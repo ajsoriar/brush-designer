@@ -1,0 +1,72 @@
+.be-window {
+    background-color: red;
+    background-image: url("./../src/brush-designer-bg.png");
+    background-repeat: no-repeat;
+    display: block;
+    height: 700px;
+    left: 0;
+    opacity: 1;
+    position: absolute;
+    top: 0;
+    width: 660px;
+    z-index: 9001;
+}
+.be-wave {
+    background-color: rgba(0, 255, 0, 0.5);
+    display: block;
+    height: 256px;
+    left: 143px;
+    opacity: 1;
+    position: absolute;
+    top: 425px;
+    width: 500px;
+}
+.be-title {
+    background-color: transparent;
+    color: black;
+    font-family: arial,sans-serif;
+    font-size: 12px;
+    padding: 3px;
+    text-shadow: 0 1px rgba(255, 255, 255, 0.7);
+}
+.be-mirror {
+    background-color: rgba(255, 255, 0, 0.8);
+    height: 100px;
+    left: 27px;
+    position: absolute;
+    top: 302px;
+    width: 488px;
+}
+.be-brush {
+    background-color: rgba(255, 0, 255, 0);
+    height: 256px;
+    left: 143px;
+    position: absolute;
+    top: 33px;
+    width: 256px;
+}
+.be-btn {
+    background-color: #eee;
+    border: 1px solid black;
+    color: black;
+    float: right;
+    font-size: 12px;
+    font-weight: 400;
+    margin: 3px;
+    padding: 3px 8px;
+    position: relative;
+    top: 0;
+}
+
+#brush-editor-outputs li{
+    background-color: black;
+    display: block;
+    height: 100px;
+    overflow: hidden;
+    width: 100px;
+}
+
+#brush-editor-outputs li img{
+    height: 100%;
+    width: 100%;
+}

@@ -1,0 +1,10 @@
+.pb-controls {
+    background-color: red;
+    display: inline-block;
+}
+#paintBoardCv{
+    border: 1px solid red;
+    box-shadow: 1px 1px 10px black;
+    height: 1024px;
+    width: 1024px;
+}
