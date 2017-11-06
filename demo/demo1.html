@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Brush Designer Demo I</title>
+
+    <link rel="stylesheet" href="../src/bd.css" type="text/css" />
+
+
+</head>
+
+<body style="background-color: #444;">
+    <!--
+    <div id="" class="" >
+    demo div layer
+    </div>
+    -->
+    <button type="button" onclick="openEditor()">Open Brush Editor!</button>
+    <script src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
+    <script src="../src/jqbrushdesigner.js"></script>
+    <script>
+
+        var be = null; 
+
+        $(document).ready(function() {
+
+            console.log("jQuery document ready!");
+            //openEditor();
+        });
+
+        function openEditor() {
+
+            be = $.brushEditor({
+
+                beforeClose: function() {
+                    renderBruses();
+                }
+            });   
+
+            console.log("be:", be );
+
+            //be.open();
+
+        }
+
+        function renderBruses(){
+
+            /*
+            $("#brush-editor-outputs").find('img').each(function(){
+
+                this.attr('display','block') //to show
+            });
+            */
+
+        }
+
+    </script>
+</body>
+
+</html>
