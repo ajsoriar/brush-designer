@@ -8,6 +8,8 @@
         width: 640,
         height: 480,
         backgroundColor: "#ffffff",
+        paintOnPointer: true,
+        brushSize: 1,
         className: "",
         onSave: null
     };
@@ -31,6 +33,10 @@
         var element = document.createElement("div");
         var canvas = document.createElement("canvas");
         var context;
+        var isPainting = false;
+        var stopPainting = function() {
+            isPainting = false;
+        };
         var board;
 
         element.id = boardId;
@@ -66,8 +72,13 @@
             width: config.width,
             height: config.height,
             backgroundColor: config.backgroundColor,
+            paintColor: getOppositeColor(config.backgroundColor),
+            brushSize: config.brushSize,
             clear: function() {
                 clear(board);
+            },
+            paintAt: function(x, y) {
+                paintAt(board, x, y);
             },
             setSize: function(width, height) {
                 setSize(board, width, height);
@@ -79,9 +90,30 @@
                 return save(board, config);
             },
             destroy: function() {
-                destroy(board);
+                destroy(board, stopPainting);
             }
         };
+
+        if (config.paintOnPointer) {
+            canvas.addEventListener("mousedown", function(event) {
+                isPainting = true;
+                paintPointerEvent(board, event);
+            });
+
+            canvas.addEventListener("mousemove", function(event) {
+                if (!isPainting) {
+                    return;
+                }
+
+                paintPointerEvent(board, event);
+            });
+
+            document.addEventListener("mouseup", stopPainting);
+
+            canvas.addEventListener("mouseleave", function() {
+                isPainting = false;
+            });
+        }
 
         return board;
     }
@@ -125,8 +157,57 @@
 
     function setBackgroundColor(board, backgroundColor) {
         board.backgroundColor = backgroundColor;
+        board.paintColor = getOppositeColor(backgroundColor);
         board.element.style.backgroundColor = backgroundColor;
         clear(board);
+    }
+
+    function paintPointerEvent(board, event) {
+        var rect = board.canvas.getBoundingClientRect();
+        var scaleX = board.canvas.width / rect.width;
+        var scaleY = board.canvas.height / rect.height;
+        var x = Math.floor((event.clientX - rect.left) * scaleX);
+        var y = Math.floor((event.clientY - rect.top) * scaleY);
+
+        event.preventDefault();
+        paintAt(board, x, y);
+    }
+
+    function paintAt(board, x, y) {
+        var size = Math.max(1, board.brushSize);
+        var offset = Math.floor(size / 2);
+
+        board.context.fillStyle = board.paintColor;
+        board.context.fillRect(x - offset, y - offset, size, size);
+    }
+
+    function getOppositeColor(color) {
+        var rgb = getRgb(color);
+
+        return "rgb(" + (255 - rgb.r) + ", " + (255 - rgb.g) + ", " + (255 - rgb.b) + ")";
+    }
+
+    function getRgb(color) {
+        var parser = document.createElement("span");
+        var value;
+        var parts;
+
+        parser.style.color = color;
+        document.body.appendChild(parser);
+        value = global.getComputedStyle(parser).color;
+        document.body.removeChild(parser);
+
+        parts = value.match(/\d+/g);
+
+        if (!parts || parts.length < 3) {
+            return { r: 255, g: 255, b: 255 };
+        }
+
+        return {
+            r: parseInt(parts[0], 10),
+            g: parseInt(parts[1], 10),
+            b: parseInt(parts[2], 10)
+        };
     }
 
     function save(board, config) {
@@ -139,7 +220,9 @@
         return data;
     }
 
-    function destroy(board) {
+    function destroy(board, stopPainting) {
+        document.removeEventListener("mouseup", stopPainting);
+
         if (board.element.parentNode) {
             board.element.parentNode.removeChild(board.element);
         }

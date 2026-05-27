@@ -6,6 +6,7 @@
     <title>Brush Designer Demo I</title>
     <link rel="stylesheet" href="../src/components/jqbrushdesigner/jqbrushdesigner.css" type="text/css" />
     <link rel="stylesheet" href="../src/components/paintBoard/paintBoard.css" type="text/css" />
+    <link rel="stylesheet" href="../src/components/simpleColorPicker/simpleColorPicker.css" type="text/css" />
     <link rel="stylesheet" href="../src/components/windowsManager/windowsManager.css" type="text/css" />
 </head>
 
@@ -16,19 +17,23 @@
         <button type="button" onclick="createDemoWindow('fixed')">Create fixed window</button>
         <button type="button" onclick="createDemoWindow('notResizable')">Create not resizable window</button>
         <button type="button" onclick="createDemoWindow('paintBoard')">Create paint board window</button>
+        <button type="button" onclick="openSimpleColorPickerWindow()">Open color picker</button>
     </div>
 
     <script src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
     <script src="../src/components/jqbrushdesigner/jqbrushdesigner.js"></script>
     <script src="../src/components/paintBoard/paintBoard.js"></script>
+    <script src="../src/components/simpleColorPicker/simpleColorPicker.js"></script>
     <script src="../src/components/windowsManager/windowsManager.js"></script>
     <script>
         var be = null; 
         var demoWindowCount = 0;
+        var appColorPicker = null;
 
         $(document).ready(function() {
             console.log("jQuery document ready!");
             openBrushEditorOutputsWindow();
+            openSimpleColorPickerWindow();
             //openEditor();
 
             /*
@@ -206,6 +211,58 @@
             }
 
             outputsWindow.contentElement.appendChild(outputsElement);
+        }
+
+        function openSimpleColorPickerWindow() {
+            var existingWindow = WindowsManager.getWindowByWindowId("simple-color-picker");
+
+            if (existingWindow) {
+                WindowsManager.bringToFront(existingWindow);
+                return appColorPicker;
+            }
+
+            var pickerWidth = 360;
+            var pickerHeight = 220;
+            var windowFrameWidth = 16;
+            var windowFrameHeight = 36;
+            var pickerWindow = WindowsManager.create({
+                id: "simple-color-picker-window",
+                windowId: "simple-color-picker",
+                title: "Simple Color Picker",
+                x: 20,
+                y: 40,
+                width: pickerWidth + windowFrameWidth,
+                height: pickerHeight + windowFrameHeight,
+                minWidth: 120,
+                minHeight: 120,
+                resizable: true,
+                scrollBarX: false,
+                scrollBarY: false,
+                contentId: "simple-color-picker-window-content"
+            });
+
+            appColorPicker = SimpleColorPicker({
+                id: "app-simple-color-picker",
+                containerId: pickerWindow.contentId,
+                columns: 15,
+                rows: 10,
+                colorGap: 0,
+                activeColor: "#000000", 
+                onColorSelected: function(color) {
+                    console.log("Selected color:", color);
+                },
+                color: {
+                    defaultWidth: 17, // px. The window wil be rescaled to
+                    defaultHeight: 17, // px
+                }
+            });
+
+            var w = appColorPicker.getWidth();
+            var h = appColorPicker.getHeight();
+
+            pickerWindow.scaleToContent(w,h)
+
+            return appColorPicker;
         }
 
         function renderBruses(){

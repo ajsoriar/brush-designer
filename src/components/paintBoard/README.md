@@ -27,12 +27,15 @@ Tambien queda disponible como `paintBoard(...)`.
 - `width`: ancho del canvas. Por defecto `640`.
 - `height`: alto del canvas. Por defecto `480`.
 - `backgroundColor`: color de fondo. Por defecto `#ffffff`.
+- `paintOnPointer`: pinta al hacer click o arrastrar. Por defecto `true`.
+- `brushSize`: tamano del pincel en pixeles. Por defecto `1`.
 - `className`: clase adicional para el wrapper.
 - `onSave`: callback al llamar a `board.save()`.
 
 ## API
 
 - `board.clear()`
+- `board.paintAt(x, y)`
 - `board.setSize(width, height)`
 - `board.setBackgroundColor(backgroundColor)`
 - `board.save()`

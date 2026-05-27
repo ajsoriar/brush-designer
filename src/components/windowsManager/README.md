@@ -48,3 +48,7 @@ document.getElementById(win.contentId).innerHTML = "<p>Contenido de la ventana</
 - `WindowsManager.minimizeWindow(id)`
 - `WindowsManager.restoreWindow(id)`
 - `WindowsManager.bringToFront(id)`
+
+Cada ventana creada tambien expone:
+
+- `window.scaleToContent(width, height)`: ajusta la ventana para que el div central tenga ese tamano.

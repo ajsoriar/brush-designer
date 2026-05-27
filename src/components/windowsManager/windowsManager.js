@@ -140,6 +140,9 @@
             resizeTo: function(width, height) {
                 element.style.width = Math.max(width, config.minWidth) + "px";
                 element.style.height = Math.max(height, config.minHeight) + "px";
+            },
+            scaleToContent: function(width, height) {
+                scaleToContent(currentWindow, config, width, height);
             }
         };
 
@@ -249,6 +252,13 @@
             document.removeEventListener("mousemove", move);
             document.removeEventListener("mouseup", stop);
         }
+    }
+
+    function scaleToContent(currentWindow, config, width, height) {
+        var frameWidth = currentWindow.element.offsetWidth - currentWindow.contentElement.clientWidth;
+        var frameHeight = currentWindow.element.offsetHeight - currentWindow.contentElement.clientHeight;
+
+        currentWindow.resizeTo(width + frameWidth, height + frameHeight);
     }
 
     function startResize(event, currentWindow, config, direction) {
