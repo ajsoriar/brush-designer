@@ -1,6 +1,13 @@
 # brush-designer
-![ajsr-confirm examples](./demo/Screen-Shot-1.png?raw=true "brush-designer example")
 
-#### License
+A simple editor for creating and testing brushes in the browser.
 
-brush-designer is [MIT licensed](./LICENSE).
+## Demo
+
+Open any file in [demo](./demo) in your browser to see the component in action.
+
+![brush-designer example](./demo/Screen-Shot-1.png?raw=true "brush-designer example")
+
+## License
+
+[MIT](./LICENSE)

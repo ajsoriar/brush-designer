@@ -1,0 +1,164 @@
+.wm-window {
+    background: #f2f2f2;
+    border: 1px solid #1d1d1d;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+    box-sizing: border-box;
+    color: #111;
+    display: grid;
+    font-family: Arial, sans-serif;
+    grid-template-columns: 8px 1fr 8px;
+    grid-template-rows: 28px 1fr 8px;
+    min-height: 120px;
+    min-width: 160px;
+    overflow: hidden;
+    position: absolute;
+    user-select: none;
+}
+
+.wm-window * {
+    box-sizing: border-box;
+}
+
+.wm-window-fixed {
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+}
+
+.wm-window-minimized {
+    height: 28px !important;
+    min-height: 28px;
+}
+
+.wm-window-minimized .wm-middle-left,
+.wm-window-minimized .wm-center,
+.wm-window-minimized .wm-middle-right,
+.wm-window-minimized .wm-bottom-left,
+.wm-window-minimized .wm-bottom,
+.wm-window-minimized .wm-bottom-right {
+    display: none;
+}
+
+.wm-top-left,
+.wm-top,
+.wm-top-right {
+    background: #d7d7d7;
+    border-bottom: 1px solid #9c9c9c;
+}
+
+.wm-top-left {
+    cursor: nwse-resize;
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.wm-top {
+    align-items: center;
+    cursor: move;
+    display: flex;
+    gap: 8px;
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+}
+
+.wm-top-right {
+    cursor: nesw-resize;
+    grid-column: 3;
+    grid-row: 1;
+}
+
+.wm-title {
+    flex: 1 1 auto;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    overflow: hidden;
+    padding-left: 4px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wm-actions {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
+    gap: 3px;
+}
+
+.wm-btn {
+    align-items: center;
+    background: #eeeeee;
+    border: 1px solid #747474;
+    color: #111;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 12px;
+    height: 18px;
+    justify-content: center;
+    line-height: 1;
+    margin: 0;
+    padding: 0;
+    width: 22px;
+}
+
+.wm-btn:hover {
+    background: #ffffff;
+}
+
+.wm-middle-left {
+    cursor: ew-resize;
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.wm-center {
+    background: #ffffff;
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 0;
+    min-width: 0;
+    overflow: auto;
+    position: relative;
+    user-select: text;
+}
+
+.wm-middle-right {
+    cursor: ew-resize;
+    grid-column: 3;
+    grid-row: 2;
+}
+
+.wm-bottom-left {
+    cursor: nesw-resize;
+    grid-column: 1;
+    grid-row: 3;
+}
+
+.wm-bottom {
+    cursor: ns-resize;
+    grid-column: 2;
+    grid-row: 3;
+}
+
+.wm-bottom-right {
+    cursor: nwse-resize;
+    grid-column: 3;
+    grid-row: 3;
+}
+
+.wm-window-fixed .wm-top,
+.wm-window-fixed .wm-top-left,
+.wm-window-fixed .wm-top-right,
+.wm-window-fixed .wm-middle-left,
+.wm-window-fixed .wm-middle-right,
+.wm-window-fixed .wm-bottom-left,
+.wm-window-fixed .wm-bottom,
+.wm-window-fixed .wm-bottom-right,
+.wm-window-not-resizable .wm-top-left,
+.wm-window-not-resizable .wm-top-right,
+.wm-window-not-resizable .wm-middle-left,
+.wm-window-not-resizable .wm-middle-right,
+.wm-window-not-resizable .wm-bottom-left,
+.wm-window-not-resizable .wm-bottom,
+.wm-window-not-resizable .wm-bottom-right {
+    cursor: default;
+}

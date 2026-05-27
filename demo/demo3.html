@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Brush Designer Demo I</title>
+
+    <link rel="stylesheet" href="../src/bd.css" type="text/css" />
+    <link rel="stylesheet" href="../src/pb.css" type="text/css" />
+    <link rel="stylesheet" href="../src/components/windowsManager/windowsManager.css" type="text/css" />
+
+    <div>
+
+    </div>
+
+
+</head>
+
+<body style="background-color: #444;">
+    <!--
+    <div id="" class="" >
+    demo div layer
+    </div>
+    -->
+    <button type="button" onclick="openEditor()">Open Brush Editor!</button>
+    <button type="button" onclick="openBrushDesignerInWindow()">Open BD in a window</button>
+    <button type="button" onclick="createDemoWindow('normal')">Create resizable window</button>
+    <button type="button" onclick="createDemoWindow('fixed')">Create fixed window</button>
+    <button type="button" onclick="createDemoWindow('notResizable')">Create not resizable window</button>
+    <script src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
+    <script src="../src/components/jqbrushdesigner/jqbrushdesigner.js"></script>
+    <script src="../src/components/paintBoard/paintBoard.js"></script>
+    <script src="../src/components/windowsManager/windowsManager.js"></script>
+    <script>
+
+        var be = null; 
+        var demoWindowCount = 0;
+
+        $(document).ready(function() {
+
+            console.log("jQuery document ready!");
+            openBrushEditorOutputsWindow();
+            //openEditor();
+
+            /*
+            paintBoard({
+                width: 1024,
+                height: 1024,
+                backgroundColor: '#000',
+                onSave: function( data ){
+
+                    storeImage( data );
+                }
+            });
+            */
+
+
+        });
+
+        function openEditor() {
+
+            be = $.brushEditor({
+
+                beforeClose: function() {
+
+                    renderBruses();
+                }
+
+            });   
+
+            console.log("be:", be );
+
+            openBrushEditorOutputsWindow();
+
+            //be.open();
+
+        }
+
+        function createDemoWindow(type) {
+
+            demoWindowCount += 1;
+
+            if (type === "fixed") {
+                WindowsManager.create({
+                    id: "demo-fixed-window-" + demoWindowCount,
+                    title: "Fixed window " + demoWindowCount,
+                    x: 520,
+                    y: 80,
+                    width: 300,
+                    height: 180,
+                    fixed: true,
+                    content: "<p>This window is fixed. It cannot move or resize.</p>"
+                });
+
+                return;
+            }
+
+            if (type === "notResizable") {
+                WindowsManager.create({
+                    id: "demo-not-resizable-window-" + demoWindowCount,
+                    title: "Movable not resizable " + demoWindowCount,
+                    x: 180,
+                    y: 260,
+                    width: 360,
+                    height: 220,
+                    resizable: false,
+                    content: "<p>This window moves from the top bar, but cannot resize.</p>"
+                });
+
+                return;
+            }
+
+            WindowsManager.create({
+                id: "demo-resizable-window-" + demoWindowCount,
+                title: "Resizable window " + demoWindowCount,
+                x: 80,
+                y: 80,
+                width: 420,
+                height: 260,
+                content: "<p>This window can move, resize, minimize and close.</p>"
+            });
+        }
+
+        function openBrushDesignerInWindow() {
+
+            var existingWindow = WindowsManager.getWindowByWindowId("brush-designer");
+
+            if (existingWindow) {
+                WindowsManager.bringToFront(existingWindow);
+                return;
+            }
+
+            var brushDesignerWidth = 660;
+            var brushDesignerHeight = 700;
+            var windowFrameWidth = 16;
+            var windowFrameHeight = 36;
+            var outerWidth = brushDesignerWidth + windowFrameWidth;
+            var outerHeight = brushDesignerHeight + windowFrameHeight;
+            var x = Math.max(0, Math.round((window.innerWidth - outerWidth) / 2));
+            var y = Math.max(0, Math.round((window.innerHeight - outerHeight) / 2));
+            var bdWindow = WindowsManager.create({
+                id: "brush-designer-window",
+                windowId: "brush-designer",
+                title: "Brush Designer",
+                x: x,
+                y: y,
+                width: outerWidth,
+                height: outerHeight,
+                resizable: false,
+                minimizable: false,
+                scrollBarX: false,
+                scrollBarY: false,
+                contentId: "brush-designer-window-content"
+            });
+
+            be = $.brushEditor({
+
+                beforeClose: function() {
+
+                    renderBruses();
+                    WindowsManager.closeWindow("brush-designer-window");
+                }
+
+            });
+
+            $(".be-back-bg").remove();
+            $("#window-brush-editor").appendTo(bdWindow.contentElement);
+            openBrushEditorOutputsWindow();
+        }
+
+        function openBrushEditorOutputsWindow() {
+
+            var outputsWidth = 170;
+            var outputsHeight = 700;
+            var windowFrameWidth = 16;
+            var windowFrameHeight = 36;
+            var outerWidth = outputsWidth + windowFrameWidth;
+            var outerHeight = outputsHeight + windowFrameHeight;
+            var x = Math.max(0, window.innerWidth - outerWidth - 20);
+            var y = Math.max(0, Math.round((window.innerHeight - outerHeight) / 2));
+            var outputsElement = document.getElementById("brush-editor-outputs");
+            var outputsWindow = WindowsManager.create({
+                id: "brush-editor-outputs-window",
+                windowId: "brush-editor-outputs",
+                title: "Brush outputs",
+                x: x,
+                y: y,
+                width: outerWidth,
+                height: outerHeight,
+                resizable: false,
+                scrollBarX: false,
+                scrollBarY: true,
+                contentId: "brush-editor-outputs-window-content"
+            });
+
+            if (!outputsElement) {
+                outputsElement = document.createElement("ol");
+                outputsElement.id = "brush-editor-outputs";
+            }
+
+            outputsWindow.contentElement.appendChild(outputsElement);
+        }
+
+        function renderBruses(){
+
+            console.log("beforeClose!");
+
+            /*
+            $("#brush-editor-outputs").find('img').each(function(){
+
+                this.attr('display','block') //to show
+            });
+            */
+
+        }
+
+        function storeImage( data ){
+
+            console.log("storeImage! data:", data );
+
+            /*
+            $("#brush-editor-outputs").find('img').each(function(){
+
+                this.attr('display','block') //to show
+            });
+            */
+
+        }
+    </script>
+</body>
+
+</html>

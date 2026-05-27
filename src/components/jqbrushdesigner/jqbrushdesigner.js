@@ -9,7 +9,7 @@
         //console.log("brushEditor! options:", options);
 
         var defaults = {
-            'title': 'Brush Designer 1.0 - Andres J. Soria R. 2016',
+            'title': 'Brush Designer 1.0 - AJSR 2016-2026',
             //'message': 'Do you really want to do that?',
             //'okTitle': 'OK',
             //'cancelTitle': 'Cancel',
@@ -40,6 +40,7 @@
 
         var heightOfEachPoint = []; // The complete wave
         var heightOfArea = []; // part of the wave that was edited
+    var isDragging = false;
 
         var blackBoard = {
             cvObj: null,
@@ -72,13 +73,17 @@
 
                 var obj = $(blackBoard.cvObj);
 
-                obj.mousedown(function() {
+                obj.on("mousedown.brushEditor", function() {
                     isDragging = true;
 
                     console.log("isDragging = true");
                 });
 
-                $(window).mouseup(function() {
+                $(window).off("mouseup.brushEditor").on("mouseup.brushEditor", function() {
+                    if (isDragging !== true) {
+                        return;
+                    }
+
                     isDragging = false;
 
                     console.log("isDragging = false");
@@ -88,7 +93,7 @@
 
                 });
 
-                obj.mousemove(function(event) {
+                obj.on("mousemove.brushEditor", function(event) {
 
                     if (isDragging === true) {
 
@@ -113,12 +118,20 @@
             },
             paintWave: function() {
 
+                if (!blackBoard.cvObj || !blackBoard.cvCtx) {
+                    return;
+                }
+
                 //heightOfArea
 
                 var max = blackBoard.getMax(heightOfArea);
                 var min = blackBoard.getMin(heightOfArea);
                 console.log("max:", max);
                 console.log("min:", min);
+
+                if (max === undefined || min === undefined) {
+                    return;
+                }
 
                 // Update area
                 for (var i = min; i < max; i++) {
@@ -203,7 +216,13 @@
             },
             clear: function() {
                 var canvasObj = document.getElementById("paintWaveLayer");
+                if (!canvasObj) {
+                    return;
+                }
                 var context = canvasObj.getContext("2d");
+                if (!context) {
+                    return;
+                }
                 context.clearRect(0, 0, canvasObj.width, canvasObj.height);
             }
         };
@@ -433,7 +452,10 @@
 
         function destroy(){
             $(".be-back-bg").remove();
-            //$(blackBoard.cvObj).off();
+            if (blackBoard.cvObj) {
+                $(blackBoard.cvObj).off(".brushEditor");
+            }
+            $(window).off("mouseup.brushEditor");
             $("#window-brush-editor").remove();  
 
             defaults.whenDestroyed();   

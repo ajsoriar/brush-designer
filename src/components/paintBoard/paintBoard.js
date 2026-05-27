@@ -19,8 +19,7 @@
 
         //var parameters = $.extend(defaults, options);
 
-        var htmlString;
-
+        var htmlString = "";
         htmlString +=   ''+
                         //'<div id="paint-board-'+ Date.now() +'" class="paint-board">'+
                             '<div class="pb-controls">'+ 
@@ -47,12 +46,8 @@
             cvObj: null,
             cvCtx: null,
             init: function() {
-
                 //defaults.beforeOpen();
-
                 // Create canvas
-
-
                 var c = document.createElement('canvas');
                 c.id = "paintBoardCv";
                 c.width = 1024;
@@ -63,25 +58,17 @@
                 //c.class = "paintBoardCv";
                 var el = document.getElementById("paint-board");
                 el.appendChild(c);
-
                 // atach events to canvas
-
-                //  paintBoard.cvObj 
-                paintBoard.cvObj = document.getElementById("paintBoardCv");
-                paintBoardCv = paintBoard.cvObj.getContext("2d");
-
-
+                obj.board.cvObj = document.getElementById("paintBoardCv");
+                obj.board.cvCtx = obj.board.cvObj.getContext("2d");
             },
             paintWave: function() {
-
                 console.log("paintWave!");
-
             },
             clear: function() {
                 var canvasObj = document.getElementById("paintBoardCv");
                 var context = canvasObj.getContext("2d");
                 context.clearRect(0, 0, canvasObj.width, canvasObj.height);
-                //paintBoardCv
             }
         };
 
