@@ -1,91 +1,151 @@
-(function() {
+(function(global) {
 
     "use strict";
 
-    console.log("paintBoard plug-in!");
+    var DEFAULTS = {
+        id: null,
+        containerId: null,
+        width: 640,
+        height: 480,
+        backgroundColor: "#ffffff",
+        className: "",
+        onSave: null
+    };
 
-    var paintBoard = function(options) {
+    function extend(target, source) {
+        var key;
 
-        var obj = {};
+        for (key in source) {
+            if (Object.prototype.hasOwnProperty.call(source, key)) {
+                target[key] = source[key];
+            }
+        }
 
-        /*
-        obj.defaults = {
-            'title': 'Paint Board 1.0 - Andres J. Soria R. 2016',
-            beforeOpen: function(){},
-            beforeClose: function(){},
-            whenDestroyed: function(){}
-        };
-        */
+        return target;
+    }
 
-        //var parameters = $.extend(defaults, options);
+    function PaintBoard(options) {
+        var config = extend(extend({}, DEFAULTS), options || {});
+        var boardId = config.id || ("paint-board-" + Date.now());
+        var container = getContainer(config.containerId);
+        var element = document.createElement("div");
+        var canvas = document.createElement("canvas");
+        var context;
+        var board;
 
-        var htmlString = "";
-        htmlString +=   ''+
-                        //'<div id="paint-board-'+ Date.now() +'" class="paint-board">'+
-                            '<div class="pb-controls">'+ 
-                                '<button class="be-btn" type="button" onclick="$.brushEditor(\'close\')">Close Board</button>' +
-                                '<button class="be-btn" type="button" onclick="$.brushEditor(\'save\')">Save Image</button>' +
-                            '</div>' +
-                        //'</div>'+
-                        '';
+        element.id = boardId;
+        element.className = "paint-board";
 
-        //var body = document.getElementTagName("body");
-        var dv = document.createElement("div");
-        dv.id = "paint-board";
-        document.body.appendChild( dv );
-        var el = document.getElementById("paint-board");
-        el.innerHTML = htmlString;
+        if (config.className) {
+            element.className += " " + config.className;
+        }
 
+        element.style.width = config.width + "px";
+        element.style.height = config.height + "px";
+        element.style.backgroundColor = config.backgroundColor;
 
-        // CREATE CANVAS
+        canvas.id = boardId + "-canvas";
+        canvas.className = "paint-board-canvas";
+        canvas.width = config.width;
+        canvas.height = config.height;
+        canvas.style.width = config.width + "px";
+        canvas.style.height = config.height + "px";
 
-        //var heightOfEachPoint = []; // The complete wave
-        //var heightOfArea = []; // part of the wave that was edited
+        element.appendChild(canvas);
+        container.appendChild(element);
 
-        obj.board = {
-            cvObj: null,
-            cvCtx: null,
-            init: function() {
-                //defaults.beforeOpen();
-                // Create canvas
-                var c = document.createElement('canvas');
-                c.id = "paintBoardCv";
-                c.width = 1024;
-                c.height = 1024;
-                c.style.zIndex = 1;
-                c.style.position = "absolute";
-                c.style.cursor = "crosshair";
-                //c.class = "paintBoardCv";
-                var el = document.getElementById("paint-board");
-                el.appendChild(c);
-                // atach events to canvas
-                obj.board.cvObj = document.getElementById("paintBoardCv");
-                obj.board.cvCtx = obj.board.cvObj.getContext("2d");
-            },
-            paintWave: function() {
-                console.log("paintWave!");
-            },
+        context = canvas.getContext("2d");
+        context.fillStyle = config.backgroundColor;
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        board = {
+            id: boardId,
+            element: element,
+            canvas: canvas,
+            context: context,
+            width: config.width,
+            height: config.height,
+            backgroundColor: config.backgroundColor,
             clear: function() {
-                var canvasObj = document.getElementById("paintBoardCv");
-                var context = canvasObj.getContext("2d");
-                context.clearRect(0, 0, canvasObj.width, canvasObj.height);
+                clear(board);
+            },
+            setSize: function(width, height) {
+                setSize(board, width, height);
+            },
+            setBackgroundColor: function(backgroundColor) {
+                setBackgroundColor(board, backgroundColor);
+            },
+            save: function() {
+                return save(board, config);
+            },
+            destroy: function() {
+                destroy(board);
             }
         };
 
-        console.log("obj:", obj );
+        return board;
+    }
 
-        obj.board.init();
+    function getContainer(containerId) {
+        var container;
 
-        return obj;
+        if (!containerId) {
+            container = document.createElement("div");
+            container.id = "paint-board-container-" + Date.now();
+            document.body.appendChild(container);
+            return container;
+        }
 
-        //
+        container = document.getElementById(containerId);
 
-    }; // $.brushEditor = function() ends here!
+        if (!container) {
+            throw new Error("PaintBoard container not found: " + containerId);
+        }
 
-    //var brd = paintBoard.board();
+        return container;
+    }
 
-    //console.log("paintBoard.board:", brd );
+    function clear(board) {
+        board.context.clearRect(0, 0, board.canvas.width, board.canvas.height);
+        board.context.fillStyle = board.backgroundColor;
+        board.context.fillRect(0, 0, board.canvas.width, board.canvas.height);
+    }
 
-    paintBoard();
+    function setSize(board, width, height) {
+        board.width = width;
+        board.height = height;
+        board.element.style.width = width + "px";
+        board.element.style.height = height + "px";
+        board.canvas.width = width;
+        board.canvas.height = height;
+        board.canvas.style.width = width + "px";
+        board.canvas.style.height = height + "px";
+        clear(board);
+    }
 
-}());
+    function setBackgroundColor(board, backgroundColor) {
+        board.backgroundColor = backgroundColor;
+        board.element.style.backgroundColor = backgroundColor;
+        clear(board);
+    }
+
+    function save(board, config) {
+        var data = board.canvas.toDataURL("image/png");
+
+        if (typeof config.onSave === "function") {
+            config.onSave(data, board);
+        }
+
+        return data;
+    }
+
+    function destroy(board) {
+        if (board.element.parentNode) {
+            board.element.parentNode.removeChild(board.element);
+        }
+    }
+
+    global.PaintBoard = PaintBoard;
+    global.paintBoard = PaintBoard;
+
+}(window));

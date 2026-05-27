@@ -1,6 +1,6 @@
 .be-window {
     background-color: red;
-    background-image: url("./../src/brush-designer-bg.png");
+    background-image: url("./brush-designer-bg.png");
     background-repeat: no-repeat;
     display: block;
     height: 700px;

@@ -1,0 +1,12 @@
+.paint-board {
+    display: block;
+    overflow: hidden;
+    position: relative;
+}
+
+.paint-board-canvas {
+    display: block;
+    left: 0;
+    position: absolute;
+    top: 0;
+}

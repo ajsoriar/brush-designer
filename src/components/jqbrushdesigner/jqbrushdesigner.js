@@ -1,6 +1,6 @@
 (function($) {
 
-    //"use strict";
+    "use strict";
 
     console.log("bd plug-in!");
 
@@ -15,12 +15,14 @@
             //'cancelTitle': 'Cancel',
             //'onconfirm': null,
             //'oncancel': null,
+            showCloseButton: true,
             beforeOpen: function(){},
             beforeClose: function(){},
             whenDestroyed: function(){}
         };
 
         var parameters = $.extend(defaults, options);
+        var closeButtonHtml = parameters.showCloseButton ? '<button class="be-btn" type="button" onclick="$.brushEditor(\'close\')">Close</button>' : '';
 
         var htmlString = '';
         htmlString += '<div  class="be-back-bg" style="background-color: black; height: 100%; left: 0; opacity: 0.6; position: absolute; top: 0; width: 100%;"></div>';
@@ -31,7 +33,7 @@
                         '<div class="be-title">' + parameters.title + '</div>' +
                         '<div id="be-brush" class="be-brush"> </div>' +
                         '<div id="be-mirror" class="be-mirror"> </div>' +
-                        '<button class="be-btn" type="button" onclick="$.brushEditor(\'close\')">Close</button>' +
+                        closeButtonHtml +
                         '<button class="be-btn" type="button" onclick="$.brushEditor(\'save\')">Save Brush</button>' +
                         '';
 
@@ -205,7 +207,6 @@
                 var i; // = 0;
                 var lon = arr.length;
                 for (i = lon; i > 0; i--) {
-
                     console.log("arr["+ i +"]:"+ arr[i] );
                     if (arr[i] != undefined && arr[i] != null) {
 
@@ -288,6 +289,8 @@
 
                 var xlong = 256;
                 var ylong = 256;
+                var _x;
+                var _y;
 
                 var alphaArr = getAlphaArray();
 
@@ -355,6 +358,9 @@
             var alphaArr = [];
             var w = 500; //500; //sourceCanvasCtx.width;
             var h = 256; //sourceCanvasCtx.height;
+
+            var x;
+            var y;
 
             for (x = 0; x < w; x++) {
 
@@ -428,8 +434,8 @@
             var imgData = ctx.toDataURL("image/png");
             */
 
-            circle_cvObj = document.getElementById("cvBrushLayer");
-            circle_cvCtx = circle_cvObj.getContext("2d");    
+            var circle_cvObj = document.getElementById("cvBrushLayer");
+            var circle_cvCtx = circle_cvObj.getContext("2d");
             var imgData = circle_cvCtx.canvas.toDataURL("image/png");
             var html = '<li><img src="' + imgData + '" width="256" height="256" /></li>'; //style="display:none" 
             var link = $("#brush-editor-outputs");

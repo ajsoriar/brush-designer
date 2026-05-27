@@ -4,40 +4,29 @@
 <head>
     <meta charset="utf-8" />
     <title>Brush Designer Demo I</title>
-
-    <link rel="stylesheet" href="../src/bd.css" type="text/css" />
-    <link rel="stylesheet" href="../src/pb.css" type="text/css" />
+    <link rel="stylesheet" href="../src/components/jqbrushdesigner/jqbrushdesigner.css" type="text/css" />
+    <link rel="stylesheet" href="../src/components/paintBoard/paintBoard.css" type="text/css" />
     <link rel="stylesheet" href="../src/components/windowsManager/windowsManager.css" type="text/css" />
-
-    <div>
-
-    </div>
-
-
 </head>
 
 <body style="background-color: #444;">
-    <!--
-    <div id="" class="" >
-    demo div layer
+    <div id="app-menu">
+        <button type="button" onclick="openBrushDesignerInWindow()">Open BD in a window</button>
+        <button type="button" onclick="createDemoWindow('normal')">Create resizable window</button>
+        <button type="button" onclick="createDemoWindow('fixed')">Create fixed window</button>
+        <button type="button" onclick="createDemoWindow('notResizable')">Create not resizable window</button>
+        <button type="button" onclick="createDemoWindow('paintBoard')">Create paint board window</button>
     </div>
-    -->
-    <button type="button" onclick="openEditor()">Open Brush Editor!</button>
-    <button type="button" onclick="openBrushDesignerInWindow()">Open BD in a window</button>
-    <button type="button" onclick="createDemoWindow('normal')">Create resizable window</button>
-    <button type="button" onclick="createDemoWindow('fixed')">Create fixed window</button>
-    <button type="button" onclick="createDemoWindow('notResizable')">Create not resizable window</button>
+
     <script src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
     <script src="../src/components/jqbrushdesigner/jqbrushdesigner.js"></script>
     <script src="../src/components/paintBoard/paintBoard.js"></script>
     <script src="../src/components/windowsManager/windowsManager.js"></script>
     <script>
-
         var be = null; 
         var demoWindowCount = 0;
 
         $(document).ready(function() {
-
             console.log("jQuery document ready!");
             openBrushEditorOutputsWindow();
             //openEditor();
@@ -53,8 +42,6 @@
                 }
             });
             */
-
-
         });
 
         function openEditor() {
@@ -62,22 +49,17 @@
             be = $.brushEditor({
 
                 beforeClose: function() {
-
                     renderBruses();
                 }
-
-            });   
+            });
 
             console.log("be:", be );
 
             openBrushEditorOutputsWindow();
-
             //be.open();
-
         }
 
         function createDemoWindow(type) {
-
             demoWindowCount += 1;
 
             if (type === "fixed") {
@@ -91,7 +73,6 @@
                     fixed: true,
                     content: "<p>This window is fixed. It cannot move or resize.</p>"
                 });
-
                 return;
             }
 
@@ -105,6 +86,34 @@
                     height: 220,
                     resizable: false,
                     content: "<p>This window moves from the top bar, but cannot resize.</p>"
+                });
+                return;
+            }
+
+            if (type === "paintBoard") {
+                var paintBoardWidth = 800;
+                var paintBoardHeight = 600;
+                var windowFrameWidth = 16;
+                var windowFrameHeight = 36;
+                var paintBoardWindow = WindowsManager.create({
+                    id: "demo-paint-board-window-" + demoWindowCount,
+                    title: "Paint Board " + demoWindowCount,
+                    x: 120,
+                    y: 120,
+                    width: paintBoardWidth + windowFrameWidth,
+                    height: paintBoardHeight + windowFrameHeight,
+                    resizable: false,
+                    scrollBarX: false,
+                    scrollBarY: false,
+                    contentId: "demo-paint-board-window-content-" + demoWindowCount
+                });
+
+                PaintBoard({
+                    id: "demo-paint-board-" + demoWindowCount,
+                    containerId: paintBoardWindow.contentId,
+                    width: paintBoardWidth,
+                    height: paintBoardHeight,
+                    backgroundColor: "#ffffff"
                 });
 
                 return;
@@ -122,7 +131,6 @@
         }
 
         function openBrushDesignerInWindow() {
-
             var existingWindow = WindowsManager.getWindowByWindowId("brush-designer");
 
             if (existingWindow) {
@@ -155,12 +163,12 @@
 
             be = $.brushEditor({
 
-                beforeClose: function() {
+                showCloseButton: false,
 
+                beforeClose: function() {
                     renderBruses();
                     WindowsManager.closeWindow("brush-designer-window");
                 }
-
             });
 
             $(".be-back-bg").remove();
@@ -169,7 +177,6 @@
         }
 
         function openBrushEditorOutputsWindow() {
-
             var outputsWidth = 170;
             var outputsHeight = 700;
             var windowFrameWidth = 16;
@@ -202,29 +209,23 @@
         }
 
         function renderBruses(){
-
             console.log("beforeClose!");
-
             /*
             $("#brush-editor-outputs").find('img').each(function(){
 
                 this.attr('display','block') //to show
             });
             */
-
         }
 
         function storeImage( data ){
-
             console.log("storeImage! data:", data );
-
             /*
             $("#brush-editor-outputs").find('img').each(function(){
 
                 this.attr('display','block') //to show
             });
             */
-
         }
     </script>
 </body>
