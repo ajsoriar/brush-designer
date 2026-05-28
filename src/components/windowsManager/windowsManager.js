@@ -2,9 +2,24 @@
 
     "use strict";
 
+    var WINDOW_TYPES = {
+        NORMAL: "NORMAL",
+        TOOL: "TOOL",
+        MODAL: "MODAL"
+    };
+
+    var Z_INDEX_RANGES = {
+        NORMAL: 10000,
+        TOOL: 100000,
+        MODAL: 200000
+    };
+
     var DEFAULTS = {
         title: "Window",
+        type: WINDOW_TYPES.NORMAL,
         windowId: null,
+        windowGroupName: null,
+        maxGroupItems: null,
         x: 40,
         y: 40,
         width: 420,
@@ -15,7 +30,9 @@
         movable: true,
         resizable: true,
         minimizable: true,
+        maximizable: false,
         closable: true,
+        modal: false,
         scrollBarX: true,
         scrollBarY: true,
         parent: null,
@@ -25,12 +42,14 @@
 
     var manager = {
         windows: [],
-        zIndex: 10000,
+        windowTypes: WINDOW_TYPES,
+        zIndex: extend({}, Z_INDEX_RANGES),
         create: createWindow,
         getWindow: getWindow,
         getWindowByWindowId: getWindowByWindowId,
         closeWindow: callOnWindow("close"),
         minimizeWindow: callOnWindow("minimize"),
+        maximizeWindow: callOnWindow("maximize"),
         restoreWindow: callOnWindow("restore"),
         bringToFront: bringToFront
     };
@@ -49,10 +68,12 @@
 
     function createWindow(options) {
         var config = extend(extend({}, DEFAULTS), options || {});
+        var type = normalizeWindowType(config);
         var id = config.id || ("wm-window-" + Date.now() + "-" + manager.windows.length);
         var contentId = config.contentId || (id + "-content");
         var parent = config.parent || document.body;
         var element = document.createElement("div");
+        var modalOverlay = null;
         var currentWindow;
         var existingWindow;
 
@@ -63,6 +84,11 @@
                 bringToFront(existingWindow);
                 return existingWindow;
             }
+        }
+
+        if (!canCreateInGroup(config)) {
+            bringTopGroupWindowToFront(config.windowGroupName);
+            return null;
         }
 
         if (config.fixed) {
@@ -87,12 +113,18 @@
             element.className += " wm-window-not-resizable";
         }
 
+        if (type === WINDOW_TYPES.MODAL) {
+            modalOverlay = document.createElement("div");
+            modalOverlay.className = "wm-modal-overlay";
+        }
+
         element.innerHTML = [
             '<div class="wm-top-left" data-wm-resize="nw"></div>',
             '<div class="wm-top">',
                 '<div class="wm-title"></div>',
                 '<div class="wm-actions">',
                     '<button class="wm-btn wm-btn-minimize" type="button" title="Minimize">_</button>',
+                    '<button class="wm-btn wm-btn-maximize" type="button" title="Maximize">[]</button>',
                     '<button class="wm-btn wm-btn-close" type="button" title="Close">x</button>',
                 '</div>',
             '</div>',
@@ -108,11 +140,16 @@
         currentWindow = {
             id: id,
             windowId: config.windowId,
+            windowGroupName: config.windowGroupName,
             title: config.title,
             contentId: contentId,
             element: element,
             contentElement: null,
+            type: type,
+            modal: type === WINDOW_TYPES.MODAL,
+            modalOverlay: modalOverlay,
             minimized: false,
+            maximized: false,
             closed: false,
             fixed: config.fixed,
             resizable: config.resizable,
@@ -122,6 +159,9 @@
             },
             restore: function() {
                 restoreWindow(currentWindow);
+            },
+            maximize: function() {
+                maximizeWindow(currentWindow, config);
             },
             close: function() {
                 closeWindow(currentWindow);
@@ -156,11 +196,71 @@
         }
 
         bindWindowEvents(currentWindow, config);
+        if (modalOverlay) {
+            modalOverlay.addEventListener("mousedown", function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                bringToFront(currentWindow.id);
+            });
+            parent.appendChild(modalOverlay);
+        }
+
         parent.appendChild(element);
         manager.windows.push(currentWindow);
         bringToFront(currentWindow.id);
 
         return currentWindow;
+    }
+
+    function canCreateInGroup(config) {
+        var maxGroupItems = parseInt(config.maxGroupItems, 10);
+
+        if (!config.windowGroupName || isNaN(maxGroupItems) || maxGroupItems < 1) {
+            return true;
+        }
+
+        return getWindowsByGroupName(config.windowGroupName).length < maxGroupItems;
+    }
+
+    function getWindowsByGroupName(windowGroupName) {
+        return manager.windows.filter(function(item) {
+            return item.windowGroupName === windowGroupName && !item.closed;
+        });
+    }
+
+    function bringTopGroupWindowToFront(windowGroupName) {
+        var groupWindows = getWindowsByGroupName(windowGroupName);
+        var topWindow = null;
+        var topZIndex = -1;
+
+        groupWindows.forEach(function(item) {
+            var zIndex = parseInt(item.element.style.zIndex, 10) || 0;
+
+            if (zIndex >= topZIndex) {
+                topZIndex = zIndex;
+                topWindow = item;
+            }
+        });
+
+        if (topWindow) {
+            bringToFront(topWindow);
+        }
+
+        return topWindow;
+    }
+
+    function normalizeWindowType(config) {
+        var type = String(config.type || WINDOW_TYPES.NORMAL).toUpperCase();
+
+        if (config.modal) {
+            return WINDOW_TYPES.MODAL;
+        }
+
+        if (type === WINDOW_TYPES.TOOL || type === WINDOW_TYPES.MODAL) {
+            return type;
+        }
+
+        return WINDOW_TYPES.NORMAL;
     }
 
     function setContent(currentWindow, content) {
@@ -183,6 +283,7 @@
         var topBar = element.querySelector(".wm-top");
         var closeButton = element.querySelector(".wm-btn-close");
         var minimizeButton = element.querySelector(".wm-btn-minimize");
+        var maximizeButton = element.querySelector(".wm-btn-maximize");
         var resizeHandles = element.querySelectorAll("[data-wm-resize]");
 
         element.addEventListener("mousedown", function() {
@@ -212,6 +313,15 @@
             });
         }
 
+        if (!config.maximizable) {
+            maximizeButton.style.display = "none";
+        } else {
+            maximizeButton.addEventListener("click", function(event) {
+                event.stopPropagation();
+                currentWindow.maximize();
+            });
+        }
+
         if (config.movable) {
             topBar.addEventListener("mousedown", function(event) {
                 if (event.target.closest(".wm-actions")) {
@@ -237,6 +347,10 @@
         var startY = event.clientY;
         var startLeft = element.offsetLeft;
         var startTop = element.offsetTop;
+
+        if (currentWindow.maximized) {
+            return;
+        }
 
         event.preventDefault();
 
@@ -270,7 +384,7 @@
         var startWidth = element.offsetWidth;
         var startHeight = element.offsetHeight;
 
-        if (currentWindow.minimized) {
+        if (currentWindow.minimized || currentWindow.maximized) {
             return;
         }
 
@@ -343,11 +457,79 @@
         }
     }
 
+    function maximizeWindow(currentWindow, config) {
+        var element = currentWindow.element;
+        var rect;
+
+        if (currentWindow.maximized) {
+            restoreMaximizedWindow(currentWindow);
+            return;
+        }
+
+        if (currentWindow.minimized) {
+            restoreWindow(currentWindow);
+        }
+
+        currentWindow.previousRect = {
+            left: element.offsetLeft,
+            top: element.offsetTop,
+            width: element.offsetWidth,
+            height: element.offsetHeight
+        };
+        rect = getMaximizeRect(element);
+        currentWindow.maximized = true;
+        element.className += element.className.indexOf("wm-window-maximized") === -1 ? " wm-window-maximized" : "";
+        element.style.left = rect.left + "px";
+        element.style.top = rect.top + "px";
+        element.style.width = Math.max(rect.width, config.minWidth) + "px";
+        element.style.height = Math.max(rect.height, config.minHeight) + "px";
+    }
+
+    function restoreMaximizedWindow(currentWindow) {
+        var rect = currentWindow.previousRect;
+
+        currentWindow.maximized = false;
+        currentWindow.element.className = currentWindow.element.className.replace(/\s?wm-window-maximized/g, "");
+
+        if (!rect) {
+            return;
+        }
+
+        currentWindow.element.style.left = rect.left + "px";
+        currentWindow.element.style.top = rect.top + "px";
+        currentWindow.element.style.width = rect.width + "px";
+        currentWindow.element.style.height = rect.height + "px";
+    }
+
+    function getMaximizeRect(element) {
+        var parent = element.parentNode;
+
+        if (!parent || parent === document.body) {
+            return {
+                left: 0,
+                top: 0,
+                width: global.innerWidth,
+                height: global.innerHeight
+            };
+        }
+
+        return {
+            left: 0,
+            top: 0,
+            width: parent.clientWidth,
+            height: parent.clientHeight
+        };
+    }
+
     function closeWindow(currentWindow) {
         currentWindow.closed = true;
 
         if (currentWindow.element.parentNode) {
             currentWindow.element.parentNode.removeChild(currentWindow.element);
+        }
+
+        if (currentWindow.modalOverlay && currentWindow.modalOverlay.parentNode) {
+            currentWindow.modalOverlay.parentNode.removeChild(currentWindow.modalOverlay);
         }
 
         manager.windows = manager.windows.filter(function(item) {
@@ -362,8 +544,14 @@
             return null;
         }
 
-        manager.zIndex += 1;
-        currentWindow.element.style.zIndex = manager.zIndex;
+        manager.zIndex[currentWindow.type] += 1;
+
+        if (currentWindow.modalOverlay) {
+            currentWindow.modalOverlay.style.zIndex = manager.zIndex[currentWindow.type];
+            manager.zIndex[currentWindow.type] += 1;
+        }
+
+        currentWindow.element.style.zIndex = manager.zIndex[currentWindow.type];
 
         return currentWindow;
     }

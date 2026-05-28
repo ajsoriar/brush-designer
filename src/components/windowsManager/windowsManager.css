@@ -19,6 +19,16 @@
     box-sizing: border-box;
 }
 
+.wm-modal-overlay {
+    background: rgba(0, 0, 0, 0.5);
+    bottom: 0;
+    cursor: default;
+    left: 0;
+    position: fixed;
+    right: 0;
+    top: 0;
+}
+
 .wm-window-fixed {
     box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
 }
@@ -26,6 +36,16 @@
 .wm-window-minimized {
     height: 28px !important;
     min-height: 28px;
+}
+
+.wm-window-maximized {
+    box-shadow: none;
+}
+
+.wm-window-maximized .wm-center {
+    align-items: center;
+    display: flex;
+    justify-content: center;
 }
 
 .wm-window-minimized .wm-middle-left,
@@ -111,7 +131,7 @@
 }
 
 .wm-center {
-    background: #ffffff;
+    background: #9E9E9E;
     grid-column: 2;
     grid-row: 2;
     min-height: 0;

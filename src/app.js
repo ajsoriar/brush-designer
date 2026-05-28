@@ -7,6 +7,7 @@
     var appBigColorPicker = null;
     var appColorPicker = null;
     var appLineWidthPicker = null;
+    var documentCount = 0;
 
     global.App = global.App || {};
     global.App.memory = global.App.memory || {};
@@ -78,31 +79,90 @@
         });
     }
 
-    function openPaintBoardWindow() {
-        var paintBoardWidth = 800;
-        var paintBoardHeight = 600;
+    function newDocument() {
+        var existingWindow = WindowsManager.getWindowByWindowId("new-document");
+        var dialogWidth = 775;
+        var dialogHeight = 320;
+        var dialogX = Math.max(0, Math.round((global.innerWidth - dialogWidth) / 2));
+        var dialogY = Math.max(0, Math.round((global.innerHeight - dialogHeight) / 2));
+        var dialogWindow;
+        var dialog;
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return;
+        }
+
+        dialogWindow = WindowsManager.create({
+            id: "new-document-window",
+            windowId: "new-document",
+            title: "New",
+            type: "MODAL",
+            x: dialogX,
+            y: dialogY,
+            width: dialogWidth,
+            height: dialogHeight,
+            fixed: true,
+            minimizable: false,
+            scrollBarX: false,
+            scrollBarY: false,
+            contentId: "new-document-window-content"
+        });
+
+        dialogWindow.element.className += " wm-window-new-document";
+        dialog = NewDocumentDialog({
+            width: 800,
+            height: 600,
+            onCancel: function() {
+                dialogWindow.close();
+            },
+            onOk: function(options) {
+                dialogWindow.close();
+                openPaintBoardWindow(options);
+            }
+        });
+
+        dialogWindow.setContent(dialog.element);
+    }
+
+    function openPaintBoardWindow(options) {
+        var config = options || {};
+        var paintBoardWidth = config.width || 800;
+        var paintBoardHeight = config.height || 600;
         var windowFrameWidth = 16;
         var windowFrameHeight = 36;
+        var windowIndex = documentCount + 1;
         var paintBoardWindow = WindowsManager.create({
-            id: "demo-paint-board-window-" + demoWindowCount,
-            title: "Paint Board " + demoWindowCount,
+            id: "demo-paint-board-window-" + windowIndex,
+            title: "Paint Board " + windowIndex,
+            windowGroupName: "paint-boards",
+            maxGroupItems: 5,
             x: 120,
             y: 120,
             width: paintBoardWidth + windowFrameWidth,
             height: paintBoardHeight + windowFrameHeight,
             resizable: false,
+            maximizable: true,
             scrollBarX: false,
             scrollBarY: false,
-            contentId: "demo-paint-board-window-content-" + demoWindowCount
+            contentId: "demo-paint-board-window-content-" + windowIndex
         });
 
+        if (!paintBoardWindow) {
+            return null;
+        }
+
+        documentCount += 1;
+
         PaintBoard({
-            id: "demo-paint-board-" + demoWindowCount,
+            id: "demo-paint-board-" + windowIndex,
             containerId: paintBoardWindow.contentId,
             width: paintBoardWidth,
             height: paintBoardHeight,
-            backgroundColor: "#ffffff"
+            backgroundColor: config.backgroundColor || "#ffffff"
         });
+
+        return paintBoardWindow;
     }
 
     function openBrushDesignerInWindow() {
@@ -163,6 +223,7 @@
             id: "brush-editor-outputs-window",
             windowId: "brush-editor-outputs",
             title: "Brush outputs",
+            type: "TOOL",
             x: x,
             y: y,
             width: outerWidth,
@@ -197,6 +258,7 @@
             id: "simple-color-picker-window",
             windowId: "simple-color-picker",
             title: "Simple Color Picker",
+            type: "TOOL",
             x: 20,
             y: 40,
             width: pickerWidth + windowFrameWidth,
@@ -247,6 +309,7 @@
             id: "big-color-picker-window",
             windowId: "big-color-picker",
             title: "Big Color Picker",
+            type: "TOOL",
             x: 260,
             y: 40,
             width: pickerWidth + windowFrameWidth,
@@ -292,6 +355,7 @@
             id: "simple-line-width-picker-window",
             windowId: "simple-line-width-picker",
             title: "Line Width",
+            type: "TOOL",
             x: 20,
             y: 300,
             width: pickerWidth + windowFrameWidth,
@@ -331,6 +395,7 @@
     }
 
     global.openEditor = openEditor;
+    global.newDocument = newDocument;
     global.createDemoWindow = createDemoWindow;
     global.openBrushDesignerInWindow = openBrushDesignerInWindow;
     global.openBrushEditorOutputsWindow = openBrushEditorOutputsWindow;

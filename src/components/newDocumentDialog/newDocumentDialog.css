@@ -1,0 +1,122 @@
+.new-document-dialog {
+    align-items: stretch;
+    background: #eeeeee;
+    color: #111111;
+    display: grid;
+    font-family: Arial, sans-serif;
+    gap: 28px;
+    grid-template-columns: 1fr 164px;
+    height: 100%;
+    padding: 12px 12px 14px 18px;
+    width: 100%;
+}
+
+.new-document-dialog fieldset {
+    border: 2px groove #ffffff;
+    margin: 0;
+    padding: 12px 18px 18px;
+}
+
+.new-document-dialog legend {
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0 8px;
+}
+
+.new-document-form-row {
+    align-items: center;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 170px 142px 1fr;
+    margin-top: 12px;
+}
+
+.new-document-form-row:first-of-type {
+    margin-top: 0;
+}
+
+.new-document-form-row label {
+    font-size: 18px;
+    text-align: right;
+}
+
+.new-document-form-row input,
+.new-document-form-row select {
+    background: #ffffff;
+    border: 1px solid #a6a6a6;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+    color: #111111;
+    font: 18px Arial, sans-serif;
+    height: 32px;
+    padding: 2px 8px;
+}
+
+.new-document-form-row select {
+    grid-column: 2 / 4;
+    width: 100%;
+}
+
+.new-document-form-row span {
+    font-size: 18px;
+}
+
+.new-document-size-fields {
+    margin-top: 52px;
+}
+
+.new-document-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-top: 4px;
+}
+
+.new-document-actions button {
+    background: #ffffff;
+    border: 1px solid #b8b8b8;
+    border-radius: 5px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+    color: #111111;
+    cursor: pointer;
+    font: 18px Arial, sans-serif;
+    height: 28px;
+    line-height: 1;
+}
+
+.new-document-actions button:hover {
+    border-color: #1087d7;
+}
+
+.new-document-actions button:focus {
+    border-color: #1087d7;
+    outline: 1px solid #1087d7;
+}
+
+.wm-window-new-document .wm-top,
+.wm-window-new-document .wm-top-left,
+.wm-window-new-document .wm-top-right {
+    background: #12b8c5;
+    border-bottom-color: #0e9ea9;
+}
+
+.wm-window-new-document .wm-title {
+    font-size: 16px;
+    font-weight: 400;
+    padding-left: 0;
+}
+
+.wm-window-new-document .wm-btn {
+    background: transparent;
+    border: 0;
+    font-size: 18px;
+    height: 22px;
+    width: 28px;
+}
+
+.wm-window-new-document .wm-btn-minimize {
+    display: none;
+}
+
+.wm-window-new-document .wm-center {
+    background: #eeeeee;
+}
