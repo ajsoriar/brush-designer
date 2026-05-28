@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="../src/components/jqbrushdesigner/jqbrushdesigner.css" type="text/css" />
     <link rel="stylesheet" href="../src/components/paintBoard/paintBoard.css" type="text/css" />
     <link rel="stylesheet" href="../src/components/simpleColorPicker/simpleColorPicker.css" type="text/css" />
+    <link rel="stylesheet" href="../src/components/simpleLineWidthPicker/simpleLineWidthPicker.css" type="text/css" />
     <link rel="stylesheet" href="../src/components/windowsManager/windowsManager.css" type="text/css" />
 </head>
 
@@ -18,17 +19,20 @@
         <button type="button" onclick="createDemoWindow('notResizable')">Create not resizable window</button>
         <button type="button" onclick="createDemoWindow('paintBoard')">Create paint board window</button>
         <button type="button" onclick="openSimpleColorPickerWindow()">Open color picker</button>
+        <button type="button" onclick="openSimpleLineWidthPickerWindow()">Open line width picker</button>
     </div>
 
     <script src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
     <script src="../src/components/jqbrushdesigner/jqbrushdesigner.js"></script>
     <script src="../src/components/paintBoard/paintBoard.js"></script>
     <script src="../src/components/simpleColorPicker/simpleColorPicker.js"></script>
+    <script src="../src/components/simpleLineWidthPicker/simpleLineWidthPicker.js"></script>
     <script src="../src/components/windowsManager/windowsManager.js"></script>
     <script>
         var be = null; 
         var demoWindowCount = 0;
         var appColorPicker = null;
+        var appLineWidthPicker = null;
 
         $(document).ready(function() {
             console.log("jQuery document ready!");
@@ -263,6 +267,51 @@
             pickerWindow.scaleToContent(w,h)
 
             return appColorPicker;
+        }
+
+        function openSimpleLineWidthPickerWindow() {
+            var existingWindow = WindowsManager.getWindowByWindowId("simple-line-width-picker");
+
+            if (existingWindow) {
+                WindowsManager.bringToFront(existingWindow);
+                return appLineWidthPicker;
+            }
+
+            var pickerWidth = 120;
+            var pickerHeight = 260;
+            var windowFrameWidth = 16;
+            var windowFrameHeight = 36;
+            var pickerWindow = WindowsManager.create({
+                id: "simple-line-width-picker-window",
+                windowId: "simple-line-width-picker",
+                title: "Line Width",
+                x: 20,
+                y: 300,
+                width: pickerWidth + windowFrameWidth,
+                height: pickerHeight + windowFrameHeight,
+                minWidth: 90,
+                minHeight: 120,
+                resizable: true,
+                scrollBarX: false,
+                scrollBarY: false,
+                contentId: "simple-line-width-picker-window-content"
+            });
+
+            appLineWidthPicker = SimpleLineWidthPicker({
+                id: "app-simple-line-width-picker",
+                containerId: pickerWindow.contentId,
+                minWidth: 1,
+                maxWidth: 15,
+                steps: 8,
+                activeLineWidth: 1,
+                onLineWidthSelected: function(lineWidth) {
+                    console.log("Selected line width:", lineWidth);
+                }
+            });
+
+            pickerWindow.scaleToContent(appLineWidthPicker.getWidth(), appLineWidthPicker.getHeight());
+
+            return appLineWidthPicker;
         }
 
         function renderBruses(){

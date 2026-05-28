@@ -10,7 +10,7 @@
         width: 420,
         height: 280,
         minWidth: 160,
-        minHeight: 120,
+        minHeight: 0,
         fixed: false,
         movable: true,
         resizable: true,

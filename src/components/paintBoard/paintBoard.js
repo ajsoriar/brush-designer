@@ -174,11 +174,27 @@
     }
 
     function paintAt(board, x, y) {
-        var size = Math.max(1, board.brushSize);
+        var size = Math.max(1, getCurrentBrushSize(board));
         var offset = Math.floor(size / 2);
 
-        board.context.fillStyle = board.paintColor;
+        board.context.fillStyle = getCurrentPaintColor(board);
         board.context.fillRect(x - offset, y - offset, size, size);
+    }
+
+    function getCurrentPaintColor(board) {
+        if (global.App && global.App.memory && global.App.memory.currentColor) {
+            return global.App.memory.currentColor;
+        }
+
+        return board.paintColor;
+    }
+
+    function getCurrentBrushSize(board) {
+        if (global.App && global.App.memory && global.App.memory.currentLineWidth) {
+            return global.App.memory.currentLineWidth;
+        }
+
+        return board.brushSize;
     }
 
     function getOppositeColor(color) {

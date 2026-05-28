@@ -1,0 +1,57 @@
+.simple-line-width-picker {
+    background: #f4f4f4;
+    color: #111111;
+    display: flex;
+    flex-direction: column;
+    font-family: Arial, sans-serif;
+    gap: 4px;
+    height: 100%;
+    padding: 8px;
+    width: 100%;
+}
+
+.simple-line-width-picker-value {
+    font-size: 12px;
+    min-height: 16px;
+}
+
+.simple-line-width-picker-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.simple-line-width-picker-option {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #c6c6c6;
+    cursor: pointer;
+    display: flex;
+    gap: 6px;
+    height: 24px;
+    justify-content: flex-start;
+    padding: 0 6px;
+    width: 72px;
+}
+
+.simple-line-width-picker-option:hover {
+    border-color: #111111;
+}
+
+.simple-line-width-picker-option-active {
+    border-color: #00a8c8;
+    box-shadow: 0 0 0 2px #00a8c8;
+}
+
+.simple-line-width-picker-line {
+    background: #111111;
+    display: block;
+    flex: 1 1 auto;
+    width: 100%;
+}
+
+.simple-line-width-picker-label {
+    flex: 0 0 24px;
+    font-size: 10px;
+    text-align: right;
+}
