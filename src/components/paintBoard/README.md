@@ -20,6 +20,19 @@ var board = PaintBoard({
 
 Tambien queda disponible como `paintBoard(...)`.
 
+## Herramientas
+
+El modo de pintado se puede cambiar desde la consola:
+
+```js
+PaintTools.use("SQUARED-POINTS");
+PaintTools.use("ROUND-POINTS");
+PaintTools.use("SQUARED-LINES");
+PaintTools.use("ROUND-LINES");
+```
+
+`SQUARED-POINTS` es el modo por defecto. `ROUND-POINTS` pinta puntos circulares. `SQUARED-LINES` pinta una linea cuadrada desde la ultima posicion del raton hasta la posicion actual mientras se arrastra. `ROUND-LINES` pinta esa linea con extremos y uniones redondeadas.
+
 ## Opciones
 
 - `id`: id del componente paint board.

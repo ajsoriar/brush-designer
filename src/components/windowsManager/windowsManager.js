@@ -320,6 +320,15 @@
                 event.stopPropagation();
                 currentWindow.maximize();
             });
+
+            topBar.addEventListener("dblclick", function(event) {
+                if (event.target.closest(".wm-actions")) {
+                    return;
+                }
+
+                event.preventDefault();
+                currentWindow.maximize();
+            });
         }
 
         if (config.movable) {

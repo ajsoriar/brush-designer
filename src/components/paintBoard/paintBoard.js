@@ -14,6 +14,44 @@
         onSave: null
     };
 
+    var PAINT_TOOL_MODES = {
+        SQUARED_POINTS: "SQUARED-POINTS",
+        ROUND_POINTS: "ROUND-POINTS",
+        SQUARED_LINES: "SQUARED-LINES",
+        ROUND_LINES: "ROUND-LINES"
+    };
+
+    var currentPaintToolMode = PAINT_TOOL_MODES.SQUARED_POINTS;
+
+    var PaintTools = {
+        modes: PAINT_TOOL_MODES,
+        use: function(mode) {
+            var normalizedMode = String(mode || "").toUpperCase();
+
+            if (!isValidPaintToolMode(normalizedMode)) {
+                throw new Error("Unknown paint tool mode: " + mode);
+            }
+
+            currentPaintToolMode = normalizedMode;
+            return currentPaintToolMode;
+        },
+        getMode: function() {
+            return currentPaintToolMode;
+        }
+    };
+
+    function isValidPaintToolMode(mode) {
+        var key;
+
+        for (key in PAINT_TOOL_MODES) {
+            if (Object.prototype.hasOwnProperty.call(PAINT_TOOL_MODES, key) && PAINT_TOOL_MODES[key] === mode) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     function extend(target, source) {
         var key;
 
@@ -36,6 +74,7 @@
         var isPainting = false;
         var stopPainting = function() {
             isPainting = false;
+            board.lastPointerPosition = null;
         };
         var board;
 
@@ -74,6 +113,7 @@
             backgroundColor: config.backgroundColor,
             paintColor: getOppositeColor(config.backgroundColor),
             brushSize: config.brushSize,
+            lastPointerPosition: null,
             clear: function() {
                 clear(board);
             },
@@ -112,6 +152,7 @@
 
             canvas.addEventListener("mouseleave", function() {
                 isPainting = false;
+                board.lastPointerPosition = null;
             });
         }
 
@@ -168,18 +209,66 @@
         var scaleY = board.canvas.height / rect.height;
         var x = Math.floor((event.clientX - rect.left) * scaleX);
         var y = Math.floor((event.clientY - rect.top) * scaleY);
+        var point = { x: x, y: y };
 
         event.preventDefault();
-        paintAt(board, x, y);
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES && board.lastPointerPosition) {
+            paintSquaredLine(board, board.lastPointerPosition, point);
+        } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES && board.lastPointerPosition) {
+            paintRoundLine(board, board.lastPointerPosition, point);
+        } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS) {
+            paintRoundPoint(board, x, y);
+        } else {
+            paintSquaredPoint(board, x, y);
+        }
+
+        board.lastPointerPosition = point;
     }
 
     function paintAt(board, x, y) {
+        paintSquaredPoint(board, x, y);
+    }
+
+    function paintSquaredPoint(board, x, y) {
         var size = Math.max(1, getCurrentBrushSize(board));
         var offset = Math.floor(size / 2);
 
         board.context.fillStyle = getCurrentPaintColor(board);
         board.context.fillRect(x - offset, y - offset, size, size);
     }
+
+    function paintRoundPoint(board, x, y) {
+        var size = Math.max(1, getCurrentBrushSize(board));
+        var radius = size / 2;
+
+        board.context.beginPath();
+        board.context.fillStyle = getCurrentPaintColor(board);
+        board.context.arc(x, y, radius, 0, Math.PI * 2);
+        board.context.fill();
+    }
+
+    function paintSquaredLine(board, fromPoint, toPoint) {
+        paintLine(board, fromPoint, toPoint, "square", "miter");
+    }
+
+    function paintRoundLine(board, fromPoint, toPoint) {
+        paintLine(board, fromPoint, toPoint, "round", "round");
+    }
+
+    function paintLine(board, fromPoint, toPoint, lineCap, lineJoin) {
+        var size = Math.max(1, getCurrentBrushSize(board));
+
+        board.context.beginPath();
+        board.context.strokeStyle = getCurrentPaintColor(board);
+        board.context.lineWidth = size;
+        board.context.lineCap = lineCap;
+        board.context.lineJoin = lineJoin;
+        board.context.moveTo(fromPoint.x, fromPoint.y);
+        board.context.lineTo(toPoint.x, toPoint.y);
+        board.context.stroke();
+    }
+
 
     function getCurrentPaintColor(board) {
         if (global.App && global.App.memory && global.App.memory.currentColor) {
@@ -246,5 +335,6 @@
 
     global.PaintBoard = PaintBoard;
     global.paintBoard = PaintBoard;
+    global.PaintTools = PaintTools;
 
 }(window));
