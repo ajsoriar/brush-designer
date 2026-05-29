@@ -42,12 +42,6 @@
     box-shadow: none;
 }
 
-.wm-window-maximized .wm-center {
-    align-items: center;
-    display: flex;
-    justify-content: center;
-}
-
 .wm-window-minimized .wm-middle-left,
 .wm-window-minimized .wm-center,
 .wm-window-minimized .wm-middle-right,
@@ -131,9 +125,12 @@
 }
 
 .wm-center {
+    align-items: center;
     background: #9E9E9E;
+    display: flex;
     grid-column: 2;
     grid-row: 2;
+    justify-content: center;
     min-height: 0;
     min-width: 0;
     overflow: auto;

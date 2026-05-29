@@ -135,6 +135,9 @@
             paintAt: function(x, y) {
                 paintAt(board, x, y);
             },
+            drawImage: function(image, x, y) {
+                drawImage(board, image, x, y);
+            },
             setSize: function(width, height) {
                 setSize(board, width, height);
             },
@@ -455,6 +458,9 @@
             currentPaintToolMode === PAINT_TOOL_MODES.STROKED_OVALS;
     }
 
+    function drawImage(board, image, x, y) {
+        board.context.drawImage(image, x || 0, y || 0);
+    }
 
     function getCurrentPaintColor(board) {
         if (global.App && global.App.memory && global.App.memory.currentColor) {

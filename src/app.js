@@ -8,6 +8,7 @@
     var appColorPicker = null;
     var appLineWidthPicker = null;
     var documentCount = 0;
+    var activePaintBoard = null;
 
     global.App = global.App || {};
     global.App.memory = global.App.memory || {};
@@ -133,6 +134,7 @@
         var windowFrameWidth = 16;
         var windowFrameHeight = 36;
         var windowIndex = documentCount + 1;
+        var paintBoard;
         var paintBoardWindow = WindowsManager.create({
             id: "demo-paint-board-window-" + windowIndex,
             title: "Paint Board " + windowIndex,
@@ -142,7 +144,7 @@
             y: 120,
             width: paintBoardWidth + windowFrameWidth,
             height: paintBoardHeight + windowFrameHeight,
-            resizable: false,
+            resizable: true,
             maximizable: true,
             scrollBarX: false,
             scrollBarY: false,
@@ -155,15 +157,112 @@
 
         documentCount += 1;
 
-        PaintBoard({
+        paintBoard = PaintBoard({
             id: "demo-paint-board-" + windowIndex,
             containerId: paintBoardWindow.contentId,
             width: paintBoardWidth,
             height: paintBoardHeight,
             backgroundColor: config.backgroundColor || "#ffffff"
         });
+        activePaintBoard = paintBoard;
+
+        paintBoardWindow.element.addEventListener("mousedown", function() {
+            activePaintBoard = paintBoard;
+        });
 
         return paintBoardWindow;
+    }
+
+    function pasteFromClipboard() {
+        var targetBoard = activePaintBoard;
+
+        if (!targetBoard || !global.navigator.clipboard || !global.navigator.clipboard.read) {
+            return;
+        }
+
+        global.navigator.clipboard.read().then(function(items) {
+            var imageBlob = getClipboardImageBlob(items);
+
+            if (!imageBlob) {
+                return null;
+            }
+
+            return pasteImageBlob(targetBoard, imageBlob);
+        }).catch(function(error) {
+            console.log("Paste from clipboard failed:", error);
+        });
+    }
+
+    function getClipboardImageBlob(items) {
+        var i;
+        var j;
+        var item;
+        var type;
+
+        for (i = 0; i < items.length; i++) {
+            item = items[i];
+
+            for (j = 0; j < item.types.length; j++) {
+                type = item.types[j];
+
+                if (type.indexOf("image/") === 0) {
+                    return item.getType(type);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    function pasteImageBlob(board, imageBlobPromise) {
+        return imageBlobPromise.then(function(blob) {
+            if (global.createImageBitmap) {
+                return global.createImageBitmap(blob).then(function(imageBitmap) {
+                    board.drawImage(imageBitmap, 0, 0);
+                });
+            }
+
+            return pasteImageWithElement(board, blob);
+        });
+    }
+
+    function pasteImageWithElement(board, blob) {
+        return new Promise(function(resolve) {
+            var image = new Image();
+            var objectUrl = URL.createObjectURL(blob);
+
+            image.onload = function() {
+                board.drawImage(image, 0, 0);
+                URL.revokeObjectURL(objectUrl);
+                resolve();
+            };
+
+            image.src = objectUrl;
+        });
+    }
+
+    function saveImage() {
+        var targetBoard = activePaintBoard;
+        var link;
+
+        if (!targetBoard) {
+            return;
+        }
+
+        link = document.createElement("a");
+        link.href = targetBoard.save();
+        link.download = targetBoard.id + ".png";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function clearBoard() {
+        if (!activePaintBoard) {
+            return;
+        }
+
+        activePaintBoard.clear();
     }
 
     function openBrushDesignerInWindow() {
@@ -438,6 +537,9 @@
 
     global.openEditor = openEditor;
     global.newDocument = newDocument;
+    global.pasteFromClipboard = pasteFromClipboard;
+    global.saveImage = saveImage;
+    global.clearBoard = clearBoard;
     global.createDemoWindow = createDemoWindow;
     global.openBrushDesignerInWindow = openBrushDesignerInWindow;
     global.openBrushEditorOutputsWindow = openBrushEditorOutputsWindow;
