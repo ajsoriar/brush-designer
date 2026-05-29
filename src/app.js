@@ -13,6 +13,7 @@
     global.App.memory = global.App.memory || {};
     global.App.memory.currentColor = global.App.memory.currentColor || "#000000";
     global.App.memory.currentLineWidth = global.App.memory.currentLineWidth || 1;
+    global.App.memory.currentDesignedBrush = global.App.memory.currentDesignedBrush || null;
 
     $(document).ready(function() {
         console.log("jQuery document ready!");
@@ -239,7 +240,48 @@
             outputsElement.id = "brush-editor-outputs";
         }
 
+        bindBrushOutputSelection(outputsElement);
         outputsWindow.contentElement.appendChild(outputsElement);
+    }
+
+    function bindBrushOutputSelection(outputsElement) {
+        if (outputsElement.getAttribute("data-selection-bound") === "true") {
+            return;
+        }
+
+        outputsElement.setAttribute("data-selection-bound", "true");
+        outputsElement.addEventListener("click", function(event) {
+            var item = event.target.closest("li");
+            var image;
+
+            if (!item || !outputsElement.contains(item)) {
+                return;
+            }
+
+            image = item.querySelector("img");
+
+            if (!image) {
+                return;
+            }
+
+            selectBrushOutput(outputsElement, item, image);
+        });
+    }
+
+    function selectBrushOutput(outputsElement, item, image) {
+        var selectedItems = outputsElement.querySelectorAll(".brush-output-selected");
+        var i;
+
+        for (i = 0; i < selectedItems.length; i++) {
+            selectedItems[i].className = selectedItems[i].className.replace(/\s?brush-output-selected/g, "");
+        }
+
+        item.className += item.className.indexOf("brush-output-selected") === -1 ? " brush-output-selected" : "";
+        global.App.memory.currentDesignedBrush = image;
+
+        if (global.PaintTools) {
+            global.PaintTools.use("DESIGNED-BRUSH");
+        }
     }
 
     function openSimpleColorPickerWindow() {

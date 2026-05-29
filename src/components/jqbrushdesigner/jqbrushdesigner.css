@@ -66,6 +66,11 @@
     width: 100px;
 }
 
+#brush-editor-outputs li.brush-output-selected {
+    outline: 3px solid #4da3ff;
+    outline-offset: -3px;
+}
+
 #brush-editor-outputs li img{
     height: 100%;
     width: 100%;

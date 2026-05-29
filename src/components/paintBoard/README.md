@@ -29,9 +29,18 @@ PaintTools.use("SQUARED-POINTS");
 PaintTools.use("ROUND-POINTS");
 PaintTools.use("SQUARED-LINES");
 PaintTools.use("ROUND-LINES");
+PaintTools.use("FILLED-SQUARES");
+PaintTools.use("FILLED-RECTANGLES");
+PaintTools.use("FILLED-CIRCLES");
+PaintTools.use("FILLED-OVALS");
+PaintTools.use("STROKED-SQUARES");
+PaintTools.use("STROKED-RECTANGLES");
+PaintTools.use("STROKED-CIRCLES");
+PaintTools.use("STROKED-OVALS");
+PaintTools.use("DESIGNED-BRUSH");
 ```
 
-`SQUARED-POINTS` es el modo por defecto. `ROUND-POINTS` pinta puntos circulares. `SQUARED-LINES` pinta una linea cuadrada desde la ultima posicion del raton hasta la posicion actual mientras se arrastra. `ROUND-LINES` pinta esa linea con extremos y uniones redondeadas.
+`SQUARED-POINTS` es el modo por defecto. `ROUND-POINTS` pinta puntos circulares. `SQUARED-LINES` pinta una linea cuadrada desde la ultima posicion del raton hasta la posicion actual mientras se arrastra. `ROUND-LINES` pinta esa linea con extremos y uniones redondeadas. Las herramientas `FILLED-*` y `STROKED-*` capturan el punto inicial en `mousedown` y dibujan la figura final en `mouseup`. `DESIGNED-BRUSH` pinta con el brush seleccionado en `brush-editor-outputs`.
 
 ## Opciones
 

@@ -18,7 +18,16 @@
         SQUARED_POINTS: "SQUARED-POINTS",
         ROUND_POINTS: "ROUND-POINTS",
         SQUARED_LINES: "SQUARED-LINES",
-        ROUND_LINES: "ROUND-LINES"
+        ROUND_LINES: "ROUND-LINES",
+        FILLED_SQUARES: "FILLED-SQUARES",
+        FILLED_RECTANGLES: "FILLED-RECTANGLES",
+        FILLED_CIRCLES: "FILLED-CIRCLES",
+        FILLED_OVALS: "FILLED-OVALS",
+        STROKED_SQUARES: "STROKED-SQUARES",
+        STROKED_RECTANGLES: "STROKED-RECTANGLES",
+        STROKED_CIRCLES: "STROKED-CIRCLES",
+        STROKED_OVALS: "STROKED-OVALS",
+        DESIGNED_BRUSH: "DESIGNED-BRUSH"
     };
 
     var currentPaintToolMode = PAINT_TOOL_MODES.SQUARED_POINTS;
@@ -72,9 +81,14 @@
         var canvas = document.createElement("canvas");
         var context;
         var isPainting = false;
-        var stopPainting = function() {
+        var stopPainting = function(event) {
+            if (isPainting && isShapeToolMode() && board.pointerStartPosition) {
+                paintShapePointerEvent(board, event);
+            }
+
             isPainting = false;
             board.lastPointerPosition = null;
+            board.pointerStartPosition = null;
         };
         var board;
 
@@ -114,6 +128,7 @@
             paintColor: getOppositeColor(config.backgroundColor),
             brushSize: config.brushSize,
             lastPointerPosition: null,
+            pointerStartPosition: null,
             clear: function() {
                 clear(board);
             },
@@ -137,7 +152,7 @@
         if (config.paintOnPointer) {
             canvas.addEventListener("mousedown", function(event) {
                 isPainting = true;
-                paintPointerEvent(board, event);
+                startPointerAction(board, event);
             });
 
             canvas.addEventListener("mousemove", function(event) {
@@ -145,12 +160,16 @@
                     return;
                 }
 
-                paintPointerEvent(board, event);
+                continuePointerAction(board, event);
             });
 
             document.addEventListener("mouseup", stopPainting);
 
             canvas.addEventListener("mouseleave", function() {
+                if (isShapeToolMode()) {
+                    return;
+                }
+
                 isPainting = false;
                 board.lastPointerPosition = null;
             });
@@ -203,13 +222,37 @@
         clear(board);
     }
 
-    function paintPointerEvent(board, event) {
+    function getPointerPosition(board, event) {
         var rect = board.canvas.getBoundingClientRect();
         var scaleX = board.canvas.width / rect.width;
         var scaleY = board.canvas.height / rect.height;
-        var x = Math.floor((event.clientX - rect.left) * scaleX);
-        var y = Math.floor((event.clientY - rect.top) * scaleY);
-        var point = { x: x, y: y };
+
+        return {
+            x: Math.floor((event.clientX - rect.left) * scaleX),
+            y: Math.floor((event.clientY - rect.top) * scaleY)
+        };
+    }
+
+    function startPointerAction(board, event) {
+        if (isShapeToolMode()) {
+            event.preventDefault();
+            board.pointerStartPosition = getPointerPosition(board, event);
+            return;
+        }
+
+        paintPointerEvent(board, event);
+    }
+
+    function continuePointerAction(board, event) {
+        if (isShapeToolMode()) {
+            return;
+        }
+
+        paintPointerEvent(board, event);
+    }
+
+    function paintPointerEvent(board, event) {
+        var point = getPointerPosition(board, event);
 
         event.preventDefault();
 
@@ -217,13 +260,27 @@
             paintSquaredLine(board, board.lastPointerPosition, point);
         } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES && board.lastPointerPosition) {
             paintRoundLine(board, board.lastPointerPosition, point);
+        } else if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH) {
+            paintDesignedBrush(board, point.x, point.y);
         } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS) {
-            paintRoundPoint(board, x, y);
+            paintRoundPoint(board, point.x, point.y);
         } else {
-            paintSquaredPoint(board, x, y);
+            paintSquaredPoint(board, point.x, point.y);
         }
 
         board.lastPointerPosition = point;
+    }
+
+    function paintShapePointerEvent(board, event) {
+        var fromPoint = board.pointerStartPosition;
+        var toPoint = getPointerPosition(board, event);
+
+        if (!fromPoint) {
+            return;
+        }
+
+        event.preventDefault();
+        paintShape(board, fromPoint, toPoint);
     }
 
     function paintAt(board, x, y) {
@@ -269,6 +326,135 @@
         board.context.stroke();
     }
 
+    function paintDesignedBrush(board, x, y) {
+        var brush = getCurrentDesignedBrush();
+        var width;
+        var height;
+        var tintedBrush;
+
+        if (!brush) {
+            paintRoundPoint(board, x, y);
+            return;
+        }
+
+        width = brush.naturalWidth || brush.width;
+        height = brush.naturalHeight || brush.height;
+        tintedBrush = getTintedBrush(brush, width, height, getCurrentPaintColor(board));
+        board.context.drawImage(tintedBrush, x - width / 2, y - height / 2, width, height);
+    }
+
+    function getTintedBrush(brush, width, height, color) {
+        var canvas = document.createElement("canvas");
+        var context;
+
+        canvas.width = width;
+        canvas.height = height;
+        context = canvas.getContext("2d");
+        context.drawImage(brush, 0, 0, width, height);
+        context.globalCompositeOperation = "source-in";
+        context.fillStyle = color;
+        context.fillRect(0, 0, width, height);
+
+        return canvas;
+    }
+
+    function paintShape(board, fromPoint, toPoint) {
+        if (currentPaintToolMode === PAINT_TOOL_MODES.FILLED_SQUARES) {
+            paintSquare(board, fromPoint, toPoint, true);
+        } else if (currentPaintToolMode === PAINT_TOOL_MODES.FILLED_RECTANGLES) {
+            paintRectangle(board, fromPoint, toPoint, true);
+        } else if (currentPaintToolMode === PAINT_TOOL_MODES.FILLED_CIRCLES) {
+            paintCircle(board, fromPoint, toPoint, true);
+        } else if (currentPaintToolMode === PAINT_TOOL_MODES.STROKED_SQUARES) {
+            paintSquare(board, fromPoint, toPoint, false);
+        } else if (currentPaintToolMode === PAINT_TOOL_MODES.STROKED_RECTANGLES) {
+            paintRectangle(board, fromPoint, toPoint, false);
+        } else if (currentPaintToolMode === PAINT_TOOL_MODES.STROKED_CIRCLES) {
+            paintCircle(board, fromPoint, toPoint, false);
+        } else if (currentPaintToolMode === PAINT_TOOL_MODES.FILLED_OVALS) {
+            paintOval(board, fromPoint, toPoint, true);
+        } else if (currentPaintToolMode === PAINT_TOOL_MODES.STROKED_OVALS) {
+            paintOval(board, fromPoint, toPoint, false);
+        }
+    }
+
+    function paintSquare(board, fromPoint, toPoint, fill) {
+        paintRectangle(board, fromPoint, getSquareEndPoint(fromPoint, toPoint), fill);
+    }
+
+    function paintCircle(board, fromPoint, toPoint, fill) {
+        paintOval(board, fromPoint, getSquareEndPoint(fromPoint, toPoint), fill);
+    }
+
+    function paintRectangle(board, fromPoint, toPoint, fill) {
+        var rect = getShapeRect(fromPoint, toPoint);
+
+        board.context.fillStyle = getCurrentPaintColor(board);
+        board.context.strokeStyle = getCurrentPaintColor(board);
+        board.context.lineWidth = Math.max(1, getCurrentBrushSize(board));
+
+        if (fill) {
+            board.context.fillRect(rect.x, rect.y, rect.width, rect.height);
+        } else {
+            board.context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+        }
+    }
+
+    function paintOval(board, fromPoint, toPoint, fill) {
+        var rect = getShapeRect(fromPoint, toPoint);
+
+        board.context.beginPath();
+        board.context.fillStyle = getCurrentPaintColor(board);
+        board.context.strokeStyle = getCurrentPaintColor(board);
+        board.context.lineWidth = Math.max(1, getCurrentBrushSize(board));
+        board.context.ellipse(
+            rect.x + rect.width / 2,
+            rect.y + rect.height / 2,
+            Math.abs(rect.width / 2),
+            Math.abs(rect.height / 2),
+            0,
+            0,
+            Math.PI * 2
+        );
+
+        if (fill) {
+            board.context.fill();
+        } else {
+            board.context.stroke();
+        }
+    }
+
+    function getShapeRect(fromPoint, toPoint) {
+        return {
+            x: Math.min(fromPoint.x, toPoint.x),
+            y: Math.min(fromPoint.y, toPoint.y),
+            width: Math.abs(toPoint.x - fromPoint.x),
+            height: Math.abs(toPoint.y - fromPoint.y)
+        };
+    }
+
+    function getSquareEndPoint(fromPoint, toPoint) {
+        var width = toPoint.x - fromPoint.x;
+        var height = toPoint.y - fromPoint.y;
+        var side = Math.max(Math.abs(width), Math.abs(height));
+
+        return {
+            x: fromPoint.x + (width < 0 ? -side : side),
+            y: fromPoint.y + (height < 0 ? -side : side)
+        };
+    }
+
+    function isShapeToolMode() {
+        return currentPaintToolMode === PAINT_TOOL_MODES.FILLED_SQUARES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.FILLED_RECTANGLES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.FILLED_CIRCLES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.FILLED_OVALS ||
+            currentPaintToolMode === PAINT_TOOL_MODES.STROKED_SQUARES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.STROKED_RECTANGLES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.STROKED_CIRCLES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.STROKED_OVALS;
+    }
+
 
     function getCurrentPaintColor(board) {
         if (global.App && global.App.memory && global.App.memory.currentColor) {
@@ -284,6 +470,14 @@
         }
 
         return board.brushSize;
+    }
+
+    function getCurrentDesignedBrush() {
+        if (global.App && global.App.memory && global.App.memory.currentDesignedBrush) {
+            return global.App.memory.currentDesignedBrush;
+        }
+
+        return null;
     }
 
     function getOppositeColor(color) {
