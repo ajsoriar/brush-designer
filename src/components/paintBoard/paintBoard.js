@@ -42,6 +42,7 @@
             }
 
             currentPaintToolMode = normalizedMode;
+            notifyPaintToolModeChange(currentPaintToolMode);
             return currentPaintToolMode;
         },
         getMode: function() {
@@ -59,6 +60,25 @@
         }
 
         return false;
+    }
+
+    function notifyPaintToolModeChange(mode) {
+        var event;
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-tools-change", {
+                detail: {
+                    mode: mode
+                }
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-tools-change", false, false, {
+                mode: mode
+            });
+        }
+
+        global.dispatchEvent(event);
     }
 
     function extend(target, source) {

@@ -1,0 +1,39 @@
+.paint-tools {
+    align-content: start;
+    background: #2b2b2b;
+    display: grid;
+    gap: 0;
+    justify-content: start;
+    padding: 0;
+}
+
+.paint-tools-button {
+    align-items: center;
+    background-image: url("./btn-normal.png");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    color: #111;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    font-family: Arial, sans-serif;
+    font-size: 8px;
+    font-weight: 700;
+    justify-content: center;
+    line-height: 1.05;
+    overflow: hidden;
+    text-align: center;
+    user-select: none;
+}
+
+.paint-tools-button-active {
+    background-image: url("./btn-selected.png");
+}
+
+.paint-tools-button-line {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

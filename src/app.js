@@ -7,6 +7,7 @@
     var appBigColorPicker = null;
     var appColorPicker = null;
     var appLineWidthPicker = null;
+    var appPaintTools = null;
     var documentCount = 0;
     var activePaintBoard = null;
 
@@ -21,6 +22,7 @@
         openBrushEditorOutputsWindow();
         openSimpleColorPickerWindow();
         openSimpleLineWidthPickerWindow();
+        openPaintToolsWindow();
     });
 
     function openEditor() {
@@ -527,6 +529,66 @@
         return appLineWidthPicker;
     }
 
+    function openPaintToolsWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("paint-tools");
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return appPaintTools;
+        }
+
+        var btnSize = 47;
+        var rows = 2;
+        var toolsCount = getPaintToolsCount();
+        var columns = Math.max(1, Math.ceil(toolsCount / rows));
+        var toolsWidth = columns * btnSize;
+        var toolsHeight = rows * btnSize;
+        var windowFrameWidth = 16;
+        var windowFrameHeight = 36;
+        var toolsWindow = WindowsManager.create({
+            id: "paint-tools-window",
+            windowId: "paint-tools",
+            title: "Paint Tools",
+            type: "TOOL",
+            x: 20,
+            y: 590,
+            width: toolsWidth + windowFrameWidth,
+            height: toolsHeight + windowFrameHeight,
+            resizable: false,
+            scrollBarX: false,
+            scrollBarY: false,
+            contentId: "paint-tools-window-content"
+        });
+
+        appPaintTools = PaintToolsComponent({
+            id: "app-paint-tools",
+            containerId: toolsWindow.contentId,
+            btnSize: btnSize,
+            rows: rows
+        });
+
+        toolsWindow.scaleToContent(appPaintTools.getWidth(), appPaintTools.getHeight());
+
+        return appPaintTools;
+    }
+
+    function getPaintToolsCount() {
+        var count = 0;
+        var key;
+
+        if (!global.PaintTools || !global.PaintTools.modes) {
+            return count;
+        }
+
+        for (key in global.PaintTools.modes) {
+            if (Object.prototype.hasOwnProperty.call(global.PaintTools.modes, key)) {
+                count += 1;
+            }
+        }
+
+        return count;
+    }
+
     function renderBruses() {
         console.log("beforeClose!");
     }
@@ -546,6 +608,7 @@
     global.openSimpleColorPickerWindow = openSimpleColorPickerWindow;
     global.openBigColorPickerWindow = openBigColorPickerWindow;
     global.openSimpleLineWidthPickerWindow = openSimpleLineWidthPickerWindow;
+    global.openPaintToolsWindow = openPaintToolsWindow;
     global.renderBruses = renderBruses;
     global.storeImage = storeImage;
 
