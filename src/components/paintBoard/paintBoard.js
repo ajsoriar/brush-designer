@@ -97,8 +97,11 @@
     function PaintBoard(options) {
         var config = extend(extend({}, DEFAULTS), options || {});
         var boardId = config.id || ("paint-board-" + Date.now());
+        var baseLayerId = boardId + "-layer-1";
         var container = getContainer(config.containerId);
         var element = document.createElement("div");
+        var layers = document.createElement("ol");
+        var baseLayer = document.createElement("li");
         var canvas = document.createElement("canvas");
         var context;
         var isPainting = false;
@@ -124,6 +127,17 @@
         element.style.height = config.height + "px";
         element.style.backgroundColor = config.backgroundColor;
 
+        layers.id = boardId + "-layers";
+        layers.className = "paint-board-layers";
+        layers.style.width = config.width + "px";
+        layers.style.height = config.height + "px";
+
+        baseLayer.id = baseLayerId;
+        baseLayer.className = "paint-board-layer";
+        baseLayer.setAttribute("data-layer", baseLayerId);
+        baseLayer.style.width = config.width + "px";
+        baseLayer.style.height = config.height + "px";
+
         canvas.id = boardId + "-canvas";
         canvas.className = "paint-board-canvas";
         canvas.width = config.width;
@@ -131,7 +145,9 @@
         canvas.style.width = config.width + "px";
         canvas.style.height = config.height + "px";
 
-        element.appendChild(canvas);
+        baseLayer.appendChild(canvas);
+        layers.appendChild(baseLayer);
+        element.appendChild(layers);
         container.appendChild(element);
 
         context = canvas.getContext("2d");
@@ -141,6 +157,9 @@
         board = {
             id: boardId,
             element: element,
+            layersElement: layers,
+            activeLayerElement: baseLayer,
+            activeLayerId: baseLayerId,
             canvas: canvas,
             context: context,
             width: config.width,
@@ -232,6 +251,10 @@
         board.height = height;
         board.element.style.width = width + "px";
         board.element.style.height = height + "px";
+        board.layersElement.style.width = width + "px";
+        board.layersElement.style.height = height + "px";
+        board.activeLayerElement.style.width = width + "px";
+        board.activeLayerElement.style.height = height + "px";
         board.canvas.width = width;
         board.canvas.height = height;
         board.canvas.style.width = width + "px";

@@ -4,9 +4,31 @@
     position: relative;
 }
 
-.paint-board-canvas {
+.paint-board-layers {
     display: block;
+    height: 100%;
     left: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0;
     position: absolute;
     top: 0;
+    width: 100%;
+}
+
+.paint-board-layer {
+    display: block;
+    height: 100%;
+    left: 0;
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    top: 0;
+    width: 100%;
+}
+
+.paint-board-canvas {
+    display: block;
+    height: 100%;
+    width: 100%;
 }
