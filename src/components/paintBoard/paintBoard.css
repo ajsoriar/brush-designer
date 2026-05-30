@@ -30,5 +30,7 @@
 .paint-board-canvas {
     display: block;
     height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
     width: 100%;
 }
