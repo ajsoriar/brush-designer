@@ -172,14 +172,54 @@
             height: paintBoardHeight,
             backgroundColor: config.backgroundColor || "#ffffff"
         });
+        paintBoard.window = paintBoardWindow;
+        paintBoardWindow.baseTitle = paintBoardWindow.title;
         activePaintBoard = paintBoard;
+        setActiveZoomBoard(paintBoard);
+        updatePaintBoardWindowTitle(paintBoard);
 
         paintBoardWindow.element.addEventListener("mousedown", function() {
             activePaintBoard = paintBoard;
+            setActiveZoomBoard(paintBoard);
+            updatePaintBoardWindowTitle(paintBoard);
         });
 
         return paintBoardWindow;
     }
+
+    function setActiveZoomBoard(paintBoard) {
+        if (global.Zoom && global.Zoom.setActiveBoard) {
+            global.Zoom.setActiveBoard(paintBoard.element);
+        }
+    }
+
+    function updatePaintBoardWindowTitle(paintBoard) {
+        var zoom = 1;
+        var title;
+
+        if (!paintBoard || !paintBoard.window) {
+            return;
+        }
+
+        if (paintBoard.element && paintBoard.element.getAttribute("data-zoom")) {
+            zoom = parseFloat(paintBoard.element.getAttribute("data-zoom"));
+        }
+
+        if (isNaN(zoom)) {
+            zoom = 1;
+        }
+
+        title = paintBoard.window.baseTitle + " - " + paintBoard.width + "x" + paintBoard.height + " - " + Math.round(zoom * 100) + "%";
+        paintBoard.window.setTitle(title);
+    }
+
+    global.addEventListener("paint-board-zoom-change", function(event) {
+        if (!activePaintBoard || !event.detail || event.detail.board !== activePaintBoard.element) {
+            return;
+        }
+
+        updatePaintBoardWindowTitle(activePaintBoard);
+    });
 
     function pasteFromClipboard() {
         var targetBoard = activePaintBoard;
