@@ -27,6 +27,7 @@
         STROKED_RECTANGLES: "STROKED-RECTANGLES",
         STROKED_CIRCLES: "STROKED-CIRCLES",
         STROKED_OVALS: "STROKED-OVALS",
+        PAINT_BUCKET: "PAINT-BUCKET",
         DESIGNED_BRUSH: "DESIGNED-BRUSH"
     };
 
@@ -257,6 +258,12 @@
     }
 
     function startPointerAction(board, event) {
+        if (currentPaintToolMode === PAINT_TOOL_MODES.PAINT_BUCKET) {
+            event.preventDefault();
+            paintBucketPointerEvent(board, event);
+            return;
+        }
+
         if (isShapeToolMode()) {
             event.preventDefault();
             board.pointerStartPosition = getPointerPosition(board, event);
@@ -267,6 +274,10 @@
     }
 
     function continuePointerAction(board, event) {
+        if (currentPaintToolMode === PAINT_TOOL_MODES.PAINT_BUCKET) {
+            return;
+        }
+
         if (isShapeToolMode()) {
             return;
         }
@@ -304,6 +315,12 @@
 
         event.preventDefault();
         paintShape(board, fromPoint, toPoint);
+    }
+
+    function paintBucketPointerEvent(board, event) {
+        var point = getPointerPosition(board, event);
+
+        paintBucket(board, point.x, point.y);
     }
 
     function paintAt(board, x, y) {
@@ -364,6 +381,78 @@
         height = brush.naturalHeight || brush.height;
         tintedBrush = getTintedBrush(brush, width, height, getCurrentPaintColor(board));
         board.context.drawImage(tintedBrush, x - width / 2, y - height / 2, width, height);
+    }
+
+    function paintBucket(board, x, y) {
+        var imageData = board.context.getImageData(0, 0, board.canvas.width, board.canvas.height);
+        var data = imageData.data;
+        var targetColor = getPixelColor(data, imageData.width, x, y);
+        var fillColor = getRgb(getCurrentPaintColor(board));
+        var stack;
+        var point;
+        var index;
+
+        if (colorsMatch(targetColor, fillColor)) {
+            return;
+        }
+
+        fillColor.a = 255;
+        stack = [{ x: x, y: y }];
+
+        while (stack.length) {
+            point = stack.pop();
+
+            if (point.x < 0 || point.x >= imageData.width || point.y < 0 || point.y >= imageData.height) {
+                continue;
+            }
+
+            index = getPixelIndex(imageData.width, point.x, point.y);
+
+            if (!colorsMatchAt(data, index, targetColor)) {
+                continue;
+            }
+
+            data[index] = fillColor.r;
+            data[index + 1] = fillColor.g;
+            data[index + 2] = fillColor.b;
+            data[index + 3] = 255;
+
+            stack.push({ x: point.x + 1, y: point.y });
+            stack.push({ x: point.x - 1, y: point.y });
+            stack.push({ x: point.x, y: point.y + 1 });
+            stack.push({ x: point.x, y: point.y - 1 });
+        }
+
+        board.context.putImageData(imageData, 0, 0);
+    }
+
+    function getPixelIndex(width, x, y) {
+        return ((y * width) + x) * 4;
+    }
+
+    function getPixelColor(data, width, x, y) {
+        var index = getPixelIndex(width, x, y);
+
+        return {
+            r: data[index],
+            g: data[index + 1],
+            b: data[index + 2],
+            a: data[index + 3]
+        };
+    }
+
+    function colorsMatchAt(data, index, color) {
+        return data[index] === color.r &&
+            data[index + 1] === color.g &&
+            data[index + 2] === color.b &&
+            data[index + 3] === color.a;
+    }
+
+    function colorsMatch(left, right) {
+        return left.r === right.r &&
+            left.g === right.g &&
+            left.b === right.b &&
+            (left.a === undefined || right.a === undefined || left.a === right.a);
     }
 
     function getTintedBrush(brush, width, height, color) {
