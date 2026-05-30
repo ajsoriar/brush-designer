@@ -8,6 +8,7 @@
     var appColorPicker = null;
     var appLineWidthPicker = null;
     var appPaintTools = null;
+    var appStarGenerator = null;
     var documentCount = 0;
     var activePaintBoard = null;
 
@@ -16,6 +17,11 @@
     global.App.memory.currentColor = global.App.memory.currentColor || "#000000";
     global.App.memory.currentLineWidth = global.App.memory.currentLineWidth || 1;
     global.App.memory.currentDesignedBrush = global.App.memory.currentDesignedBrush || null;
+    global.App.memory.currentStar = global.App.memory.currentStar || {
+        points: 5,
+        outerRadius: 96,
+        innerRadius: 44
+    };
 
     $(document).ready(function() {
         console.log("jQuery document ready!");
@@ -572,6 +578,64 @@
         return appPaintTools;
     }
 
+    function openStarGeneratorWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("star-generator");
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return appStarGenerator;
+        }
+
+        var generatorWidth = 420;
+        var generatorHeight = 560;
+        var windowFrameWidth = 16;
+        var windowFrameHeight = 36;
+        var generatorWindow = WindowsManager.create({
+            id: "star-generator-window",
+            windowId: "star-generator",
+            title: "Star",
+            type: "TOOL",
+            x: 280,
+            y: 120,
+            width: generatorWidth + windowFrameWidth,
+            height: generatorHeight + windowFrameHeight,
+            resizable: false,
+            minimizable: false,
+            scrollBarX: false,
+            scrollBarY: false,
+            contentId: "star-generator-window-content"
+        });
+
+        generatorWindow.element.className += " wm-window-star-generator";
+        appStarGenerator = StarGenerator({
+            id: "app-star-generator",
+            containerId: generatorWindow.contentId,
+            width: generatorWidth,
+            height: generatorHeight,
+            current: global.App.memory.currentStar,
+            onChange: function(current) {
+                global.App.memory.currentStar = current;
+            },
+            onCancel: function() {
+                generatorWindow.close();
+            },
+            onGenerate: function(result) {
+                global.App.memory.currentStar = result.current;
+                global.App.memory.currentDesignedBrush = result.image;
+
+                if (global.PaintTools) {
+                    global.PaintTools.use("DESIGNED-BRUSH");
+                }
+
+                generatorWindow.close();
+            }
+        });
+
+        generatorWindow.scaleToContent(appStarGenerator.getWidth(), appStarGenerator.getHeight());
+
+        return appStarGenerator;
+    }
+
     function getPaintToolsCount() {
         var count = 0;
         var key;
@@ -609,6 +673,7 @@
     global.openBigColorPickerWindow = openBigColorPickerWindow;
     global.openSimpleLineWidthPickerWindow = openSimpleLineWidthPickerWindow;
     global.openPaintToolsWindow = openPaintToolsWindow;
+    global.openStarGeneratorWindow = openStarGeneratorWindow;
     global.renderBruses = renderBruses;
     global.storeImage = storeImage;
 
