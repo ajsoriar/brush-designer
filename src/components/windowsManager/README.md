@@ -53,10 +53,12 @@ document.getElementById(win.contentId).innerHTML = "<p>Contenido de la ventana</
 - `WindowsManager.minimizeWindow(id)`
 - `WindowsManager.maximizeWindow(id)`
 - `WindowsManager.restoreWindow(id)`
+- `WindowsManager.setWindowTitle(id, title)`
 - `WindowsManager.bringToFront(id)`
 
 Cada ventana creada tambien expone:
 
+- `window.setTitle(title)`: cambia el titulo visible de la ventana.
 - `window.scaleToContent(width, height)`: ajusta la ventana para que el div central tenga ese tamano.
 
 ## Z-index

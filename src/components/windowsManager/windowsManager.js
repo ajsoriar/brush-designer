@@ -51,6 +51,7 @@
         minimizeWindow: callOnWindow("minimize"),
         maximizeWindow: callOnWindow("maximize"),
         restoreWindow: callOnWindow("restore"),
+        setWindowTitle: setWindowTitle,
         bringToFront: bringToFront
     };
 
@@ -601,6 +602,18 @@
 
             return currentWindow;
         };
+    }
+
+    function setWindowTitle(id, title) {
+        var currentWindow = getWindow(id);
+
+        if (!currentWindow) {
+            return null;
+        }
+
+        currentWindow.setTitle(title);
+
+        return currentWindow;
     }
 
     global.WindowsManager = manager;
