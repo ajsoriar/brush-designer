@@ -33,6 +33,7 @@
         maximizable: false,
         closable: true,
         modal: false,
+        scrollbars: null,
         scrollBarX: true,
         scrollBarY: true,
         parent: null,
@@ -52,6 +53,7 @@
         maximizeWindow: callOnWindow("maximize"),
         restoreWindow: callOnWindow("restore"),
         setWindowTitle: setWindowTitle,
+        setWindowScrollBars: setWindowScrollBars,
         bringToFront: bringToFront
     };
 
@@ -77,6 +79,8 @@
         var modalOverlay = null;
         var currentWindow;
         var existingWindow;
+
+        normalizeScrollBarsConfig(config, options || {});
 
         if (config.windowId) {
             existingWindow = getWindowByWindowId(config.windowId);
@@ -174,6 +178,9 @@
             setContent: function(content) {
                 setContent(currentWindow, content);
             },
+            setScrollBars: function(scrollbars, scrollBarY) {
+                setScrollBars(currentWindow, scrollbars, scrollBarY);
+            },
             moveTo: function(x, y) {
                 element.style.left = x + "px";
                 element.style.top = y + "px";
@@ -188,8 +195,7 @@
         };
 
         currentWindow.contentElement = element.querySelector(".wm-center");
-        currentWindow.contentElement.style.overflowX = config.scrollBarX ? "auto" : "hidden";
-        currentWindow.contentElement.style.overflowY = config.scrollBarY ? "auto" : "hidden";
+        setScrollBars(currentWindow, config.scrollBarX, config.scrollBarY);
         currentWindow.setTitle(config.title);
 
         if (config.content !== null && config.content !== undefined) {
@@ -264,6 +270,13 @@
         return WINDOW_TYPES.NORMAL;
     }
 
+    function normalizeScrollBarsConfig(config, options) {
+        if (typeof options.scrollbars === "boolean") {
+            config.scrollBarX = options.scrollbars;
+            config.scrollBarY = options.scrollbars;
+        }
+    }
+
     function setContent(currentWindow, content) {
         var contentElement = currentWindow.contentElement;
 
@@ -277,6 +290,17 @@
         if (content && content.nodeType) {
             contentElement.appendChild(content);
         }
+    }
+
+    function setScrollBars(currentWindow, scrollBarX, scrollBarY) {
+        var bothAxes = typeof scrollBarX === "boolean" && typeof scrollBarY !== "boolean";
+        var horizontal = !!scrollBarX;
+        var vertical = bothAxes ? horizontal : !!scrollBarY;
+
+        currentWindow.scrollBarX = horizontal;
+        currentWindow.scrollBarY = vertical;
+        currentWindow.contentElement.style.overflowX = horizontal ? "auto" : "hidden";
+        currentWindow.contentElement.style.overflowY = vertical ? "auto" : "hidden";
     }
 
     function bindWindowEvents(currentWindow, config) {
@@ -612,6 +636,18 @@
         }
 
         currentWindow.setTitle(title);
+
+        return currentWindow;
+    }
+
+    function setWindowScrollBars(id, scrollBarX, scrollBarY) {
+        var currentWindow = getWindow(id);
+
+        if (!currentWindow) {
+            return null;
+        }
+
+        currentWindow.setScrollBars(scrollBarX, scrollBarY);
 
         return currentWindow;
     }

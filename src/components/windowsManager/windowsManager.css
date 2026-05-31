@@ -179,3 +179,15 @@
 .wm-window-not-resizable .wm-bottom-right {
     cursor: default;
 }
+
+.wm-window-paint-board .wm-center {
+    display: block;
+}
+
+.paint-board-scroll-area {
+    display: block;
+    left: 0;
+    pointer-events: none;
+    position: relative;
+    top: 0;
+}

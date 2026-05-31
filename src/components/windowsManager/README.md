@@ -40,6 +40,7 @@ document.getElementById(win.contentId).innerHTML = "<p>Contenido de la ventana</
 - `maximizable`: muestra u oculta el boton de maximizar/restaurar.
 - `closable`: muestra u oculta el boton `x`.
 - `modal`: alias legacy de `type: "MODAL"`.
+- `scrollbars`: activa u oculta ambos scrollbars del div central.
 - `scrollBarX`: activa u oculta el scroll horizontal del div central.
 - `scrollBarY`: activa u oculta el scroll vertical del div central.
 - `content`: string HTML o nodo DOM inicial para pintar dentro del centro.
@@ -54,11 +55,13 @@ document.getElementById(win.contentId).innerHTML = "<p>Contenido de la ventana</
 - `WindowsManager.maximizeWindow(id)`
 - `WindowsManager.restoreWindow(id)`
 - `WindowsManager.setWindowTitle(id, title)`
+- `WindowsManager.setWindowScrollBars(id, scrollBarX, scrollBarY)`
 - `WindowsManager.bringToFront(id)`
 
 Cada ventana creada tambien expone:
 
 - `window.setTitle(title)`: cambia el titulo visible de la ventana.
+- `window.setScrollBars(scrollBarX, scrollBarY)`: cambia el overflow del div central. Si se pasa un solo booleano, se aplica a ambos ejes.
 - `window.scaleToContent(width, height)`: ajusta la ventana para que el div central tenga ese tamano.
 
 ## Z-index

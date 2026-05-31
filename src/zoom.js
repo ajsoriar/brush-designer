@@ -6,6 +6,7 @@
     var MAX_ZOOM = 4;
     var ZOOM_STEP = 0.1;
     var ACTIVE_BOARD_SELECTOR = ".paint-board[data-active-paint-board=\"true\"]";
+    var resizeObserver = null;
 
     function handlePointerDown(event) {
         var board = getBoardFromEvent(event);
@@ -121,36 +122,170 @@
     function applyBoardZoom(board, zoom) {
         var currentZoom = getBoardZoom(board);
         var normalizedZoom = normalizeZoom(zoom);
-        var origin = getVisibleTransformOrigin(board, currentZoom);
+        var viewport = getBoardViewport(board);
+        var visibleCenter = getVisibleCenterPoint(viewport, currentZoom);
+        var nextZoom = parseFloat(normalizedZoom);
 
+        setupZoomLayout(board, viewport);
         board.setAttribute("data-zoom", normalizedZoom);
-        board.style.transformOrigin = origin.x + "px " + origin.y + "px";
+        board.style.transformOrigin = "0 0";
         board.style.transform = "scale(" + normalizedZoom + ")";
-        notifyZoomChange(board, parseFloat(normalizedZoom));
+        updateZoomLayout(board, viewport, nextZoom);
+        restoreVisibleCenter(viewport, visibleCenter, nextZoom);
+        notifyZoomChange(board, nextZoom);
     }
 
-    function getVisibleTransformOrigin(board, currentZoom) {
-        var center = board.closest && board.closest(".wm-center");
-        var boardRect = board.getBoundingClientRect();
-        var centerRect;
-        var viewportCenterX;
-        var viewportCenterY;
+    function setupZoomLayout(board, viewport) {
+        var scrollArea;
 
-        if (!center || !boardRect.width || !boardRect.height) {
-            return {
-                x: board.offsetWidth / 2,
-                y: board.offsetHeight / 2
-            };
+        if (!viewport) {
+            return;
         }
 
-        centerRect = center.getBoundingClientRect();
-        viewportCenterX = centerRect.left + (center.clientWidth / 2);
-        viewportCenterY = centerRect.top + (center.clientHeight / 2);
+        scrollArea = getScrollArea(board);
+
+        if (!scrollArea) {
+            scrollArea = document.createElement("div");
+            scrollArea.className = "paint-board-scroll-area";
+            scrollArea.setAttribute("data-paint-board-scroll-area", board.id || "paint-board");
+            viewport.insertBefore(scrollArea, board);
+        }
+
+        observeViewportResize(viewport);
+        board.style.left = "0";
+        board.style.margin = "0";
+        board.style.position = "absolute";
+        board.style.top = "0";
+        board.style.zIndex = "1";
+    }
+
+    function updateZoomLayout(board, viewport, zoom) {
+        var scrollArea = getScrollArea(board);
+        var layout;
+
+        if (!scrollArea || !viewport) {
+            return;
+        }
+
+        layout = getZoomLayout(board, viewport, zoom);
+        board.style.left = layout.left + "px";
+        board.style.top = layout.top + "px";
+        scrollArea.style.width = layout.width + "px";
+        scrollArea.style.height = layout.height + "px";
+    }
+
+    function updateViewportZoomLayout(viewport) {
+        var boards;
+        var i;
+
+        if (!viewport) {
+            return;
+        }
+
+        boards = viewport.querySelectorAll(".paint-board");
+
+        for (i = 0; i < boards.length; i++) {
+            updateBoardZoomLayout(boards[i]);
+        }
+    }
+
+    function updateBoardZoomLayout(board) {
+        var viewport = getBoardViewport(board);
+        var zoom = getBoardZoom(board);
+
+        if (!viewport) {
+            return;
+        }
+
+        setupZoomLayout(board, viewport);
+        updateZoomLayout(board, viewport, zoom);
+    }
+
+    function observeViewportResize(viewport) {
+        if (!viewport || viewport.getAttribute("data-zoom-resize-observed") === "true") {
+            return;
+        }
+
+        viewport.setAttribute("data-zoom-resize-observed", "true");
+
+        if (global.ResizeObserver) {
+            getResizeObserver().observe(viewport);
+            return;
+        }
+
+        global.addEventListener("resize", function() {
+            updateViewportZoomLayout(viewport);
+        });
+    }
+
+    function getResizeObserver() {
+        if (!resizeObserver) {
+            resizeObserver = new global.ResizeObserver(function(entries) {
+                var i;
+
+                for (i = 0; i < entries.length; i++) {
+                    updateViewportZoomLayout(entries[i].target);
+                }
+            });
+        }
+
+        return resizeObserver;
+    }
+
+    function getZoomLayout(board, viewport, zoom) {
+        var scaledWidth = Math.ceil(board.offsetWidth * zoom);
+        var scaledHeight = Math.ceil(board.offsetHeight * zoom);
+        var left = Math.max(0, Math.floor((viewport.clientWidth - scaledWidth) / 2));
+        var top = Math.max(0, Math.floor((viewport.clientHeight - scaledHeight) / 2));
 
         return {
-            x: (viewportCenterX - boardRect.left) / currentZoom,
-            y: (viewportCenterY - boardRect.top) / currentZoom
+            left: left,
+            top: top,
+            width: Math.max(viewport.clientWidth, left + scaledWidth),
+            height: Math.max(viewport.clientHeight, top + scaledHeight)
         };
+    }
+
+    function getScrollArea(board) {
+        var viewport = getBoardViewport(board);
+
+        if (!viewport) {
+            return null;
+        }
+
+        return viewport.querySelector('[data-paint-board-scroll-area="' + (board.id || "paint-board") + '"]');
+    }
+
+    function getBoardViewport(board) {
+        return board.closest && board.closest(".wm-center");
+    }
+
+    function getVisibleCenterPoint(viewport, zoom) {
+        var board = viewport && viewport.querySelector(".paint-board");
+        var left = board ? parseFloat(board.style.left) || 0 : 0;
+        var top = board ? parseFloat(board.style.top) || 0 : 0;
+
+        if (!viewport) {
+            return null;
+        }
+
+        return {
+            x: (viewport.scrollLeft + (viewport.clientWidth / 2) - left) / zoom,
+            y: (viewport.scrollTop + (viewport.clientHeight / 2) - top) / zoom
+        };
+    }
+
+    function restoreVisibleCenter(viewport, visibleCenter, zoom) {
+        var board = viewport && viewport.querySelector(".paint-board");
+        var left = board ? parseFloat(board.style.left) || 0 : 0;
+        var top = board ? parseFloat(board.style.top) || 0 : 0;
+
+        if (!viewport || !visibleCenter) {
+            return;
+        }
+
+        viewport.scrollLeft = Math.max(0, left + (visibleCenter.x * zoom) - (viewport.clientWidth / 2));
+        viewport.scrollTop = Math.max(0, top + (visibleCenter.y * zoom) - (viewport.clientHeight / 2));
     }
 
     function notifyZoomChange(board, zoom) {

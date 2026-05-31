@@ -139,8 +139,8 @@
         var config = options || {};
         var paintBoardWidth = config.width || 800;
         var paintBoardHeight = config.height || 600;
-        var windowFrameWidth = 16;
-        var windowFrameHeight = 36;
+        var windowFrameWidth = 18;
+        var windowFrameHeight = 38;
         var windowIndex = documentCount + 1;
         var paintBoard;
         var paintBoardWindow = WindowsManager.create({
@@ -154,8 +154,7 @@
             height: paintBoardHeight + windowFrameHeight,
             resizable: true,
             maximizable: true,
-            scrollBarX: false,
-            scrollBarY: false,
+            scrollbars: true,
             contentId: "demo-paint-board-window-content-" + windowIndex
         });
 
@@ -163,6 +162,7 @@
             return null;
         }
 
+        paintBoardWindow.element.className += " wm-window-paint-board";
         documentCount += 1;
 
         paintBoard = PaintBoard({
