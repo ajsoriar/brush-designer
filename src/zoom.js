@@ -75,7 +75,7 @@
         setActiveBoard(board);
 
         direction = event.deltaY < 0 ? 1 : -1;
-        zoomBoardByWheel(board, direction);
+        zoomBoardByWheel(board, direction, event);
     }
 
     function startPan(event, board) {
@@ -167,13 +167,16 @@
         return zoom;
     }
 
-    function zoomBoardByWheel(board, direction) {
+    function zoomBoardByWheel(board, direction, event) {
         var currentZoom = getBoardZoom(board);
         var progressiveZoom = Math.max(0, currentZoom - WHEEL_PROGRESSIVE_ZOOM_START);
         var step = ZOOM_STEP + (progressiveZoom * WHEEL_PROGRESSIVE_FACTOR);
         var zoom = clampZoom(currentZoom + (direction * step));
+        var viewport = getBoardViewport(board);
+        var anchor = getPointerAnchorPoint(board, viewport, event, currentZoom);
 
         applyBoardZoom(board, zoom);
+        restorePointerAnchor(viewport, anchor, zoom);
 
         return zoom;
     }
@@ -407,6 +410,25 @@
         };
     }
 
+    function getPointerAnchorPoint(board, viewport, event, zoom) {
+        var left = board ? parseFloat(board.style.left) || 0 : 0;
+        var top = board ? parseFloat(board.style.top) || 0 : 0;
+        var viewportRect;
+
+        if (!board || !viewport || !event) {
+            return null;
+        }
+
+        viewportRect = viewport.getBoundingClientRect();
+
+        return {
+            x: (viewport.scrollLeft + event.clientX - viewportRect.left - left) / zoom,
+            y: (viewport.scrollTop + event.clientY - viewportRect.top - top) / zoom,
+            viewportX: event.clientX - viewportRect.left,
+            viewportY: event.clientY - viewportRect.top
+        };
+    }
+
     function restoreVisibleCenter(viewport, visibleCenter, zoom) {
         var board = viewport && viewport.querySelector(".paint-board");
         var left = board ? parseFloat(board.style.left) || 0 : 0;
@@ -418,6 +440,19 @@
 
         viewport.scrollLeft = Math.max(0, left + (visibleCenter.x * zoom) - (viewport.clientWidth / 2));
         viewport.scrollTop = Math.max(0, top + (visibleCenter.y * zoom) - (viewport.clientHeight / 2));
+    }
+
+    function restorePointerAnchor(viewport, anchor, zoom) {
+        var board = viewport && viewport.querySelector(".paint-board");
+        var left = board ? parseFloat(board.style.left) || 0 : 0;
+        var top = board ? parseFloat(board.style.top) || 0 : 0;
+
+        if (!viewport || !anchor) {
+            return;
+        }
+
+        viewport.scrollLeft = Math.max(0, left + (anchor.x * zoom) - anchor.viewportX);
+        viewport.scrollTop = Math.max(0, top + (anchor.y * zoom) - anchor.viewportY);
     }
 
     function notifyZoomChange(board, zoom) {
