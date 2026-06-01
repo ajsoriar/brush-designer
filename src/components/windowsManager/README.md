@@ -43,6 +43,7 @@ document.getElementById(win.contentId).innerHTML = "<p>Contenido de la ventana</
 - `scrollbars`: activa u oculta ambos scrollbars del div central.
 - `scrollBarX`: activa u oculta el scroll horizontal del div central.
 - `scrollBarY`: activa u oculta el scroll vertical del div central.
+- `cornerRadius`: radio de las esquinas en px. Se limita al ancho del marco de la ventana.
 - `content`: string HTML o nodo DOM inicial para pintar dentro del centro.
 
 ## API

@@ -14,6 +14,8 @@
         MODAL: 200000
     };
 
+    var WINDOW_FRAME_EDGE_SIZE = 8;
+
     var DEFAULTS = {
         title: "Window",
         type: WINDOW_TYPES.NORMAL,
@@ -36,6 +38,7 @@
         scrollbars: null,
         scrollBarX: true,
         scrollBarY: true,
+        cornerRadius: 0,
         parent: null,
         content: null,
         contentId: null
@@ -109,6 +112,7 @@
         element.style.height = config.height + "px";
         element.style.minWidth = config.minWidth + "px";
         element.style.minHeight = config.minHeight + "px";
+        element.style.borderRadius = getCornerRadius(config.cornerRadius) + "px";
 
         if (config.fixed) {
             element.className += " wm-window-fixed";
@@ -227,6 +231,16 @@
         }
 
         return getWindowsByGroupName(config.windowGroupName).length < maxGroupItems;
+    }
+
+    function getCornerRadius(cornerRadius) {
+        var radius = parseInt(cornerRadius, 10);
+
+        if (isNaN(radius) || radius < 0) {
+            return 0;
+        }
+
+        return Math.min(radius, WINDOW_FRAME_EDGE_SIZE);
     }
 
     function getWindowsByGroupName(windowGroupName) {

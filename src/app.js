@@ -455,6 +455,7 @@
             minWidth: 120,
             //minHeight: 120,
             resizable: true,
+            cornerRadius: 100,
             scrollBarX: false,
             scrollBarY: false,
             contentId: "simple-color-picker-window-content"
