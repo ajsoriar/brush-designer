@@ -140,7 +140,7 @@
         var paintBoardWidth = config.width || 800;
         var paintBoardHeight = config.height || 600;
         var windowFrameWidth = 18;
-        var windowFrameHeight = 38;
+        var windowFrameHeight = 66;
         var windowIndex = documentCount + 1;
         var paintBoard;
         var paintBoardWindow = WindowsManager.create({
@@ -154,6 +154,7 @@
             height: paintBoardHeight + windowFrameHeight,
             resizable: true,
             maximizable: true,
+            toolsRow: true,
             scrollbars: true,
             contentId: "demo-paint-board-window-content-" + windowIndex
         });
@@ -176,6 +177,7 @@
         paintBoardWindow.baseTitle = paintBoardWindow.title;
         activePaintBoard = paintBoard;
         setActiveZoomBoard(paintBoard);
+        initPaintBoardToolbar(paintBoard);
         updatePaintBoardWindowTitle(paintBoard);
 
         paintBoardWindow.element.addEventListener("mousedown", function() {
@@ -185,6 +187,45 @@
         });
 
         return paintBoardWindow;
+    }
+
+    function initPaintBoardToolbar(paintBoard) {
+        var toolbar;
+        var zoomOptions = [
+            { label: "50%", zoom: 0.5 },
+            { label: "Actual Size", zoom: 1, title: "100%" },
+            { label: "200%", zoom: 2 },
+            { label: "400%", zoom: 4 }
+        ];
+
+        if (!paintBoard || !paintBoard.window || !paintBoard.window.toolsRowElement) {
+            return;
+        }
+
+        toolbar = document.createElement("div");
+        toolbar.className = "paint-board-toolbar";
+
+        zoomOptions.forEach(function(option) {
+            var button = document.createElement("button");
+
+            button.type = "button";
+            button.className = "paint-board-toolbar-btn";
+            button.textContent = option.label;
+            button.title = option.title || option.label;
+            button.addEventListener("click", function() {
+                activePaintBoard = paintBoard;
+                setActiveZoomBoard(paintBoard);
+
+                if (global.Zoom && global.Zoom.setBoardZoom) {
+                    global.Zoom.setBoardZoom(paintBoard.element, option.zoom);
+                }
+            });
+
+            toolbar.appendChild(button);
+        });
+
+        paintBoard.window.toolsRowElement.innerHTML = "";
+        paintBoard.window.toolsRowElement.appendChild(toolbar);
     }
 
     function setActiveZoomBoard(paintBoard) {

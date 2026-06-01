@@ -40,6 +40,7 @@
         scrollBarY: true,
         cornerRadius: 0,
         topBarGradient: null,
+        toolsRow: false,
         parent: null,
         content: null,
         contentId: null
@@ -123,6 +124,10 @@
             element.className += " wm-window-not-resizable";
         }
 
+        if (config.toolsRow) {
+            element.className += " wm-window-tools-row-visible";
+        }
+
         if (type === WINDOW_TYPES.MODAL) {
             modalOverlay = document.createElement("div");
             modalOverlay.className = "wm-modal-overlay";
@@ -139,6 +144,7 @@
                 '</div>',
             '</div>',
             '<div class="wm-top-right" data-wm-resize="ne"></div>',
+            '<div class="wm-tools-row"></div>',
             '<div class="wm-middle-left" data-wm-resize="w"></div>',
             '<div class="wm-center" id="' + contentId + '"></div>',
             '<div class="wm-middle-right" data-wm-resize="e"></div>',
@@ -157,6 +163,7 @@
             contentId: contentId,
             element: element,
             contentElement: null,
+            toolsRowElement: null,
             type: type,
             modal: type === WINDOW_TYPES.MODAL,
             modalOverlay: modalOverlay,
@@ -202,6 +209,7 @@
         };
 
         currentWindow.contentElement = element.querySelector(".wm-center");
+        currentWindow.toolsRowElement = element.querySelector(".wm-tools-row");
         setScrollBars(currentWindow, config.scrollBarX, config.scrollBarY);
         currentWindow.setTitle(config.title);
 

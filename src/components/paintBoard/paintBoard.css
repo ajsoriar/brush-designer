@@ -34,3 +34,37 @@
     image-rendering: crisp-edges;
     width: 100%;
 }
+
+.paint-board-pan-mode .paint-board,
+.paint-board-pan-mode .paint-board-canvas {
+    cursor: grab;
+}
+
+.paint-board-panning,
+.paint-board-panning .paint-board-canvas {
+    cursor: grabbing;
+}
+
+.paint-board-toolbar {
+    align-items: center;
+    display: flex;
+    gap: 6px;
+    padding: 3px 8px;
+}
+
+.paint-board-toolbar-btn {
+    background: #ffffff;
+    border: 1px solid #b9c2cf;
+    border-radius: 4px;
+    color: #1f2937;
+    cursor: pointer;
+    font: 12px Arial, sans-serif;
+    height: 22px;
+    line-height: 1;
+    padding: 0 8px;
+}
+
+.paint-board-toolbar-btn:hover {
+    background: #f3f6fa;
+    border-color: #7f8ea3;
+}

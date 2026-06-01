@@ -45,6 +45,7 @@ document.getElementById(win.contentId).innerHTML = "<p>Contenido de la ventana</
 - `scrollBarY`: activa u oculta el scroll vertical del div central.
 - `cornerRadius`: radio de las esquinas en px. Se limita al ancho del marco de la ventana.
 - `topBarGradient`: gradiente de la barra superior con forma `{ a: "#2563eb", b: "#14b8a6", orientacion: "horizontal" }`. En horizontal, el div izquierdo usa `a`, el derecho usa `b` y el centro usa un gradiente de izquierda a derecha. En vertical, los tres divs usan el mismo gradiente de arriba a abajo. Tambien acepta `orientation`.
+- `toolsRow`: muestra una fila adicional debajo de la barra superior, con altura minima igual a la barra superior.
 - `content`: string HTML o nodo DOM inicial para pintar dentro del centro.
 
 ## API
@@ -65,6 +66,7 @@ Cada ventana creada tambien expone:
 - `window.setTitle(title)`: cambia el titulo visible de la ventana.
 - `window.setScrollBars(scrollBarX, scrollBarY)`: cambia el overflow del div central. Si se pasa un solo booleano, se aplica a ambos ejes.
 - `window.scaleToContent(width, height)`: ajusta la ventana para que el div central tenga ese tamano.
+- `window.toolsRowElement`: referencia al elemento de la fila de herramientas.
 
 ## Z-index
 

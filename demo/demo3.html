@@ -28,6 +28,7 @@
     <script src="../src/components/simpleColorPicker/simpleColorPicker.js"></script>
     <script src="../src/components/simpleLineWidthPicker/simpleLineWidthPicker.js"></script>
     <script src="../src/components/windowsManager/windowsManager.js"></script>
+    <script src="../src/zoom.js"></script>
     <script>
         var be = null; 
         var demoWindowCount = 0;
@@ -103,7 +104,8 @@
                 var paintBoardWidth = 800;
                 var paintBoardHeight = 600;
                 var windowFrameWidth = 16;
-                var windowFrameHeight = 36;
+                var windowFrameHeight = 64;
+                var paintBoard;
                 var paintBoardWindow = WindowsManager.create({
                     id: "demo-paint-board-window-" + demoWindowCount,
                     title: "Paint Board " + demoWindowCount,
@@ -112,18 +114,21 @@
                     width: paintBoardWidth + windowFrameWidth,
                     height: paintBoardHeight + windowFrameHeight,
                     resizable: false,
-                    scrollBarX: false,
-                    scrollBarY: false,
+                    toolsRow: true,
+                    scrollBarX: true,
+                    scrollBarY: true,
                     contentId: "demo-paint-board-window-content-" + demoWindowCount
                 });
 
-                PaintBoard({
+                paintBoard = PaintBoard({
                     id: "demo-paint-board-" + demoWindowCount,
                     containerId: paintBoardWindow.contentId,
                     width: paintBoardWidth,
                     height: paintBoardHeight,
                     backgroundColor: "#ffffff"
                 });
+                paintBoard.window = paintBoardWindow;
+                initPaintBoardToolbar(paintBoard);
 
                 return;
             }
@@ -137,6 +142,46 @@
                 height: 260,
                 content: "<p>This window can move, resize, minimize and close.</p>"
             });
+        }
+
+        function initPaintBoardToolbar(paintBoard) {
+            var toolbar;
+            var zoomOptions = [
+                { label: "50%", zoom: 0.5 },
+                { label: "Actual Size", zoom: 1, title: "100%" },
+                { label: "200%", zoom: 2 },
+                { label: "400%", zoom: 4 }
+            ];
+
+            if (!paintBoard || !paintBoard.window || !paintBoard.window.toolsRowElement) {
+                return;
+            }
+
+            toolbar = document.createElement("div");
+            toolbar.className = "paint-board-toolbar";
+
+            zoomOptions.forEach(function(option) {
+                var button = document.createElement("button");
+
+                button.type = "button";
+                button.className = "paint-board-toolbar-btn";
+                button.textContent = option.label;
+                button.title = option.title || option.label;
+                button.addEventListener("click", function() {
+                    if (window.Zoom && window.Zoom.setActiveBoard) {
+                        window.Zoom.setActiveBoard(paintBoard.element);
+                    }
+
+                    if (window.Zoom && window.Zoom.setBoardZoom) {
+                        window.Zoom.setBoardZoom(paintBoard.element, option.zoom);
+                    }
+                });
+
+                toolbar.appendChild(button);
+            });
+
+            paintBoard.window.toolsRowElement.innerHTML = "";
+            paintBoard.window.toolsRowElement.appendChild(toolbar);
         }
 
         function openBrushDesignerInWindow() {

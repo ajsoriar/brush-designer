@@ -3,16 +3,28 @@
     "use strict";
 
     var MIN_ZOOM = 0.5;
-    var MAX_ZOOM = 4;
+    var MAX_ZOOM = 12;
     var ZOOM_STEP = 0.1;
+    var WHEEL_PROGRESSIVE_ZOOM_START = 1;
+    var WHEEL_PROGRESSIVE_FACTOR = 0.15;
     var ACTIVE_BOARD_SELECTOR = ".paint-board[data-active-paint-board=\"true\"]";
     var resizeObserver = null;
+    var spacePanActive = false;
+    var panState = null;
 
     function handlePointerDown(event) {
         var board = getBoardFromEvent(event);
+        var pointerBoard;
 
-        if (board) {
-            setActiveBoard(board);
+        if (!board) {
+            return;
+        }
+
+        setActiveBoard(board);
+        pointerBoard = getBoardFromPointerEvent(event);
+
+        if (spacePanActive && pointerBoard) {
+            startPan(event, pointerBoard);
         }
     }
 
@@ -20,6 +32,12 @@
         var direction;
 
         if (isEditableTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey) {
+            return;
+        }
+
+        if (isSpacePanKey(event)) {
+            event.preventDefault();
+            setSpacePanActive(true);
             return;
         }
 
@@ -31,6 +49,92 @@
 
         event.preventDefault();
         zoomActiveBoard(direction);
+    }
+
+    function handleKeyUp(event) {
+        if (isSpacePanKey(event)) {
+            setSpacePanActive(false);
+        }
+    }
+
+    function handleWheel(event) {
+        var board;
+        var direction;
+
+        if (!event.deltaY || isEditableTarget(event.target)) {
+            return;
+        }
+
+        board = getBoardFromEvent(event);
+
+        if (!board) {
+            return;
+        }
+
+        event.preventDefault();
+        setActiveBoard(board);
+
+        direction = event.deltaY < 0 ? 1 : -1;
+        zoomBoardByWheel(board, direction);
+    }
+
+    function startPan(event, board) {
+        var viewport = getBoardViewport(board);
+
+        if (!viewport) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (event.stopImmediatePropagation) {
+            event.stopImmediatePropagation();
+        }
+
+        panState = {
+            board: board,
+            viewport: viewport,
+            startX: event.clientX,
+            startY: event.clientY,
+            startScrollLeft: viewport.scrollLeft,
+            startScrollTop: viewport.scrollTop
+        };
+
+        board.className += board.className.indexOf("paint-board-panning") === -1 ? " paint-board-panning" : "";
+        document.addEventListener("mousemove", continuePan, true);
+        document.addEventListener("mouseup", stopPan, true);
+    }
+
+    function continuePan(event) {
+        if (!panState) {
+            return;
+        }
+
+        event.preventDefault();
+        panState.viewport.scrollLeft = panState.startScrollLeft - (event.clientX - panState.startX);
+        panState.viewport.scrollTop = panState.startScrollTop - (event.clientY - panState.startY);
+    }
+
+    function stopPan() {
+        if (panState && panState.board) {
+            panState.board.className = panState.board.className.replace(/\s?paint-board-panning/g, "");
+        }
+
+        panState = null;
+        document.removeEventListener("mousemove", continuePan, true);
+        document.removeEventListener("mouseup", stopPan, true);
+    }
+
+    function setSpacePanActive(active) {
+        spacePanActive = active;
+
+        if (active) {
+            document.body.className += document.body.className.indexOf("paint-board-pan-mode") === -1 ? " paint-board-pan-mode" : "";
+            return;
+        }
+
+        document.body.className = document.body.className.replace(/\s?paint-board-pan-mode/g, "");
     }
 
     function getZoomDirection(event) {
@@ -45,6 +149,10 @@
         return 0;
     }
 
+    function isSpacePanKey(event) {
+        return event.key === " " || event.key === "Spacebar" || event.code === "Space";
+    }
+
     function zoomActiveBoard(direction) {
         var board = getActiveBoard();
         var zoom;
@@ -57,6 +165,26 @@
         applyBoardZoom(board, zoom);
 
         return zoom;
+    }
+
+    function zoomBoardByWheel(board, direction) {
+        var currentZoom = getBoardZoom(board);
+        var progressiveZoom = Math.max(0, currentZoom - WHEEL_PROGRESSIVE_ZOOM_START);
+        var step = ZOOM_STEP + (progressiveZoom * WHEEL_PROGRESSIVE_FACTOR);
+        var zoom = clampZoom(currentZoom + (direction * step));
+
+        applyBoardZoom(board, zoom);
+
+        return zoom;
+    }
+
+    function setBoardZoom(board, zoom) {
+        if (!board) {
+            return null;
+        }
+
+        applyBoardZoom(board, clampZoom(zoom));
+        return getBoardZoom(board);
     }
 
     function getActiveBoard() {
@@ -107,6 +235,10 @@
         }
 
         return null;
+    }
+
+    function getBoardFromPointerEvent(event) {
+        return event.target.closest && event.target.closest(".paint-board");
     }
 
     function getBoardZoom(board) {
@@ -330,6 +462,15 @@
 
     document.addEventListener("mousedown", handlePointerDown, true);
     document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keyup", handleKeyUp);
+    document.addEventListener("wheel", handleWheel, {
+        capture: true,
+        passive: false
+    });
+    global.addEventListener("blur", function() {
+        setSpacePanActive(false);
+        stopPan();
+    });
 
     global.Zoom = {
         zoomIn: function() {
@@ -339,7 +480,8 @@
             return zoomActiveBoard(-1);
         },
         getActiveBoard: getActiveBoard,
-        setActiveBoard: setActiveBoard
+        setActiveBoard: setActiveBoard,
+        setBoardZoom: setBoardZoom
     };
 
 }(window));
