@@ -172,11 +172,7 @@
         var progressiveZoom = Math.max(0, currentZoom - WHEEL_PROGRESSIVE_ZOOM_START);
         var step = ZOOM_STEP + (progressiveZoom * WHEEL_PROGRESSIVE_FACTOR);
         var zoom = clampZoom(currentZoom + (direction * step));
-        var viewport = getBoardViewport(board);
-        var anchor = getPointerAnchorPoint(board, viewport, event, currentZoom);
-
-        applyBoardZoom(board, zoom);
-        restorePointerAnchor(viewport, anchor, zoom);
+        applyBoardZoom(board, zoom, getPointerAnchorPoint(board, getBoardViewport(board), event, currentZoom));
 
         return zoom;
     }
@@ -254,11 +250,11 @@
         return clampZoom(zoom);
     }
 
-    function applyBoardZoom(board, zoom) {
+    function applyBoardZoom(board, zoom, pointerAnchor) {
         var currentZoom = getBoardZoom(board);
         var normalizedZoom = normalizeZoom(zoom);
         var viewport = getBoardViewport(board);
-        var visibleCenter = getVisibleCenterPoint(viewport, currentZoom);
+        var visibleCenter = pointerAnchor ? null : getVisibleCenterPoint(viewport, currentZoom);
         var nextZoom = parseFloat(normalizedZoom);
 
         setupZoomLayout(board, viewport);
@@ -266,7 +262,11 @@
         board.style.transformOrigin = "0 0";
         board.style.transform = "scale(" + normalizedZoom + ")";
         updateZoomLayout(board, viewport, nextZoom);
-        restoreVisibleCenter(viewport, visibleCenter, nextZoom);
+        if (pointerAnchor) {
+            restorePointerAnchor(viewport, pointerAnchor, nextZoom);
+        } else {
+            restoreVisibleCenter(viewport, visibleCenter, nextZoom);
+        }
         notifyZoomChange(board, nextZoom);
     }
 
@@ -372,12 +372,14 @@
         var scaledHeight = Math.ceil(board.offsetHeight * zoom);
         var left = Math.max(0, Math.floor((viewport.clientWidth - scaledWidth) / 2));
         var top = Math.max(0, Math.floor((viewport.clientHeight - scaledHeight) / 2));
+        var needsHorizontalScroll = scaledWidth > viewport.clientWidth;
+        var needsVerticalScroll = scaledHeight > viewport.clientHeight;
 
         return {
             left: left,
             top: top,
-            width: Math.max(viewport.clientWidth, left + scaledWidth),
-            height: Math.max(viewport.clientHeight, top + scaledHeight)
+            width: needsHorizontalScroll ? scaledWidth : 1,
+            height: needsVerticalScroll ? scaledHeight : 1
         };
     }
 

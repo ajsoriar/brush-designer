@@ -176,8 +176,9 @@
         paintBoard.window = paintBoardWindow;
         paintBoardWindow.baseTitle = paintBoardWindow.title;
         activePaintBoard = paintBoard;
-        setActiveZoomBoard(paintBoard);
         initPaintBoardToolbar(paintBoard);
+        paintBoardWindow.scaleToContent(paintBoardWidth, paintBoardHeight);
+        setActiveZoomBoard(paintBoard);
         updatePaintBoardWindowTitle(paintBoard);
 
         paintBoardWindow.element.addEventListener("mousedown", function() {

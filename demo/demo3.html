@@ -129,6 +129,11 @@
                 });
                 paintBoard.window = paintBoardWindow;
                 initPaintBoardToolbar(paintBoard);
+                paintBoardWindow.scaleToContent(paintBoardWidth, paintBoardHeight);
+
+                if (window.Zoom && window.Zoom.setActiveBoard) {
+                    window.Zoom.setActiveBoard(paintBoard.element);
+                }
 
                 return;
             }
