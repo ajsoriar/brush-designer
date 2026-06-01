@@ -1,6 +1,5 @@
 .wm-window {
-    background: #f2f2f2;
-    border: 1px solid #1d1d1d;
+    /* border: 1px solid #1d1d1d; */
     box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
     box-sizing: border-box;
     color: #111;
@@ -60,7 +59,7 @@
 .wm-top,
 .wm-top-right {
     background: #d7d7d7;
-    border-bottom: 1px solid #9c9c9c;
+    /* border-bottom: 1px solid #9c9c9c; */
 }
 
 .wm-top-left {
@@ -124,6 +123,7 @@
 }
 
 .wm-middle-left {
+    background: #f2f2f2;
     cursor: ew-resize;
     grid-column: 1;
     grid-row: 3;
@@ -132,7 +132,7 @@
 .wm-tools-row {
     align-items: center;
     background: #eceff3;
-    border-bottom: 1px solid #c9ced6;
+    /* border-bottom: 1px solid #c9ced6; */
     display: none;
     grid-column: 1 / 4;
     grid-row: 2;
@@ -158,24 +158,28 @@
 }
 
 .wm-middle-right {
+    background: #f2f2f2;
     cursor: ew-resize;
     grid-column: 3;
     grid-row: 3;
 }
 
 .wm-bottom-left {
+    background: #f2f2f2;
     cursor: nesw-resize;
     grid-column: 1;
     grid-row: 4;
 }
 
 .wm-bottom {
+    background: #f2f2f2;
     cursor: ns-resize;
     grid-column: 2;
     grid-row: 4;
 }
 
 .wm-bottom-right {
+    background: #f2f2f2;
     cursor: nwse-resize;
     grid-column: 3;
     grid-row: 4;
