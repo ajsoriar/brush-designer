@@ -10,6 +10,7 @@ Thumbs.db
 OLD*
 node_modules
 bower_components
+dist
 *.log
 .map
 *.psd
