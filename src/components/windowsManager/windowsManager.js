@@ -39,6 +39,7 @@
         scrollBarX: true,
         scrollBarY: true,
         cornerRadius: 0,
+        topBarGradient: null,
         parent: null,
         content: null,
         contentId: null
@@ -146,6 +147,8 @@
             '<div class="wm-bottom-right" data-wm-resize="se"></div>'
         ].join("");
 
+        applyTopBarGradient(element, config.topBarGradient);
+
         currentWindow = {
             id: id,
             windowId: config.windowId,
@@ -241,6 +244,44 @@
         }
 
         return Math.min(radius, WINDOW_FRAME_EDGE_SIZE);
+    }
+
+    function applyTopBarGradient(element, topBarGradient) {
+        var colorA;
+        var colorB;
+        var gradient;
+        var orientation;
+        var topLeft;
+        var top;
+        var topRight;
+
+        if (!topBarGradient || !topBarGradient.a || !topBarGradient.b) {
+            return;
+        }
+
+        colorA = topBarGradient.a;
+        colorB = topBarGradient.b;
+        orientation = String(topBarGradient.orientation || topBarGradient.orientacion || "horizontal").toLowerCase();
+        topLeft = element.querySelector(".wm-top-left");
+        top = element.querySelector(".wm-top");
+        topRight = element.querySelector(".wm-top-right");
+
+        if (!topLeft || !top || !topRight) {
+            return;
+        }
+
+        if (orientation === "vertical") {
+            gradient = "linear-gradient(to bottom, " + colorA + ", " + colorB + ")";
+            topLeft.style.background = gradient;
+            top.style.background = gradient;
+            topRight.style.background = gradient;
+            return;
+        }
+
+        gradient = "linear-gradient(to right, " + colorA + ", " + colorB + ")";
+        topLeft.style.background = colorA;
+        top.style.background = gradient;
+        topRight.style.background = colorB;
     }
 
     function getWindowsByGroupName(windowGroupName) {

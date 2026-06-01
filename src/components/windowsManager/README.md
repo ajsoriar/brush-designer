@@ -44,6 +44,7 @@ document.getElementById(win.contentId).innerHTML = "<p>Contenido de la ventana</
 - `scrollBarX`: activa u oculta el scroll horizontal del div central.
 - `scrollBarY`: activa u oculta el scroll vertical del div central.
 - `cornerRadius`: radio de las esquinas en px. Se limita al ancho del marco de la ventana.
+- `topBarGradient`: gradiente de la barra superior con forma `{ a: "#2563eb", b: "#14b8a6", orientacion: "horizontal" }`. En horizontal, el div izquierdo usa `a`, el derecho usa `b` y el centro usa un gradiente de izquierda a derecha. En vertical, los tres divs usan el mismo gradiente de arriba a abajo. Tambien acepta `orientation`.
 - `content`: string HTML o nodo DOM inicial para pintar dentro del centro.
 
 ## API

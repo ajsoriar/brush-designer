@@ -377,6 +377,11 @@
             width: outerWidth,
             height: outerHeight,
             resizable: false,
+            topBarGradient: {
+                a: "#2563eb",
+                b: "#14b8a6",
+                orientacion: "vertical"
+            },
             scrollBarX: false,
             scrollBarY: true,
             contentId: "brush-editor-outputs-window-content"
@@ -456,6 +461,11 @@
             //minHeight: 120,
             resizable: true,
             cornerRadius: 100,
+            topBarGradient: {
+                a: "#2563eb",
+                b: "#14b8a6",
+                orientacion: "horizontal"
+            },
             scrollBarX: false,
             scrollBarY: false,
             contentId: "simple-color-picker-window-content"
