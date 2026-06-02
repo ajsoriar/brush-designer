@@ -29,6 +29,7 @@
         openSimpleColorPickerWindow();
         openSimpleLineWidthPickerWindow();
         openPaintToolsWindow();
+        createDemoWindow("paintBoard");
     });
 
     function openEditor() {
@@ -328,6 +329,37 @@
             };
 
             image.src = objectUrl;
+        });
+    }
+
+    function copyToClipboard() {
+        var targetBoard = activePaintBoard;
+
+        if (!targetBoard || !global.navigator.clipboard || !global.navigator.clipboard.write || !global.ClipboardItem) {
+            return;
+        }
+
+        getBoardBlob(targetBoard).then(function(blob) {
+            var item = new global.ClipboardItem({
+                "image/png": blob
+            });
+
+            return global.navigator.clipboard.write([item]);
+        }).catch(function(error) {
+            console.log("Copy to clipboard failed:", error);
+        });
+    }
+
+    function getBoardBlob(board) {
+        return new Promise(function(resolve, reject) {
+            board.canvas.toBlob(function(blob) {
+                if (!blob) {
+                    reject(new Error("Could not create image blob from board."));
+                    return;
+                }
+
+                resolve(blob);
+            }, "image/png");
         });
     }
 
@@ -757,6 +789,7 @@
     global.openEditor = openEditor;
     global.newDocument = newDocument;
     global.pasteFromClipboard = pasteFromClipboard;
+    global.copyToClipboard = copyToClipboard;
     global.saveImage = saveImage;
     global.clearBoard = clearBoard;
     global.createDemoWindow = createDemoWindow;
