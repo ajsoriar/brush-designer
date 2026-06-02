@@ -9,9 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "ajsr-confirm": "^1.2.2",
-    "ajsr-notify": "^0.0.1",
-    "div-lines": "^1.3.0",
+    "ajsr-confirm": "file:vendor/ajsr-confirm",
+    "ajsr-notify": "file:vendor/ajsr-notify",
+    "div-lines": "file:vendor/div-lines",
     "jquery": "2.2.3"
   },
   "devDependencies": {

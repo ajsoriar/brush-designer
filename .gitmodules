@@ -1,0 +1,9 @@
+[submodule "vendor/ajsr-confirm"]
+	path = vendor/ajsr-confirm
+	url = https://github.com/ajsoriar/ajsr-confirm.git
+[submodule "vendor/ajsr-notify"]
+	path = vendor/ajsr-notify
+	url = https://github.com/ajsoriar/ajsr-notify.git
+[submodule "vendor/div-lines"]
+	path = vendor/div-lines
+	url = https://github.com/ajsoriar/div-lines.git
