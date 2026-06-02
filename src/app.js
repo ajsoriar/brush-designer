@@ -157,7 +157,10 @@
             maximizable: true,
             toolsRow: true,
             scrollbars: true,
-            contentId: "demo-paint-board-window-content-" + windowIndex
+            contentId: "demo-paint-board-window-content-" + windowIndex,
+            beforeClose: function(currentWindow) {
+                return confirmPaintBoardClose(paintBoard, currentWindow);
+            }
         });
 
         if (!paintBoardWindow) {
@@ -278,7 +281,9 @@
                 return null;
             }
 
-            return pasteImageBlob(targetBoard, imageBlob);
+            return pasteImageBlob(targetBoard, imageBlob).then(function() {
+                showNotify("Pasted");
+            });
         }).catch(function(error) {
             console.log("Paste from clipboard failed:", error);
         });
@@ -345,8 +350,77 @@
             });
 
             return global.navigator.clipboard.write([item]);
+        }).then(function() {
+            showNotify("Copied");
         }).catch(function(error) {
             console.log("Copy to clipboard failed:", error);
+        });
+    }
+
+    function confirmPaintBoardClose(paintBoard, paintBoardWindow) {
+        if (!paintBoardWindow || paintBoardWindow.closeConfirmed) {
+            clearActivePaintBoard(paintBoard);
+            return true;
+        }
+
+        if (typeof global.ajsrConfirm !== "function") {
+            return true;
+        }
+
+        global.ajsrConfirm({
+            title: "Close Paint Board",
+            message: "Discard this Paint Board? All unsaved data will be lost.",
+            okButton: "Discard",
+            cancelButton: "Cancel",
+            btnFocus: 0,
+            style: "z-index: 300001;",
+            bgStyle: "z-index: 300000;",
+            afterShow: function() {
+                disableConfirmBackdropAction();
+            },
+            onConfirm: function() {
+                closePaintBoardAfterConfirmation(paintBoard, paintBoardWindow);
+            }
+        });
+
+        return false;
+    }
+
+    function disableConfirmBackdropAction() {
+        var backdrop = document.getElementsByClassName("ajsrConfirm-back-bg")[0];
+
+        if (!backdrop) {
+            return;
+        }
+
+        backdrop.addEventListener("click", function(event) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }, true);
+    }
+
+    function closePaintBoardAfterConfirmation(paintBoard, paintBoardWindow) {
+        paintBoardWindow.closeConfirmed = true;
+        clearActivePaintBoard(paintBoard);
+        paintBoardWindow.close();
+    }
+
+    function clearActivePaintBoard(paintBoard) {
+        if (activePaintBoard === paintBoard) {
+            activePaintBoard = null;
+        }
+    }
+
+    function showNotify(message) {
+        if (typeof global.ajsrnotify !== "function") {
+            return;
+        }
+
+        global.ajsrnotify({
+            msg: message,
+            type: "success",
+            position: "right",
+            timeout: 2000
         });
     }
 
@@ -365,11 +439,16 @@
 
     function saveImage() {
         var targetBoard = activePaintBoard;
-        var link;
 
         if (!targetBoard) {
             return;
         }
+
+        downloadBoardImage(targetBoard);
+    }
+
+    function downloadBoardImage(targetBoard) {
+        var link;
 
         link = document.createElement("a");
         link.href = targetBoard.save();

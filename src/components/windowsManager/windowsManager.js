@@ -43,7 +43,8 @@
         toolsRow: false,
         parent: null,
         content: null,
-        contentId: null
+        contentId: null,
+        beforeClose: null
     };
 
     var manager = {
@@ -183,7 +184,7 @@
                 maximizeWindow(currentWindow, config);
             },
             close: function() {
-                closeWindow(currentWindow);
+                closeWindow(currentWindow, config);
             },
             setTitle: function(title) {
                 currentWindow.title = title;
@@ -618,7 +619,11 @@
         };
     }
 
-    function closeWindow(currentWindow) {
+    function closeWindow(currentWindow, config) {
+        if (config && typeof config.beforeClose === "function" && config.beforeClose(currentWindow) === false) {
+            return;
+        }
+
         currentWindow.closed = true;
 
         if (currentWindow.element.parentNode) {
