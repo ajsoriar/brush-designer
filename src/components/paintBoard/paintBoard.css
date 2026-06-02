@@ -27,6 +27,24 @@
     width: 100%;
 }
 
+.paint-board-temp-layer {
+    display: block;
+    height: 100%;
+    left: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    z-index: 2;
+}
+
+.paint-board-temp-layer .line {
+    display: block;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
 .paint-board-canvas {
     display: block;
     height: 100%;

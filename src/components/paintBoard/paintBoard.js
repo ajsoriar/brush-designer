@@ -103,6 +103,7 @@
         var layers = document.createElement("ol");
         var baseLayer = document.createElement("li");
         var canvas = document.createElement("canvas");
+        var tempLayer = createTempLayer(config.width, config.height);
         var context;
         var isPainting = false;
         var stopPainting = function(event) {
@@ -110,6 +111,7 @@
                 paintShapePointerEvent(board, event);
             }
 
+            clearTempSquare(board);
             isPainting = false;
             board.lastPointerPosition = null;
             board.pointerStartPosition = null;
@@ -148,6 +150,7 @@
         baseLayer.appendChild(canvas);
         layers.appendChild(baseLayer);
         element.appendChild(layers);
+        element.appendChild(tempLayer);
         container.appendChild(element);
 
         context = canvas.getContext("2d");
@@ -158,6 +161,7 @@
             id: boardId,
             element: element,
             layersElement: layers,
+            tempLayerElement: tempLayer,
             activeLayerElement: baseLayer,
             activeLayerId: baseLayerId,
             canvas: canvas,
@@ -195,6 +199,7 @@
         if (config.paintOnPointer) {
             canvas.addEventListener("mousedown", function(event) {
                 isPainting = true;
+                startTempSquare(board, event);
                 startPointerAction(board, event);
             });
 
@@ -203,6 +208,7 @@
                     return;
                 }
 
+                updateTempSquare(board, event);
                 continuePointerAction(board, event);
             });
 
@@ -246,6 +252,17 @@
         board.context.fillRect(0, 0, board.canvas.width, board.canvas.height);
     }
 
+    function createTempLayer(width, height) {
+        if (global.PaintBoardTempLayer && global.PaintBoardTempLayer.create) {
+            return global.PaintBoardTempLayer.create({
+                width: width,
+                height: height
+            });
+        }
+
+        return document.createElement("div");
+    }
+
     function setSize(board, width, height) {
         board.width = width;
         board.height = height;
@@ -253,6 +270,7 @@
         board.element.style.height = height + "px";
         board.layersElement.style.width = width + "px";
         board.layersElement.style.height = height + "px";
+        setTempLayerSize(board.tempLayerElement, width, height);
         board.activeLayerElement.style.width = width + "px";
         board.activeLayerElement.style.height = height + "px";
         board.canvas.width = width;
@@ -260,6 +278,20 @@
         board.canvas.style.width = width + "px";
         board.canvas.style.height = height + "px";
         clear(board);
+    }
+
+    function setTempLayerSize(tempLayer, width, height) {
+        if (global.PaintBoardTempLayer && global.PaintBoardTempLayer.setSize) {
+            global.PaintBoardTempLayer.setSize(tempLayer, width, height);
+            return;
+        }
+
+        if (!tempLayer) {
+            return;
+        }
+
+        tempLayer.style.width = width + "px";
+        tempLayer.style.height = height + "px";
     }
 
     function setBackgroundColor(board, backgroundColor) {
@@ -275,9 +307,37 @@
         var scaleY = board.canvas.height / rect.height;
 
         return {
-            x: Math.floor((event.clientX - rect.left) * scaleX),
-            y: Math.floor((event.clientY - rect.top) * scaleY)
+            x: clamp(Math.floor((event.clientX - rect.left) * scaleX), 0, board.canvas.width),
+            y: clamp(Math.floor((event.clientY - rect.top) * scaleY), 0, board.canvas.height)
         };
+    }
+
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    function startTempSquare(board, event) {
+        if (!global.PaintBoardTempLayer || !global.PaintBoardTempLayer.startSquare) {
+            return;
+        }
+
+        global.PaintBoardTempLayer.startSquare(board.tempLayerElement, getPointerPosition(board, event));
+    }
+
+    function updateTempSquare(board, event) {
+        if (!global.PaintBoardTempLayer || !global.PaintBoardTempLayer.updateSquare) {
+            return;
+        }
+
+        global.PaintBoardTempLayer.updateSquare(board.tempLayerElement, getPointerPosition(board, event));
+    }
+
+    function clearTempSquare(board) {
+        if (!global.PaintBoardTempLayer || !global.PaintBoardTempLayer.clear) {
+            return;
+        }
+
+        global.PaintBoardTempLayer.clear(board.tempLayerElement);
     }
 
     function startPointerAction(board, event) {

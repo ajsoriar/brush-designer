@@ -18,6 +18,8 @@ window.jQuery = $;
 
 await import("./components/jqbrushdesigner/jqbrushdesigner.js");
 await import("./components/bigColorPicker/bigColorPicker.js");
+await import("div-lines");
+await import("./components/paintBoard/tempLayer.js");
 await import("./components/paintBoard/paintBoard.js");
 await import("./components/paintTools/paintTools.js");
 await import("./components/simpleColorPicker/simpleColorPicker.js");
