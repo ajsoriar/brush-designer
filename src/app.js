@@ -92,6 +92,19 @@
 
     function newDocument() {
         var existingWindow = WindowsManager.getWindowByWindowId("new-document");
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return;
+        }
+
+        getNewDocumentInitialSize().then(function(size) {
+            openNewDocumentDialog(size);
+        });
+    }
+
+    function openNewDocumentDialog(size) {
+        var existingWindow = WindowsManager.getWindowByWindowId("new-document");
         var dialogWidth = 775;
         var dialogHeight = 320;
         var dialogX = Math.max(0, Math.round((global.innerWidth - dialogWidth) / 2));
@@ -122,8 +135,8 @@
 
         dialogWindow.element.className += " wm-window-new-document";
         dialog = NewDocumentDialog({
-            width: 800,
-            height: 600,
+            width: size.width,
+            height: size.height,
             onCancel: function() {
                 dialogWindow.close();
             },
@@ -134,6 +147,77 @@
         });
 
         dialogWindow.setContent(dialog.element);
+    }
+
+    function getNewDocumentInitialSize() {
+        var fallback = {
+            width: 800,
+            height: 600
+        };
+
+        if (!global.navigator.clipboard || !global.navigator.clipboard.read) {
+            return Promise.resolve(fallback);
+        }
+
+        return global.navigator.clipboard.read().then(function(items) {
+            var imageBlob = getClipboardImageBlob(items);
+
+            if (!imageBlob) {
+                return fallback;
+            }
+
+            return getImageBlobSize(imageBlob).then(function(size) {
+                return size || fallback;
+            });
+        }).catch(function(error) {
+            console.log("Could not read clipboard image size:", error);
+            return fallback;
+        });
+    }
+
+    function getImageBlobSize(imageBlobPromise) {
+        return imageBlobPromise.then(function(blob) {
+            if (global.createImageBitmap) {
+                return global.createImageBitmap(blob).then(function(imageBitmap) {
+                    var size = {
+                        width: imageBitmap.width,
+                        height: imageBitmap.height
+                    };
+
+                    if (imageBitmap.close) {
+                        imageBitmap.close();
+                    }
+
+                    return size;
+                });
+            }
+
+            return getImageElementSize(blob);
+        });
+    }
+
+    function getImageElementSize(blob) {
+        return new Promise(function(resolve) {
+            var image = new Image();
+            var objectUrl = URL.createObjectURL(blob);
+
+            image.onload = function() {
+                var size = {
+                    width: image.naturalWidth || image.width,
+                    height: image.naturalHeight || image.height
+                };
+
+                URL.revokeObjectURL(objectUrl);
+                resolve(size);
+            };
+
+            image.onerror = function() {
+                URL.revokeObjectURL(objectUrl);
+                resolve(null);
+            };
+
+            image.src = objectUrl;
+        });
     }
 
     function openPaintBoardWindow(options) {
@@ -265,6 +349,14 @@
         }
 
         updatePaintBoardWindowTitle(activePaintBoard);
+    });
+
+    global.addEventListener("paint-board-color-picked", function(event) {
+        if (!event.detail || !event.detail.color) {
+            return;
+        }
+
+        setActiveColor(event.detail.color);
     });
 
     function pasteFromClipboard() {
@@ -863,6 +955,18 @@
 
     function storeImage(data) {
         console.log("storeImage! data:", data);
+    }
+
+    function setActiveColor(color) {
+        global.App.memory.currentColor = color;
+
+        if (appColorPicker && appColorPicker.setActiveColor) {
+            appColorPicker.setActiveColor(color);
+        }
+
+        if (appBigColorPicker && appBigColorPicker.setActiveColor) {
+            appBigColorPicker.setActiveColor(color);
+        }
     }
 
     global.openEditor = openEditor;

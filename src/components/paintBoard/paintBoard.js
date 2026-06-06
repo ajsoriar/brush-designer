@@ -28,6 +28,7 @@
         STROKED_CIRCLES: "STROKED-CIRCLES",
         STROKED_OVALS: "STROKED-OVALS",
         PAINT_BUCKET: "PAINT-BUCKET",
+        INK_DROPPER: "INK-DROPPER",
         DESIGNED_BRUSH: "DESIGNED-BRUSH"
     };
 
@@ -317,6 +318,10 @@
     }
 
     function startTempSquare(board, event) {
+        if (!isTempPreviewToolMode()) {
+            return;
+        }
+
         if (!global.PaintBoardTempLayer || !global.PaintBoardTempLayer.startSquare) {
             return;
         }
@@ -325,6 +330,10 @@
     }
 
     function updateTempSquare(board, event) {
+        if (!isTempPreviewToolMode()) {
+            return;
+        }
+
         if (!global.PaintBoardTempLayer || !global.PaintBoardTempLayer.updateSquare) {
             return;
         }
@@ -341,6 +350,12 @@
     }
 
     function startPointerAction(board, event) {
+        if (currentPaintToolMode === PAINT_TOOL_MODES.INK_DROPPER) {
+            event.preventDefault();
+            inkDropperPointerEvent(board, event);
+            return;
+        }
+
         if (currentPaintToolMode === PAINT_TOOL_MODES.PAINT_BUCKET) {
             event.preventDefault();
             paintBucketPointerEvent(board, event);
@@ -357,6 +372,10 @@
     }
 
     function continuePointerAction(board, event) {
+        if (currentPaintToolMode === PAINT_TOOL_MODES.INK_DROPPER) {
+            return;
+        }
+
         if (currentPaintToolMode === PAINT_TOOL_MODES.PAINT_BUCKET) {
             return;
         }
@@ -404,6 +423,14 @@
         var point = getPointerPosition(board, event);
 
         paintBucket(board, point.x, point.y);
+    }
+
+    function inkDropperPointerEvent(board, event) {
+        var point = getPointerPosition(board, event);
+        var imageData = board.context.getImageData(point.x, point.y, 1, 1);
+        var color = pixelDataToHex(imageData.data);
+
+        notifyInkDropperColorSelected(color, board, point);
     }
 
     function paintAt(board, x, y) {
@@ -524,6 +551,38 @@
         };
     }
 
+    function pixelDataToHex(data) {
+        return "#" + toHex(data[0]) + toHex(data[1]) + toHex(data[2]);
+    }
+
+    function toHex(value) {
+        var text = Math.max(0, Math.min(255, value)).toString(16);
+
+        return text.length === 1 ? "0" + text : text;
+    }
+
+    function notifyInkDropperColorSelected(color, board, point) {
+        var event;
+        var detail = {
+            color: color,
+            board: board.element,
+            paintBoard: board,
+            x: point.x,
+            y: point.y
+        };
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-board-color-picked", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-board-color-picked", false, false, detail);
+        }
+
+        global.dispatchEvent(event);
+    }
+
     function colorsMatchAt(data, index, color) {
         return data[index] === color.r &&
             data[index + 1] === color.g &&
@@ -640,6 +699,17 @@
     }
 
     function isShapeToolMode() {
+        return currentPaintToolMode === PAINT_TOOL_MODES.FILLED_SQUARES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.FILLED_RECTANGLES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.FILLED_CIRCLES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.FILLED_OVALS ||
+            currentPaintToolMode === PAINT_TOOL_MODES.STROKED_SQUARES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.STROKED_RECTANGLES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.STROKED_CIRCLES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.STROKED_OVALS;
+    }
+
+    function isTempPreviewToolMode() {
         return currentPaintToolMode === PAINT_TOOL_MODES.FILLED_SQUARES ||
             currentPaintToolMode === PAINT_TOOL_MODES.FILLED_RECTANGLES ||
             currentPaintToolMode === PAINT_TOOL_MODES.FILLED_CIRCLES ||
