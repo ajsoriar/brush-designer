@@ -29,5 +29,7 @@ await import("./components/newDocumentDialog/newDocumentDialog.js");
 await import("./components/starGenerator/starGenerator.js");
 await import("ajsr-confirm");
 await import("ajsr-notify");
+await import("./app.clipboard.js");
+await import("./app.openWindows.js");
 await import("./app.js");
 await import("./zoom.js");
