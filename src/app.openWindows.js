@@ -587,7 +587,7 @@
             return appPaintTools;
         }
 
-        var btnSize = 47;
+        var btnSize = 75;
         var rows = 2;
         var toolsCount = getPaintToolsCount();
         var columns = Math.max(1, Math.ceil(toolsCount / rows));

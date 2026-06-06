@@ -5,9 +5,27 @@
     var DEFAULTS = {
         id: null,
         containerId: null,
-        btnSize: 47,
+        btnSize: 75,
         rows: 2,
         tools: null
+    };
+
+    var TOOL_ICONS = {
+        "SQUARED-POINTS": new URL("./icons/paint-tools_03.png", import.meta.url).href,
+        "ROUND-POINTS": new URL("./icons/paint-tools_05.png", import.meta.url).href,
+        "SQUARED-LINES": new URL("./icons/paint-tools_07.png", import.meta.url).href,
+        "ROUND-LINES": new URL("./icons/paint-tools_09.png", import.meta.url).href,
+        "FILLED-SQUARES": new URL("./icons/paint-tools_12.png", import.meta.url).href,
+        "FILLED-RECTANGLES": new URL("./icons/paint-tools_14.png", import.meta.url).href,
+        "FILLED-CIRCLES": new URL("./icons/paint-tools_16.png", import.meta.url).href,
+        "FILLED-OVALS": new URL("./icons/paint-tools_18.png", import.meta.url).href,
+        "STROKED-SQUARES": new URL("./icons/paint-tools_33.png", import.meta.url).href,
+        "STROKED-RECTANGLES": new URL("./icons/paint-tools_35.png", import.meta.url).href,
+        "STROKED-CIRCLES": new URL("./icons/paint-tools_37.png", import.meta.url).href,
+        "STROKED-OVALS": new URL("./icons/paint-tools_42.png", import.meta.url).href,
+        "PAINT-BUCKET": new URL("./icons/paint-tools_40.png", import.meta.url).href,
+        "INK-DROPPER": new URL("./icons/paint-tools_29.png", import.meta.url).href,
+        "DESIGNED-BRUSH": new URL("./icons/paint-tools_31.png", import.meta.url).href
     };
 
     function extend(target, source) {
@@ -74,13 +92,14 @@
     function renderButtons(component) {
         component.tools.forEach(function(tool) {
             var button = document.createElement("div");
+            var icon = TOOL_ICONS[tool];
 
             button.className = "paint-tools-button";
             button.setAttribute("data-paint-tool", tool);
             button.style.width = component.btnSize + "px";
             button.style.height = component.btnSize + "px";
             button.title = tool;
-            button.innerHTML = getToolLabelHtml(tool);
+            button.innerHTML = getToolButtonHtml(tool, icon);
             button.addEventListener("click", function() {
                 if (global.PaintTools) {
                     global.PaintTools.use(tool);
@@ -88,6 +107,18 @@
             });
             component.element.appendChild(button);
         });
+    }
+
+    function getToolButtonHtml(tool, icon) {
+        var html = '<span class="paint-tools-button-label">' + getToolLabelHtml(tool) + '</span>';
+
+        if (icon) {
+            html += '<span class="paint-tools-button-icon-wrap">' +
+                '<img class="paint-tools-button-icon" src="' + escapeHtml(icon) + '" alt="" draggable="false">' +
+                '</span>';
+        }
+
+        return html;
     }
 
     function getToolLabelHtml(tool) {

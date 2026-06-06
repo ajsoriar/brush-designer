@@ -18,11 +18,13 @@
     display: flex;
     flex-direction: column;
     font-family: Arial, sans-serif;
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 700;
-    justify-content: center;
+    justify-content: flex-start;
     line-height: 1.05;
     overflow: hidden;
+    padding: 7px 5px 6px;
+    box-sizing: border-box;
     text-align: center;
     user-select: none;
 }
@@ -36,4 +38,29 @@
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.paint-tools-button-label {
+    display: block;
+    flex: 0 0 auto;
+    height: 24px;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.paint-tools-button-icon-wrap {
+    align-items: center;
+    display: flex;
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 0;
+    width: 100%;
+}
+
+.paint-tools-button-icon {
+    display: block;
+    max-height: 48px;
+    max-width: 64px;
+    object-fit: contain;
+    pointer-events: none;
 }
