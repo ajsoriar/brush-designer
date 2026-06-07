@@ -1,6 +1,6 @@
 import $ from "jquery";
 
-import "./components/jqbrushdesigner/jqbrushdesigner.css";
+import "./components/brushdesigner.v1/jqbrushdesigner.css";
 import "./components/bigColorPicker/bigColorPicker.css";
 import "./components/paintBoard/paintBoard.css";
 import "./components/paintTools/paintTools.css";
@@ -16,7 +16,7 @@ import "./toolsBar.css";
 window.$ = $;
 window.jQuery = $;
 
-await import("./components/jqbrushdesigner/jqbrushdesigner.js");
+await import("./components/brushdesigner.v1/jqbrushdesigner.js");
 await import("./components/bigColorPicker/bigColorPicker.js");
 await import("../vendor/div-lines/dist/div-lines.min.js");
 await import("./components/paintBoard/tempLayer.js");
