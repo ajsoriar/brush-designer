@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Brush Designer Demos</title>
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            display: flex;
+            font-family: Arial, sans-serif;
+            background: #2f2f2f;
+        }
+
+        .demo-list {
+            box-sizing: border-box;
+            width: 20%;
+            height: 100%;
+            margin: 0;
+            padding: 20px;
+            background: #202020;
+            border-right: 1px solid #555;
+            list-style: none;
+        }
+
+        .demo-list li {
+            margin-bottom: 10px;
+        }
+
+        .demo-list a {
+            color: #ffffff;
+            text-decoration: none;
+        }
+
+        .demo-list a:hover {
+            text-decoration: underline;
+        }
+
+        .demo-frame {
+            width: 80%;
+            height: 100%;
+            border: 0;
+            background: #444;
+        }
+    </style>
+</head>
+
+<body>
+    <ul class="demo-list">
+        <li><a href="demo1.html" target="demo-frame">Demo 1</a></li>
+        <li><a href="demo2.html" target="demo-frame">Demo 2</a></li>
+        <li><a href="demo3.html" target="demo-frame">Demo 3</a></li>
+        <li><a href="demo_04.html" target="demo-frame">Demo 4</a></li>
+    </ul>
+
+    <iframe class="demo-frame" name="demo-frame" src="demo1.html" title="Brush Designer demo"></iframe>
+</body>
+
+</html>

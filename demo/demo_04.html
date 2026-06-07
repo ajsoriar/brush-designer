@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Brush Designer II Demo</title>
+    <link rel="stylesheet" href="../src/components/brushdesigner.v1/jqbrushdesigner.css" type="text/css" />
+    <style>
+        #target {
+            margin: 30px;
+            width: 150px;
+            height: 150px;
+            border: 2px solid red;
+            background-color: white;
+            padding: 10px;
+        }
+    </style>
+</head>
+
+<body style="background-color: #444;">
+
+    <h1>Brush Designer II Demo</h1>
+
+    <p>This is a demo of the Brush Designer II. A native JS component for designing brushes. Photoshop-like
+        functionality.</p>
+
+    <button type="button" onclick="openEditor()">Open Brush Editor v2!</button>
+    <div id="target" class="">target layer to show the brush designer v2</div>
+
+    <script src="../src/components/brushdesigner.v2/brushdesigner.v2.js"></script>
+    <script>
+
+        var be = null;
+
+        $(document).ready(function () {
+
+            console.log("jQuery document ready!");
+            //openEditor();
+        });
+
+        function openEditor() {
+
+            be = $.brushEditor({
+
+                beforeClose: function () {
+                    renderBruses();
+                }
+            });
+
+            console.log("be:", be);
+
+            //be.open();
+
+        }
+
+        function renderBruses() {
+
+            /*
+            $("#brush-editor-outputs").find('img').each(function(){
+
+                this.attr('display','block') //to show
+            });
+            */
+
+        }
+
+    </script>
+</body>
+
+</html>
