@@ -9,15 +9,19 @@
         minSize: 1,
         maxSize: 256,
         size: 64,
-        hardness: 50
+        hardness: 50,
+        assetBaseUrl: null
     };
 
     function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
     }
 
-    function assetUrl(fileName) {
-        return new URL(fileName, assetBaseUrl).href;
+    function assetUrl(fileName, baseUrl) {
+        var base = baseUrl || assetBaseUrl || "/components/brushdesigner.v2/";
+        var resolvedBase = new URL(base, global.location.href);
+
+        return new URL(fileName, resolvedBase).href;
     }
 
     function createElement(tagName, className, parent) {
@@ -89,8 +93,8 @@
         injectStyles();
 
         root = createElement("div", "bd2-root");
-        root.style.setProperty("--bd2-bg", "url(\"" + assetUrl("bd2-bg.png") + "\")");
-        root.style.setProperty("--bd2-handles", "url(\"" + assetUrl("bd2-handles.png") + "\")");
+        root.style.setProperty("--bd2-bg", "url(\"" + assetUrl("bd2-bg.png", this.options.assetBaseUrl) + "\")");
+        root.style.setProperty("--bd2-handles", "url(\"" + assetUrl("bd2-handles.png", this.options.assetBaseUrl) + "\")");
 
         this.target.replaceChildren(root);
         this.root = root;

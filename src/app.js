@@ -126,6 +126,7 @@
     global.clearBoard = clearBoard;
     global.createDemoWindow = global.AppOpenWindows.createDemoWindow;
     global.openBrushDesignerInWindow = global.AppOpenWindows.openBrushDesignerInWindow;
+    global.openBrushDesigner2InWindow = global.AppOpenWindows.openBrushDesigner2InWindow;
     global.openBrushEditorOutputsWindow = global.AppOpenWindows.openBrushEditorOutputsWindow;
     global.openSimpleColorPickerWindow = global.AppOpenWindows.openSimpleColorPickerWindow;
     global.openBigColorPickerWindow = global.AppOpenWindows.openBigColorPickerWindow;

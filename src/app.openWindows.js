@@ -9,6 +9,7 @@
     var appLineWidthPicker = null;
     var appPaintTools = null;
     var appStarGenerator = null;
+    var appBrushDesigner2 = null;
     var documentCount = 0;
     var activePaintBoard = null;
 
@@ -348,6 +349,48 @@
         $(".be-back-bg").remove();
         $("#window-brush-editor").appendTo(bdWindow.contentElement);
         openBrushEditorOutputsWindow();
+    }
+
+    function openBrushDesigner2InWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("brush-designer-2");
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return appBrushDesigner2;
+        }
+
+        var brushDesignerWidth = 380;
+        var brushDesignerHeight = 475;
+        var windowFrameWidth = 16;
+        var windowFrameHeight = 36;
+        var outerWidth = brushDesignerWidth + windowFrameWidth;
+        var outerHeight = brushDesignerHeight + windowFrameHeight;
+        var x = Math.max(0, Math.round((global.innerWidth - outerWidth) / 2));
+        var y = Math.max(0, Math.round((global.innerHeight - outerHeight) / 2));
+        var bdWindow = WindowsManager.create({
+            id: "brush-designer-2-window",
+            windowId: "brush-designer-2",
+            title: "Brush Designer II",
+            x: x,
+            y: y,
+            width: outerWidth,
+            height: outerHeight,
+            resizable: false,
+            minimizable: false,
+            scrollBarX: false,
+            scrollBarY: false,
+            contentId: "brush-designer-2-window-content"
+        });
+
+        appBrushDesigner2 = global.createBrushDesignerV2(bdWindow.contentElement, {
+            assetBaseUrl: "/components/brushdesigner.v2/",
+            onChange: function(brush, designer) {
+                global.App.memory.currentBrushDesigner2 = brush;
+                global.App.memory.currentDesignedBrush = designer.createBrushCanvas();
+            }
+        });
+
+        return appBrushDesigner2;
     }
 
     function openBrushEditorOutputsWindow() {
@@ -727,6 +770,7 @@
         createDemoWindow: createDemoWindow,
         openPaintBoardWindow: openPaintBoardWindow,
         openBrushDesignerInWindow: openBrushDesignerInWindow,
+        openBrushDesigner2InWindow: openBrushDesigner2InWindow,
         openBrushEditorOutputsWindow: openBrushEditorOutputsWindow,
         openSimpleColorPickerWindow: openSimpleColorPickerWindow,
         openBigColorPickerWindow: openBigColorPickerWindow,

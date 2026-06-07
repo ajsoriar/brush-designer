@@ -27,6 +27,7 @@ await import("./components/simpleLineWidthPicker/simpleLineWidthPicker.js");
 await import("./components/windowsManager/windowsManager.js");
 await import("./components/newDocumentDialog/newDocumentDialog.js");
 await import("./components/starGenerator/starGenerator.js");
+await import("./components/brushdesigner.v2/brushdesigner.v2.js");
 await import("../vendor/ajsr-confirm/dist/ajsr-js-confirm.min.js");
 await import("../vendor/ajsr-notify/dist/ajsr-notify.min.js");
 await import("./app.clipboard.js");
