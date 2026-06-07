@@ -42,15 +42,20 @@
             ".bd2-root{position:relative;width:380px;height:475px;background-image:var(--bd2-bg);background-size:380px 475px;background-repeat:no-repeat;font-family:Arial,sans-serif;color:#111;user-select:none;}",
             ".bd2-root *{box-sizing:border-box;}",
             ".bd2-label{position:absolute;font-size:12px;font-weight:bold;line-height:1;}",
-            ".bd2-value{position:absolute;width:58px;height:22px;border:1px solid #c6c6c6;background:#fff;font:bold 12px Arial,sans-serif;text-align:center;}",
-            ".bd2-range{position:absolute;width:160px;height:18px;margin:0;accent-color:#1784d1;}",
+            ".bd2-value{position:absolute;width:45px;height:22px;border:1px solid transparent;background:transparent;color:#d00033;font:bold 12px Arial,sans-serif;text-align:center;text-shadow:0 1px #fff;pointer-events:none;}",
+            ".bd2-range{position:absolute;width:160px;height:18px;margin:0;background:transparent;accent-color:var(--bd2-range-color);}",
+            ".bd2-range-size{--bd2-range-color:#ff5548;}",
+            ".bd2-range-hardness{--bd2-range-color:#30a746;}",
             ".bd2-preview{position:absolute;width:58px;height:58px;background:transparent;}",
             ".bd2-drawing{position:absolute;left:50px;top:186px;width:280px;height:280px;background:transparent;cursor:crosshair;}",
             ".bd2-handle{position:absolute;width:26px;height:26px;background-image:var(--bd2-handles);background-repeat:no-repeat;background-size:57px 26px;transform:translate(-13px,-13px);cursor:grab;touch-action:none;}",
             ".bd2-handle:active{cursor:grabbing;}",
             ".bd2-handle-size{background-position:0 0;}",
             ".bd2-handle-hardness{background-position:-31px 0;}",
-            ".bd2-output{position:absolute;left:50px;right:50px;bottom:9px;height:22px;border:1px solid #bbb;background:rgba(255,255,255,.8);font:11px Consolas,monospace;line-height:20px;overflow:hidden;white-space:nowrap;padding:0 6px;}"
+            ".bd2-output{position:absolute;left:50px;right:50px;bottom:9px;min-height:74px;border:1px solid #E91E63;background:#000000bd;color:#00ff0a;font:11px Consolas,monospace;line-height:11px;overflow:auto;white-space:pre-wrap;padding:8px;z-index:20;}",
+            ".bd2-output-close{position:absolute;right:3px;top:3px;width:16px;height:16px;border:1px solid #E91E63;background:#000;color:#00ff0a;font:bold 11px Arial,sans-serif;line-height:12px;padding:0;cursor:pointer;}",
+            ".bd2-output-content{display:block;padding-right:18px;}",
+            ".bd2-info-button{position:absolute;left:55px;bottom:15px;height:18px;border:1px solid #888;background:#eee;color:#111;font:10px Consolas,monospace;line-height:14px;padding:1px 6px;cursor:pointer;z-index:19;}"
         ].join("\n");
         document.head.appendChild(style);
     }
@@ -94,7 +99,7 @@
         root.lastChild.style.left = "92px";
         root.lastChild.style.top = "58px";
 
-        this.hardnessInput = createElement("input", "bd2-range", root);
+        this.hardnessInput = createElement("input", "bd2-range bd2-range-hardness", root);
         this.hardnessInput.type = "range";
         this.hardnessInput.min = "0";
         this.hardnessInput.max = "100";
@@ -103,14 +108,14 @@
 
         this.hardnessValue = createElement("input", "bd2-value", root);
         this.hardnessValue.type = "text";
-        this.hardnessValue.style.left = "243px";
-        this.hardnessValue.style.top = "50px";
+        this.hardnessValue.style.left = "246px";
+        this.hardnessValue.style.top = "77px";
 
         createElement("label", "bd2-label", root).textContent = "Size:";
         root.lastChild.style.left = "92px";
         root.lastChild.style.top = "126px";
 
-        this.sizeInput = createElement("input", "bd2-range", root);
+        this.sizeInput = createElement("input", "bd2-range bd2-range-size", root);
         this.sizeInput.type = "range";
         this.sizeInput.min = String(this.options.minSize);
         this.sizeInput.max = String(this.options.maxSize);
@@ -119,8 +124,8 @@
 
         this.sizeValue = createElement("input", "bd2-value", root);
         this.sizeValue.type = "text";
-        this.sizeValue.style.left = "243px";
-        this.sizeValue.style.top = "118px";
+        this.sizeValue.style.left = "250px";
+        this.sizeValue.style.top = "145px";
 
         this.softPreview = createElement("canvas", "bd2-preview", root);
         this.softPreview.width = 58;
@@ -141,6 +146,13 @@
         this.sizeHandle = createElement("div", "bd2-handle bd2-handle-size", root);
         this.hardnessHandle = createElement("div", "bd2-handle bd2-handle-hardness", root);
         this.output = createElement("div", "bd2-output", root);
+        this.outputClose = createElement("button", "bd2-output-close", this.output);
+        this.outputClose.type = "button";
+        this.outputClose.textContent = "x";
+        this.outputContent = createElement("span", "bd2-output-content", this.output);
+        this.infoButton = createElement("button", "bd2-info-button", root);
+        this.infoButton.type = "button";
+        this.infoButton.textContent = "INFO";
 
         this.bindEvents();
     };
@@ -170,6 +182,14 @@
 
         this.hardnessHandle.addEventListener("pointerdown", function(event) {
             self.startDrag("hardness", event);
+        });
+
+        this.outputClose.addEventListener("click", function() {
+            self.output.style.display = "none";
+        });
+
+        this.infoButton.addEventListener("click", function() {
+            self.output.style.display = "block";
         });
 
         global.addEventListener("pointermove", function(event) {
@@ -231,7 +251,7 @@
         this.hardnessValue.value = brush.hardness + "%";
         this.sizeInput.value = String(brush.size);
         this.sizeValue.value = brush.size + " px";
-        this.output.textContent = JSON.stringify(brush);
+        this.outputContent.textContent = JSON.stringify(brush, null, 2);
 
         this.drawPreviewCanvas(this.softPreview, brush.size, brush.hardness);
         this.drawPreviewCanvas(this.hardPreview, brush.size, 100);
@@ -304,7 +324,7 @@
 
         this.sizeHandle.style.left = centerX - sizeRadius + "px";
         this.sizeHandle.style.top = centerY + "px";
-        this.hardnessHandle.style.left = centerX - hardnessRadius + "px";
+        this.hardnessHandle.style.left = centerX + hardnessRadius + "px";
         this.hardnessHandle.style.top = centerY + "px";
     };
 
