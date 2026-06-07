@@ -116,6 +116,7 @@
             clearTempSquare(board);
             isPainting = false;
             board.lastPointerPosition = null;
+            board.designedBrush2Stroke = null;
             board.pointerStartPosition = null;
         };
         var board;
@@ -174,6 +175,7 @@
             paintColor: getOppositeColor(config.backgroundColor),
             brushSize: config.brushSize,
             lastPointerPosition: null,
+            designedBrush2Stroke: null,
             pointerStartPosition: null,
             clear: function() {
                 clear(board);
@@ -223,6 +225,7 @@
 
                 isPainting = false;
                 board.lastPointerPosition = null;
+                board.designedBrush2Stroke = null;
             });
         }
 
@@ -510,12 +513,19 @@
 
         brushConfig = brush.brush || {};
         if (brushConfig.algorithm === "B") {
+            board.designedBrush2Stroke = null;
             paintDesignedBrush2Grid(board, brush, brushConfig, x, y);
+            return;
+        }
+
+        if (brushConfig.algorithm === "C") {
+            paintDesignedBrush2Continuous(board, brush, brushConfig, x, y);
             return;
         }
 
         width = brush.naturalWidth || brush.width;
         height = brush.naturalHeight || brush.height;
+        board.designedBrush2Stroke = null;
         tintedBrush = getTintedBrush(brush, width, height, getCurrentPaintColor(board));
         board.context.drawImage(tintedBrush, x - width / 2, y - height / 2, width, height);
     }
@@ -529,6 +539,62 @@
         var tintedBrush = getTintedBrush(brush, width, height, getCurrentPaintColor(board));
 
         board.context.drawImage(tintedBrush, gridX - width / 2, gridY - height / 2, width, height);
+    }
+
+    function paintDesignedBrush2Continuous(board, brush, brushConfig, x, y) {
+        var width = brush.naturalWidth || brush.width;
+        var height = brush.naturalHeight || brush.height;
+        var spacing = Math.max(1, width * 0.15);
+        var stroke = board.designedBrush2Stroke;
+        var tintedBrush = getTintedBrush(brush, width, height, getCurrentPaintColor(board));
+        var dx;
+        var dy;
+        var distance;
+        var travel;
+        var t;
+        var stampX;
+        var stampY;
+
+        if (!stroke || stroke.algorithm !== brushConfig.algorithm || stroke.brush !== brush) {
+            stampDesignedBrush(board, tintedBrush, width, height, x, y);
+            board.designedBrush2Stroke = {
+                algorithm: brushConfig.algorithm,
+                brush: brush,
+                x: x,
+                y: y,
+                remainder: 0
+            };
+            return;
+        }
+
+        dx = x - stroke.x;
+        dy = y - stroke.y;
+        distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance === 0) {
+            return;
+        }
+
+        travel = spacing - stroke.remainder;
+        while (travel <= distance) {
+            t = travel / distance;
+            stampX = stroke.x + dx * t;
+            stampY = stroke.y + dy * t;
+            stampDesignedBrush(board, tintedBrush, width, height, stampX, stampY);
+            travel += spacing;
+        }
+
+        board.designedBrush2Stroke = {
+            algorithm: brushConfig.algorithm,
+            brush: brush,
+            x: x,
+            y: y,
+            remainder: (stroke.remainder + distance) % spacing
+        };
+    }
+
+    function stampDesignedBrush(board, brush, width, height, x, y) {
+        board.context.drawImage(brush, x - width / 2, y - height / 2, width, height);
     }
 
     function paintBucket(board, x, y) {
