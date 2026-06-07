@@ -68,10 +68,13 @@
             ".bd2-range-hardness{--bd2-range-color:#30a746;}",
             ".bd2-small-label{position:absolute;font:bold 11px Georgia,serif;line-height:1;color:#111;}",
             ".bd2-opacity-value{position:absolute;color:#111;font:bold 12px Georgia,serif;line-height:1;text-align:center;}",
-            ".bd2-algorithm-group{position:absolute;left:338px;top:167px;font:bold 11px Georgia,serif;color:#111;}",
-            ".bd2-algorithm-row{display:flex;align-items:center;gap:4px;height:41px;}",
+            ".bd2-algorithm-group{position:absolute;left:337px;top:167px;font:bold 11px Georgia,serif;color:#111;}",
+            ".bd2-algorithm-row{display:flex;align-items:center;gap:3px;height:42px;}",
             ".bd2-algorithm-radio{width:20px;height:20px;margin:0;accent-color:#001fff;}",
-            ".bd2-grid-size{position:absolute;left:338px;top:237px;width:34px;height:26px;font:bold 12px Arial,sans-serif;text-align:center;}",
+            ".bd2-grid-control{position:absolute;left:336px;top:228px;width:38px;display:grid;grid-template-columns:12px 1fr 12px;grid-template-rows:18px 14px;gap:1px;z-index:2;}",
+            ".bd2-grid-size{grid-column:1/4;width:38px;height:18px;border:1px solid #999;background:#fff;color:#111;font:bold 10px Arial,sans-serif;text-align:center;padding:0;}",
+            ".bd2-grid-step{width:12px;height:14px;border:1px solid #777;background:#eee;color:#111;font:bold 10px Arial,sans-serif;line-height:10px;padding:0;cursor:pointer;}",
+            ".bd2-grid-step-spacer{width:12px;height:14px;}",
             ".bd2-preview{position:absolute;width:58px;height:58px;background:transparent;}",
             ".bd2-drawing{position:absolute;left:50px;top:186px;width:280px;height:280px;background:transparent;cursor:crosshair;}",
             ".bd2-handle{position:absolute;width:26px;height:26px;background-image:var(--bd2-handles);background-repeat:no-repeat;background-size:57px 26px;transform:translate(-13px,-13px);cursor:grab;touch-action:none;}",
@@ -190,11 +193,19 @@
             this.algorithmInputs[algorithm] = radio;
         }, this);
 
-        this.gridSizeInput = createElement("input", "bd2-grid-size", root);
+        this.gridControl = createElement("div", "bd2-grid-control", root);
+        this.gridSizeInput = createElement("input", "bd2-grid-size", this.gridControl);
         this.gridSizeInput.type = "number";
         this.gridSizeInput.min = "10";
         this.gridSizeInput.max = "200";
         this.gridSizeInput.step = "10";
+        this.gridMinusButton = createElement("button", "bd2-grid-step", this.gridControl);
+        this.gridMinusButton.type = "button";
+        this.gridMinusButton.textContent = "-";
+        createElement("span", "bd2-grid-step-spacer", this.gridControl);
+        this.gridPlusButton = createElement("button", "bd2-grid-step", this.gridControl);
+        this.gridPlusButton.type = "button";
+        this.gridPlusButton.textContent = "+";
 
         this.softPreview = createElement("canvas", "bd2-preview", root);
         this.softPreview.width = 58;
@@ -259,6 +270,14 @@
 
         this.gridSizeInput.addEventListener("change", function() {
             self.setGridSize(Number(self.gridSizeInput.value));
+        });
+
+        this.gridMinusButton.addEventListener("click", function() {
+            self.setGridSize(self.state.gridSize - 10);
+        });
+
+        this.gridPlusButton.addEventListener("click", function() {
+            self.setGridSize(self.state.gridSize + 10);
         });
 
         this.sizeHandle.addEventListener("pointerdown", function(event) {
@@ -356,6 +375,8 @@
         this.algorithmInputs[brush.algorithm].checked = true;
         this.gridSizeInput.value = String(brush.gridSize);
         this.gridSizeInput.disabled = brush.algorithm !== "B";
+        this.gridMinusButton.disabled = brush.algorithm !== "B";
+        this.gridPlusButton.disabled = brush.algorithm !== "B";
         this.outputContent.textContent = JSON.stringify(brush, null, 2);
 
         this.drawPreviewCanvas(this.softPreview, brush.size, brush.hardness);
