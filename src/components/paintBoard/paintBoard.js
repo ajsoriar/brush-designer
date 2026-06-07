@@ -29,7 +29,8 @@
         STROKED_OVALS: "STROKED-OVALS",
         PAINT_BUCKET: "PAINT-BUCKET",
         INK_DROPPER: "INK-DROPPER",
-        DESIGNED_BRUSH: "DESIGNED-BRUSH"
+        DESIGNED_BRUSH: "DESIGNED-BRUSH",
+        DESIGNED_BRUSH_2: "DESIGNED-BRUSH-2"
     };
 
     var currentPaintToolMode = PAINT_TOOL_MODES.SQUARED_POINTS;
@@ -398,6 +399,8 @@
             paintRoundLine(board, board.lastPointerPosition, point);
         } else if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH) {
             paintDesignedBrush(board, point.x, point.y);
+        } else if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2) {
+            paintDesignedBrush2(board, point.x, point.y);
         } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS) {
             paintRoundPoint(board, point.x, point.y);
         } else {
@@ -491,6 +494,41 @@
         height = brush.naturalHeight || brush.height;
         tintedBrush = getTintedBrush(brush, width, height, getCurrentPaintColor(board));
         board.context.drawImage(tintedBrush, x - width / 2, y - height / 2, width, height);
+    }
+
+    function paintDesignedBrush2(board, x, y) {
+        var brush = getCurrentDesignedBrush2();
+        var brushConfig;
+        var width;
+        var height;
+        var tintedBrush;
+
+        if (!brush) {
+            paintRoundPoint(board, x, y);
+            return;
+        }
+
+        brushConfig = brush.brush || {};
+        if (brushConfig.algorithm === "B") {
+            paintDesignedBrush2Grid(board, brush, brushConfig, x, y);
+            return;
+        }
+
+        width = brush.naturalWidth || brush.width;
+        height = brush.naturalHeight || brush.height;
+        tintedBrush = getTintedBrush(brush, width, height, getCurrentPaintColor(board));
+        board.context.drawImage(tintedBrush, x - width / 2, y - height / 2, width, height);
+    }
+
+    function paintDesignedBrush2Grid(board, brush, brushConfig, x, y) {
+        var gridSize = Math.max(10, parseInt(brushConfig.gridSize, 10) || 200);
+        var gridX = Math.round(x / gridSize) * gridSize;
+        var gridY = Math.round(y / gridSize) * gridSize;
+        var width = brush.naturalWidth || brush.width;
+        var height = brush.naturalHeight || brush.height;
+        var tintedBrush = getTintedBrush(brush, width, height, getCurrentPaintColor(board));
+
+        board.context.drawImage(tintedBrush, gridX - width / 2, gridY - height / 2, width, height);
     }
 
     function paintBucket(board, x, y) {
@@ -743,6 +781,14 @@
     function getCurrentDesignedBrush() {
         if (global.App && global.App.memory && global.App.memory.currentDesignedBrush) {
             return global.App.memory.currentDesignedBrush;
+        }
+
+        return null;
+    }
+
+    function getCurrentDesignedBrush2() {
+        if (global.App && global.App.memory && global.App.memory.currentDesignedBrush2) {
+            return global.App.memory.currentDesignedBrush2;
         }
 
         return null;

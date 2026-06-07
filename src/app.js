@@ -40,6 +40,18 @@
         global.AppOpenWindows.setActiveColor(event.detail.color);
     });
 
+    global.addEventListener("paint-tools-change", function(event) {
+        var mode = event.detail && event.detail.mode;
+
+        if (mode === "DESIGNED-BRUSH") {
+            global.AppOpenWindows.openBrushEditorOutputsWindow();
+        }
+
+        if (mode === "DESIGNED-BRUSH-2") {
+            global.AppOpenWindows.openBrushDesigner2InWindow();
+        }
+    });
+
     function pasteFromClipboard() {
         var targetBoard = global.AppOpenWindows.getActivePaintBoard();
 

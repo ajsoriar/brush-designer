@@ -371,6 +371,7 @@
             id: "brush-designer-2-window",
             windowId: "brush-designer-2",
             title: "Brush Designer II",
+            type: "TOOL",
             x: x,
             y: y,
             width: outerWidth,
@@ -386,7 +387,7 @@
             assetBaseUrl: "/components/brushdesigner.v2/",
             onChange: function(brush, designer) {
                 global.App.memory.currentBrushDesigner2 = brush;
-                global.App.memory.currentDesignedBrush = designer.createBrushCanvas();
+                global.App.memory.currentDesignedBrush2 = designer.createBrushCanvas();
             }
         });
 
@@ -394,6 +395,7 @@
     }
 
     function openBrushEditorOutputsWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("brush-editor-outputs");
         var outputsWidth = 170;
         var outputsHeight = 700;
         var windowFrameWidth = 16;
@@ -403,7 +405,14 @@
         var x = Math.max(0, global.innerWidth - outerWidth - 20);
         var y = Math.max(0, Math.round((global.innerHeight - outerHeight) / 2));
         var outputsElement = document.getElementById("brush-editor-outputs");
-        var outputsWindow = WindowsManager.create({
+        var outputsWindow;
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return existingWindow;
+        }
+
+        outputsWindow = WindowsManager.create({
             id: "brush-editor-outputs-window",
             windowId: "brush-editor-outputs",
             title: "Brush outputs",

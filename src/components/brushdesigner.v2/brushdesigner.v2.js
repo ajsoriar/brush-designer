@@ -10,6 +10,9 @@
         maxSize: 256,
         size: 64,
         hardness: 50,
+        opacity: 30,
+        algorithm: "A",
+        gridSize: 200,
         assetBaseUrl: null
     };
 
@@ -35,6 +38,18 @@
         return element;
     }
 
+    function normalizeAlgorithm(algorithm) {
+        var value = String(algorithm || "A").toUpperCase();
+
+        return value === "B" || value === "C" ? value : "A";
+    }
+
+    function normalizeGridSize(gridSize) {
+        var value = Math.round((Number(gridSize) || 200) / 10) * 10;
+
+        return clamp(value, 10, 200);
+    }
+
     function injectStyles() {
         if (document.getElementById("brush-designer-v2-styles")) {
             return;
@@ -48,8 +63,15 @@
             ".bd2-label{position:absolute;font-size:12px;font-weight:bold;line-height:1;}",
             ".bd2-value{position:absolute;width:45px;height:22px;border:1px solid transparent;background:transparent;color:#d00033;font:bold 12px Arial,sans-serif;text-align:center;text-shadow:0 1px #fff;pointer-events:none;}",
             ".bd2-range{position:absolute;width:160px;height:18px;margin:0;background:transparent;accent-color:var(--bd2-range-color);}",
+            ".bd2-range-vertical{position:absolute;width:160px;height:18px;margin:0;background:transparent;accent-color:#2647ff;transform:rotate(-90deg);transform-origin:left top;}",
             ".bd2-range-size{--bd2-range-color:#ff5548;}",
             ".bd2-range-hardness{--bd2-range-color:#30a746;}",
+            ".bd2-small-label{position:absolute;font:bold 11px Georgia,serif;line-height:1;color:#111;}",
+            ".bd2-opacity-value{position:absolute;color:#111;font:bold 12px Georgia,serif;line-height:1;text-align:center;}",
+            ".bd2-algorithm-group{position:absolute;left:338px;top:167px;font:bold 11px Georgia,serif;color:#111;}",
+            ".bd2-algorithm-row{display:flex;align-items:center;gap:4px;height:41px;}",
+            ".bd2-algorithm-radio{width:20px;height:20px;margin:0;accent-color:#001fff;}",
+            ".bd2-grid-size{position:absolute;left:338px;top:237px;width:34px;height:26px;font:bold 12px Arial,sans-serif;text-align:center;}",
             ".bd2-preview{position:absolute;width:58px;height:58px;background:transparent;}",
             ".bd2-drawing{position:absolute;left:50px;top:186px;width:280px;height:280px;background:transparent;cursor:crosshair;}",
             ".bd2-handle{position:absolute;width:26px;height:26px;background-image:var(--bd2-handles);background-repeat:no-repeat;background-size:57px 26px;transform:translate(-13px,-13px);cursor:grab;touch-action:none;}",
@@ -78,6 +100,9 @@
         this.state = {
             size: clamp(Number(this.options.size), this.options.minSize, this.options.maxSize),
             hardness: clamp(Number(this.options.hardness), 0, 100),
+            opacity: clamp(Number(this.options.opacity), 0, 100),
+            algorithm: normalizeAlgorithm(this.options.algorithm),
+            gridSize: normalizeGridSize(this.options.gridSize),
             centerX: 140,
             centerY: 140
         };
@@ -131,6 +156,46 @@
         this.sizeValue.style.left = "250px";
         this.sizeValue.style.top = "145px";
 
+        createElement("label", "bd2-small-label", root).textContent = "Opacity";
+        root.lastChild.style.left = "6px";
+        root.lastChild.style.top = "139px";
+
+        this.opacityValue = createElement("div", "bd2-opacity-value", root);
+        this.opacityValue.style.left = "8px";
+        this.opacityValue.style.top = "154px";
+        this.opacityValue.style.width = "38px";
+
+        this.opacityInput = createElement("input", "bd2-range-vertical", root);
+        this.opacityInput.type = "range";
+        this.opacityInput.min = "0";
+        this.opacityInput.max = "100";
+        this.opacityInput.style.left = "20px";
+        this.opacityInput.style.top = "340px";
+
+        createElement("label", "bd2-small-label", root).textContent = "Algorithm";
+        root.lastChild.style.left = "316px";
+        root.lastChild.style.top = "139px";
+
+        this.algorithmGroup = createElement("div", "bd2-algorithm-group", root);
+        this.algorithmInputs = {};
+        ["A", "B", "C"].forEach(function(algorithm) {
+            var row = createElement("label", "bd2-algorithm-row", this.algorithmGroup);
+            var text = createElement("span", "", row);
+            var radio = createElement("input", "bd2-algorithm-radio", row);
+
+            text.textContent = algorithm;
+            radio.type = "radio";
+            radio.name = "bd2-algorithm";
+            radio.value = algorithm;
+            this.algorithmInputs[algorithm] = radio;
+        }, this);
+
+        this.gridSizeInput = createElement("input", "bd2-grid-size", root);
+        this.gridSizeInput.type = "number";
+        this.gridSizeInput.min = "10";
+        this.gridSizeInput.max = "200";
+        this.gridSizeInput.step = "10";
+
         this.softPreview = createElement("canvas", "bd2-preview", root);
         this.softPreview.width = 58;
         this.softPreview.height = 58;
@@ -172,12 +237,28 @@
             self.setSize(Number(self.sizeInput.value));
         });
 
+        this.opacityInput.addEventListener("input", function() {
+            self.setOpacity(Number(self.opacityInput.value));
+        });
+
         this.hardnessValue.addEventListener("change", function() {
             self.setHardness(parseInt(self.hardnessValue.value, 10));
         });
 
         this.sizeValue.addEventListener("change", function() {
             self.setSize(parseInt(self.sizeValue.value, 10));
+        });
+
+        ["A", "B", "C"].forEach(function(algorithm) {
+            self.algorithmInputs[algorithm].addEventListener("change", function() {
+                if (self.algorithmInputs[algorithm].checked) {
+                    self.setAlgorithm(algorithm);
+                }
+            });
+        });
+
+        this.gridSizeInput.addEventListener("change", function() {
+            self.setGridSize(Number(self.gridSizeInput.value));
         });
 
         this.sizeHandle.addEventListener("pointerdown", function(event) {
@@ -248,6 +329,21 @@
         this.update();
     };
 
+    BrushDesignerV2.prototype.setOpacity = function(opacity) {
+        this.state.opacity = clamp(Number.isFinite(opacity) ? opacity : 0, 0, 100);
+        this.update();
+    };
+
+    BrushDesignerV2.prototype.setAlgorithm = function(algorithm) {
+        this.state.algorithm = normalizeAlgorithm(algorithm);
+        this.update();
+    };
+
+    BrushDesignerV2.prototype.setGridSize = function(gridSize) {
+        this.state.gridSize = normalizeGridSize(gridSize);
+        this.update();
+    };
+
     BrushDesignerV2.prototype.update = function() {
         var brush = this.getBrush();
 
@@ -255,6 +351,11 @@
         this.hardnessValue.value = brush.hardness + "%";
         this.sizeInput.value = String(brush.size);
         this.sizeValue.value = brush.size + " px";
+        this.opacityInput.value = String(brush.opacity);
+        this.opacityValue.textContent = brush.opacity + "%";
+        this.algorithmInputs[brush.algorithm].checked = true;
+        this.gridSizeInput.value = String(brush.gridSize);
+        this.gridSizeInput.disabled = brush.algorithm !== "B";
         this.outputContent.textContent = JSON.stringify(brush, null, 2);
 
         this.drawPreviewCanvas(this.softPreview, brush.size, brush.hardness);
@@ -270,7 +371,7 @@
         var radius = previewSize / 2;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        this.drawBrush(ctx, canvas.width / 2, canvas.height / 2, radius, hardness);
+        this.drawBrush(ctx, canvas.width / 2, canvas.height / 2, radius, hardness, this.state.opacity);
     };
 
     BrushDesignerV2.prototype.drawDesignerCanvas = function() {
@@ -279,7 +380,7 @@
         var hardRadius = radius * (this.state.hardness / 100);
 
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.drawBrush(ctx, this.state.centerX, this.state.centerY, radius, this.state.hardness);
+        this.drawBrush(ctx, this.state.centerX, this.state.centerY, radius, this.state.hardness, this.state.opacity);
 
         ctx.save();
         ctx.strokeStyle = "rgba(255,95,68,.95)";
@@ -295,16 +396,17 @@
         ctx.restore();
     };
 
-    BrushDesignerV2.prototype.drawBrush = function(ctx, x, y, radius, hardness) {
+    BrushDesignerV2.prototype.drawBrush = function(ctx, x, y, radius, hardness, opacity) {
         var gradient;
         var hardStop = clamp(hardness / 100, 0, 1);
+        var alpha = clamp((Number(opacity) || 0) / 100, 0, 1);
 
         ctx.save();
         if (hardness >= 100) {
-            ctx.fillStyle = "#000";
+            ctx.fillStyle = "rgba(0,0,0," + alpha + ")";
         } else {
             gradient = ctx.createRadialGradient(x, y, radius * hardStop, x, y, radius);
-            gradient.addColorStop(0, "rgba(0,0,0,1)");
+            gradient.addColorStop(0, "rgba(0,0,0," + alpha + ")");
             gradient.addColorStop(1, "rgba(0,0,0,0)");
             ctx.fillStyle = gradient;
         }
@@ -337,8 +439,10 @@
             size: Math.round(this.state.size),
             hardness: Math.round(this.state.hardness),
             radius: Math.round(this.state.size / 2),
+            opacity: Math.round(this.state.opacity),
+            algorithm: this.state.algorithm,
+            gridSize: this.state.gridSize,
             spacing: 1,
-            opacity: 1,
             shape: "round"
         };
     };
@@ -350,8 +454,9 @@
 
         canvas.width = brush.size;
         canvas.height = brush.size;
+        canvas.brush = brush;
         ctx = canvas.getContext("2d");
-        this.drawBrush(ctx, brush.radius, brush.radius, brush.radius, brush.hardness);
+        this.drawBrush(ctx, brush.radius, brush.radius, brush.radius, brush.hardness, brush.opacity);
 
         return canvas;
     };
