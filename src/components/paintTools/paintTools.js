@@ -25,7 +25,8 @@
         "STROKED-OVALS": new URL("./icons/paint-tools_42.png", import.meta.url).href,
         "PAINT-BUCKET": new URL("./icons/paint-tools_40.png", import.meta.url).href,
         "INK-DROPPER": new URL("./icons/paint-tools_29.png", import.meta.url).href,
-        "DESIGNED-BRUSH": new URL("./icons/paint-tools_31.png", import.meta.url).href
+        "DESIGNED-BRUSH": new URL("./icons/paint-tools_31.png", import.meta.url).href,
+        "DESIGNED-BRUSH-2": new URL("./icons/paint-tools_31.png", import.meta.url).href
     };
 
     function extend(target, source) {
