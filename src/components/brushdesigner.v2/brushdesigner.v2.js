@@ -12,7 +12,7 @@
         hardness: 50,
         opacity: 30,
         algorithm: "A",
-        gridSize: 200,
+        gridSize: 110,
         assetBaseUrl: null
     };
 
@@ -50,43 +50,16 @@
         return clamp(value, 10, 200);
     }
 
-    function injectStyles() {
+    function injectStyles(baseUrl) {
         if (document.getElementById("brush-designer-v2-styles")) {
             return;
         }
 
-        var style = createElement("style");
-        style.id = "brush-designer-v2-styles";
-        style.textContent = [
-            ".bd2-root{position:relative;width:380px;height:475px;background-image:var(--bd2-bg);background-size:380px 475px;background-repeat:no-repeat;font-family:Arial,sans-serif;color:#111;user-select:none;}",
-            ".bd2-root *{box-sizing:border-box;}",
-            ".bd2-label{position:absolute;font-size:12px;font-weight:bold;line-height:1;}",
-            ".bd2-value{position:absolute;width:45px;height:22px;border:1px solid transparent;background:transparent;color:#d00033;font:bold 12px Arial,sans-serif;text-align:center;text-shadow:0 1px #fff;pointer-events:none;}",
-            ".bd2-range{position:absolute;width:160px;height:18px;margin:0;background:transparent;accent-color:var(--bd2-range-color);}",
-            ".bd2-range-vertical{position:absolute;width:160px;height:18px;margin:0;background:transparent;accent-color:#2647ff;transform:rotate(-90deg);transform-origin:left top;}",
-            ".bd2-range-size{--bd2-range-color:#ff5548;}",
-            ".bd2-range-hardness{--bd2-range-color:#30a746;}",
-            ".bd2-small-label{position:absolute;font:bold 11px Georgia,serif;line-height:1;color:#111;}",
-            ".bd2-opacity-value{position:absolute;color:#111;font:bold 12px Georgia,serif;line-height:1;text-align:center;}",
-            ".bd2-algorithm-group{position:absolute;left:337px;top:167px;font:bold 11px Georgia,serif;color:#111;}",
-            ".bd2-algorithm-row{display:flex;align-items:center;gap:3px;height:42px;}",
-            ".bd2-algorithm-radio{width:20px;height:20px;margin:0;accent-color:#001fff;}",
-            ".bd2-grid-control{position:absolute;left:336px;top:228px;width:38px;display:grid;grid-template-columns:12px 1fr 12px;grid-template-rows:18px 14px;gap:1px;z-index:2;}",
-            ".bd2-grid-size{grid-column:1/4;width:38px;height:18px;border:1px solid #999;background:#fff;color:#111;font:bold 10px Arial,sans-serif;text-align:center;padding:0;}",
-            ".bd2-grid-step{width:12px;height:14px;border:1px solid #777;background:#eee;color:#111;font:bold 10px Arial,sans-serif;line-height:10px;padding:0;cursor:pointer;}",
-            ".bd2-grid-step-spacer{width:12px;height:14px;}",
-            ".bd2-preview{position:absolute;width:58px;height:58px;background:transparent;}",
-            ".bd2-drawing{position:absolute;left:50px;top:186px;width:280px;height:280px;background:transparent;cursor:crosshair;}",
-            ".bd2-handle{position:absolute;width:26px;height:26px;background-image:var(--bd2-handles);background-repeat:no-repeat;background-size:57px 26px;transform:translate(-13px,-13px);cursor:grab;touch-action:none;}",
-            ".bd2-handle:active{cursor:grabbing;}",
-            ".bd2-handle-size{background-position:0 0;}",
-            ".bd2-handle-hardness{background-position:-31px 0;}",
-            ".bd2-output{position:absolute;left:50px;right:50px;bottom:9px;min-height:74px;border:1px solid #E91E63;background:#000000bd;color:#00ff0a;font:11px Consolas,monospace;line-height:11px;overflow:auto;white-space:pre-wrap;padding:8px;z-index:20;}",
-            ".bd2-output-close{position:absolute;right:3px;top:3px;width:16px;height:16px;border:1px solid #E91E63;background:#000;color:#00ff0a;font:bold 11px Arial,sans-serif;line-height:12px;padding:0;cursor:pointer;}",
-            ".bd2-output-content{display:block;padding-right:18px;}",
-            ".bd2-info-button{position:absolute;left:55px;bottom:15px;height:18px;border:1px solid #888;background:#eee;color:#111;font:10px Consolas,monospace;line-height:14px;padding:1px 6px;cursor:pointer;z-index:19;}"
-        ].join("\n");
-        document.head.appendChild(style);
+        var link = createElement("link");
+        link.id = "brush-designer-v2-styles";
+        link.rel = "stylesheet";
+        link.href = assetUrl("brushdesigner.v2.css", baseUrl);
+        document.head.appendChild(link);
     }
 
     function BrushDesignerV2(target, options) {
@@ -118,7 +91,7 @@
 
     BrushDesignerV2.prototype.render = function() {
         var root;
-        injectStyles();
+        injectStyles(this.options.assetBaseUrl);
 
         root = createElement("div", "bd2-root");
         root.style.setProperty("--bd2-bg", "url(\"" + assetUrl("bd2-bg.png", this.options.assetBaseUrl) + "\")");
@@ -191,21 +164,24 @@
             radio.name = "bd2-algorithm";
             radio.value = algorithm;
             this.algorithmInputs[algorithm] = radio;
-        }, this);
 
-        this.gridControl = createElement("div", "bd2-grid-control", root);
-        this.gridSizeInput = createElement("input", "bd2-grid-size", this.gridControl);
-        this.gridSizeInput.type = "number";
-        this.gridSizeInput.min = "10";
-        this.gridSizeInput.max = "200";
-        this.gridSizeInput.step = "10";
-        this.gridMinusButton = createElement("button", "bd2-grid-step", this.gridControl);
-        this.gridMinusButton.type = "button";
-        this.gridMinusButton.textContent = "-";
-        createElement("span", "bd2-grid-step-spacer", this.gridControl);
-        this.gridPlusButton = createElement("button", "bd2-grid-step", this.gridControl);
-        this.gridPlusButton.type = "button";
-        this.gridPlusButton.textContent = "+";
+            if (algorithm === "B") {
+                createElement("br", "", row);
+                this.gridControl = createElement("div", "bd2-grid-control", row);
+                this.gridSizeInput = createElement("input", "bd2-grid-size", this.gridControl);
+                this.gridSizeInput.type = "number";
+                this.gridSizeInput.min = "10";
+                this.gridSizeInput.max = "200";
+                this.gridSizeInput.step = "10";
+                this.gridMinusButton = createElement("button", "bd2-grid-step", this.gridControl);
+                this.gridMinusButton.type = "button";
+                this.gridMinusButton.textContent = "-";
+                createElement("span", "bd2-grid-step-spacer", this.gridControl);
+                this.gridPlusButton = createElement("button", "bd2-grid-step", this.gridControl);
+                this.gridPlusButton.type = "button";
+                this.gridPlusButton.textContent = "+";
+            }
+        }, this);
 
         this.softPreview = createElement("canvas", "bd2-preview", root);
         this.softPreview.width = 58;
