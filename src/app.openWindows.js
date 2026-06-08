@@ -513,7 +513,12 @@
             },
             scrollBarX: false,
             scrollBarY: false,
-            contentId: "simple-color-picker-window-content"
+            contentId: "simple-color-picker-window-content",
+            onResize: function(width, height) {
+                if (appColorPicker && appColorPicker.resizeTo) {
+                    appColorPicker.resizeTo(width, height);
+                }
+            }
         });
 
         appColorPicker = SimpleColorPicker({
@@ -523,6 +528,7 @@
             rows: 10,
             colorGap: 0,
             activeColor: global.App.memory.currentColor,
+            resizePolicy: "EXPAND",
             onColorSelected: function(color) {
                 global.App.memory.currentColor = color;
                 console.log("Selected color:", color);

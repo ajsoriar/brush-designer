@@ -44,6 +44,7 @@
         parent: null,
         content: null,
         contentId: null,
+        onResize: null,
         beforeClose: null
     };
 
@@ -178,7 +179,7 @@
                 minimizeWindow(currentWindow);
             },
             restore: function() {
-                restoreWindow(currentWindow);
+                restoreWindow(currentWindow, config);
             },
             maximize: function() {
                 maximizeWindow(currentWindow, config);
@@ -203,6 +204,7 @@
             resizeTo: function(width, height) {
                 element.style.width = Math.max(width, config.minWidth) + "px";
                 element.style.height = Math.max(height, config.minHeight) + "px";
+                notifyResize(currentWindow, config);
             },
             scaleToContent: function(width, height) {
                 scaleToContent(currentWindow, config, width, height);
@@ -532,6 +534,7 @@
             element.style.top = nextTop + "px";
             element.style.width = nextWidth + "px";
             element.style.height = nextHeight + "px";
+            notifyResize(currentWindow, config);
         }
 
         function stop() {
@@ -546,12 +549,13 @@
         currentWindow.element.className += currentWindow.element.className.indexOf("wm-window-minimized") === -1 ? " wm-window-minimized" : "";
     }
 
-    function restoreWindow(currentWindow) {
+    function restoreWindow(currentWindow, config) {
         currentWindow.minimized = false;
         currentWindow.element.className = currentWindow.element.className.replace(/\s?wm-window-minimized/g, "");
 
         if (currentWindow.previousHeight) {
             currentWindow.element.style.height = currentWindow.previousHeight + "px";
+            notifyResize(currentWindow, config);
         }
     }
 
@@ -560,12 +564,12 @@
         var rect;
 
         if (currentWindow.maximized) {
-            restoreMaximizedWindow(currentWindow);
+            restoreMaximizedWindow(currentWindow, config);
             return;
         }
 
         if (currentWindow.minimized) {
-            restoreWindow(currentWindow);
+            restoreWindow(currentWindow, config);
         }
 
         currentWindow.previousRect = {
@@ -581,9 +585,10 @@
         element.style.top = rect.top + "px";
         element.style.width = Math.max(rect.width, config.minWidth) + "px";
         element.style.height = Math.max(rect.height, config.minHeight) + "px";
+        notifyResize(currentWindow, config);
     }
 
-    function restoreMaximizedWindow(currentWindow) {
+    function restoreMaximizedWindow(currentWindow, config) {
         var rect = currentWindow.previousRect;
 
         currentWindow.maximized = false;
@@ -597,6 +602,37 @@
         currentWindow.element.style.top = rect.top + "px";
         currentWindow.element.style.width = rect.width + "px";
         currentWindow.element.style.height = rect.height + "px";
+        notifyResize(currentWindow, config);
+    }
+
+    function notifyResize(currentWindow, config) {
+        var detail;
+        var event;
+
+        if (!currentWindow || !currentWindow.contentElement) {
+            return;
+        }
+
+        detail = {
+            window: currentWindow,
+            width: currentWindow.contentElement.clientWidth,
+            height: currentWindow.contentElement.clientHeight
+        };
+
+        if (typeof config.onResize === "function") {
+            config.onResize(detail.width, detail.height, currentWindow);
+        }
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("wm-window-resize", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("wm-window-resize", false, false, detail);
+        }
+
+        currentWindow.contentElement.dispatchEvent(event);
     }
 
     function getMaximizeRect(element) {

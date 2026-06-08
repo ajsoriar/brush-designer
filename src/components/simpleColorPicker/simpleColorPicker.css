@@ -1,6 +1,6 @@
 .simple-color-picker {
-    background: #202020;
-    color: #f0f0f0;
+    background: #f2f2f2;
+    color: #000000;
     display: flex;
     flex-direction: column;
     font-family: Arial, sans-serif;
@@ -45,18 +45,26 @@
     aspect-ratio: 1 / 1;
     background: transparent;
     border: 0;
+    box-shadow: none;
     cursor: pointer;
     min-height: 5px;
     min-width: 5px;
+    outline: none;
     padding: 0;
 }
 
 .simple-color-picker-cell:hover {
-    outline: 1px solid #ffffff;
-    outline-offset: -1px;
+    box-shadow: inset 0 0 0 1px #ffffff;
+}
+
+.simple-color-picker-cell:focus {
+    outline: none;
+}
+
+.simple-color-picker-cell:focus-visible {
+    box-shadow: inset 0 0 0 1px #ffffff, inset 0 0 0 3px #000000;
 }
 
 .simple-color-picker-cell-active {
-    outline: 3px solid #000000;
-    outline-offset: -3px;
+    box-shadow: inset 0 0 0 3px #000000;
 }

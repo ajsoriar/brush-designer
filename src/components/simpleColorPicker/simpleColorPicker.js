@@ -8,15 +8,27 @@
         columns: 10,
         rows: 4,
         colorGap: 0,
+        bgColor: "#f2f2f2",
+        textColor: "#000000",
         color: {
             defaultWidth: 26,
             defaultHeight: 26
         },
         colors: null,
         activeColor: null,
+        resizePolicy: "SCALE",
         onChange: null,
         onColorSelected: null
     };
+    var DEFAULT_HUES = [0, 15, 30, 45, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 345];
+    var RESIZE_POLICIES = {
+        SCALE: "SCALE",
+        EXPAND: "EXPAND"
+    };
+    var ACTIVE_HEIGHT = 32;
+    var COMPONENT_GAP = 8;
+    var HORIZONTAL_PADDING = 20;
+    var VERTICAL_PADDING = 20;
 
     function extend(target, source) {
         var key;
@@ -33,6 +45,9 @@
     function SimpleColorPicker(options) {
         var config = extend(extend({}, DEFAULTS), options || {});
         config.color = extend(extend({}, DEFAULTS.color), config.color || {});
+        config.resizePolicy = normalizeResizePolicy(config.resizePolicy);
+        config.hasCustomColors = !!config.colors;
+        config.baseColor = extend({}, config.color);
         var pickerId = config.id || ("simple-color-picker-" + Date.now());
         var container = getContainer(config.containerId);
         var element = document.createElement("div");
@@ -45,6 +60,8 @@
 
         element.id = pickerId;
         element.className = "simple-color-picker";
+        element.style.backgroundColor = config.bgColor;
+        element.style.color = config.textColor;
 
         active.className = "simple-color-picker-active";
         preview.className = "simple-color-picker-preview";
@@ -78,6 +95,9 @@
             setActiveColor: function(color) {
                 setActiveColor(picker, color, config);
             },
+            resizeTo: function(width, height, resizePolicy) {
+                resizeTo(picker, config, width, height, resizePolicy);
+            },
             destroy: function() {
                 destroy(picker);
             }
@@ -110,6 +130,7 @@
 
     function renderColors(picker, config) {
         picker.gridElement.innerHTML = "";
+        picker.gridElement.style.gridTemplateColumns = "repeat(" + config.columns + ", " + config.color.defaultWidth + "px)";
 
         picker.colors.forEach(function(color) {
             var button = document.createElement("button");
@@ -129,7 +150,7 @@
         });
     }
 
-    function setActiveColor(picker, color, config) {
+    function setActiveColor(picker, color, config, silent) {
         var cells = picker.gridElement.querySelectorAll(".simple-color-picker-cell");
         var preview = picker.element.querySelector(".simple-color-picker-preview");
         var value = picker.element.querySelector(".simple-color-picker-value");
@@ -146,6 +167,10 @@
             }
         });
 
+        if (silent) {
+            return;
+        }
+
         if (typeof config.onChange === "function") {
             config.onChange(color, picker);
         }
@@ -155,30 +180,91 @@
         }
     }
 
+    function resizeTo(picker, config, width, height, resizePolicy) {
+        var policy = normalizeResizePolicy(resizePolicy || config.resizePolicy);
+
+        if (policy === RESIZE_POLICIES.EXPAND && !config.hasCustomColors) {
+            expandTo(picker, config, width, height);
+        } else {
+            scaleTo(picker, config, width, height);
+        }
+
+        setActiveColor(picker, picker.activeColor, config, true);
+    }
+
+    function expandTo(picker, config, width, height) {
+        var columns = getColumnsForWidth(config, width);
+        var rows = getRowsForHeight(config, height);
+
+        if (columns === config.columns && rows === config.rows) {
+            return;
+        }
+
+        config.columns = columns;
+        config.rows = rows;
+        config.color.defaultWidth = config.baseColor.defaultWidth;
+        config.color.defaultHeight = config.baseColor.defaultHeight;
+        picker.colors = createPalette(config.columns, config.rows);
+        renderColors(picker, config);
+    }
+
+    function scaleTo(picker, config, width, height) {
+        var gridWidth = Math.max(1, width - HORIZONTAL_PADDING);
+        var gridHeight = Math.max(1, height - ACTIVE_HEIGHT - COMPONENT_GAP - VERTICAL_PADDING);
+        var horizontalGap = Math.max(0, (config.columns - 1) * config.colorGap);
+        var verticalGap = Math.max(0, (config.rows - 1) * config.colorGap);
+        var cellWidth = Math.max(5, Math.floor((gridWidth - horizontalGap) / Math.max(1, config.columns)));
+        var cellHeight = Math.max(5, Math.floor((gridHeight - verticalGap) / Math.max(1, config.rows)));
+
+        config.color.defaultWidth = cellWidth;
+        config.color.defaultHeight = cellHeight;
+        renderColors(picker, config);
+    }
+
+    function getColumnsForWidth(config, width) {
+        var availableWidth = Math.max(1, width - HORIZONTAL_PADDING);
+        var cellWidth = Math.max(1, config.baseColor.defaultWidth + config.colorGap);
+
+        return Math.max(1, Math.floor((availableWidth + config.colorGap) / cellWidth));
+    }
+
+    function getRowsForHeight(config, height) {
+        var availableHeight = Math.max(1, height - ACTIVE_HEIGHT - COMPONENT_GAP - VERTICAL_PADDING);
+        var cellHeight = Math.max(1, config.baseColor.defaultHeight + config.colorGap);
+
+        return Math.max(1, Math.floor((availableHeight + config.colorGap) / cellHeight));
+    }
+
     function getWidth(config) {
         var gridWidth = (config.columns * config.color.defaultWidth) + ((config.columns - 1) * config.colorGap);
         var activeWidth = 140;
-        var horizontalPadding = 20;
 
-        return Math.max(gridWidth, activeWidth) + horizontalPadding;
+        return Math.max(gridWidth, activeWidth) + HORIZONTAL_PADDING;
     }
 
     function getHeight(config) {
         var gridHeight = (config.rows * config.color.defaultHeight) + ((config.rows - 1) * config.colorGap);
-        var activeHeight = 32;
-        var componentGap = 8;
-        var verticalPadding = 20;
 
-        return activeHeight + componentGap + gridHeight + verticalPadding;
+        return ACTIVE_HEIGHT + COMPONENT_GAP + gridHeight + VERTICAL_PADDING;
+    }
+
+    function normalizeResizePolicy(resizePolicy) {
+        var policy = String(resizePolicy || RESIZE_POLICIES.SCALE).toUpperCase();
+
+        if (policy === RESIZE_POLICIES.EXPAND) {
+            return RESIZE_POLICIES.EXPAND;
+        }
+
+        return RESIZE_POLICIES.SCALE;
     }
 
     function createPalette(columns, rows) {
         var count = columns * rows;
         var colors = [];
         var i;
-        var ci;
         var hue;
         var row;
+        var column;
         var lightness;
 
         if (count > 0) {
@@ -194,14 +280,25 @@
         }
 
         for (i = colors.length; i < count; i++) {
-            ci = i - 3;
-            hue = Math.round((ci * 360) / Math.max(1, count - 3));
-            row = Math.floor(ci / columns);
-            lightness = Math.round(38 + (row * 34) / Math.max(1, rows - 1));
-            colors.push("hsl(" + hue + ", 85%, " + lightness + "%)");
+            column = i % columns;
+            hue = getPaletteHue(column, columns);
+            row = Math.floor(i / columns);
+            lightness = Math.round(30 + (row * 40) / Math.max(1, rows - 1));
+            if (row === Math.floor(rows / 2)) {
+                lightness = 50;
+            }
+            colors.push("hsl(" + hue + ", 100%, " + lightness + "%)");
         }
 
         return colors;
+    }
+
+    function getPaletteHue(column, columns) {
+        if (columns === DEFAULT_HUES.length) {
+            return DEFAULT_HUES[column];
+        }
+
+        return Math.round((column * 360) / Math.max(1, columns));
     }
 
     function getRgbText(color) {
