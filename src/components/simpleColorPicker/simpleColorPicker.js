@@ -176,6 +176,7 @@
         var count = columns * rows;
         var colors = [];
         var i;
+        var ci;
         var hue;
         var row;
         var lightness;
@@ -193,8 +194,9 @@
         }
 
         for (i = colors.length; i < count; i++) {
-            hue = Math.round(((i - 3) * 360) / Math.max(1, count - 3));
-            row = Math.floor(i / columns);
+            ci = i - 3;
+            hue = Math.round((ci * 360) / Math.max(1, count - 3));
+            row = Math.floor(ci / columns);
             lightness = Math.round(38 + (row * 34) / Math.max(1, rows - 1));
             colors.push("hsl(" + hue + ", 85%, " + lightness + "%)");
         }
