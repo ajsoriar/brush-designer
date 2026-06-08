@@ -202,13 +202,13 @@
         }
 
         toolbar = document.createElement("div");
-        toolbar.className = "paint-board-toolbar";
+        toolbar.className = "wm-toolbar";
 
         zoomOptions.forEach(function(option) {
             var button = document.createElement("button");
 
             button.type = "button";
-            button.className = "paint-board-toolbar-btn";
+            button.className = "wm-toolbar-btn";
             button.textContent = option.label;
             button.title = option.title || option.label;
             button.addEventListener("click", function() {
@@ -396,7 +396,7 @@
 
     function openBrushEditorOutputsWindow() {
         var existingWindow = WindowsManager.getWindowByWindowId("brush-editor-outputs");
-        var outputsWidth = 170;
+        var outputsWidth = 200;
         var outputsHeight = 700;
         var windowFrameWidth = 16;
         var windowFrameHeight = 36;
@@ -404,7 +404,6 @@
         var outerHeight = outputsHeight + windowFrameHeight;
         var x = Math.max(0, global.innerWidth - outerWidth - 20);
         var y = Math.max(0, Math.round((global.innerHeight - outerHeight) / 2));
-        var outputsElement = document.getElementById("brush-editor-outputs");
         var outputsWindow;
 
         if (existingWindow) {
@@ -422,6 +421,8 @@
             width: outerWidth,
             height: outerHeight,
             resizable: false,
+            toolsRow: true,
+            contentCentered: false,
             topBarGradient: {
                 a: "#2563eb",
                 b: "#14b8a6",
@@ -432,53 +433,20 @@
             contentId: "brush-editor-outputs-window-content"
         });
 
-        if (!outputsElement) {
-            outputsElement = document.createElement("ol");
-            outputsElement.id = "brush-editor-outputs";
-        }
+        global.BrushEditorOutputs({
+            containerId: outputsWindow.contentId,
+            toolbarElement: outputsWindow.toolsRowElement,
+            onCreateBrush: function() {
+                openBrushDesignerInWindow();
+            },
+            onSelect: function(image) {
+                global.App.memory.currentDesignedBrush = image;
 
-        bindBrushOutputSelection(outputsElement);
-        outputsWindow.contentElement.appendChild(outputsElement);
-    }
-
-    function bindBrushOutputSelection(outputsElement) {
-        if (outputsElement.getAttribute("data-selection-bound") === "true") {
-            return;
-        }
-
-        outputsElement.setAttribute("data-selection-bound", "true");
-        outputsElement.addEventListener("click", function(event) {
-            var item = event.target.closest("li");
-            var image;
-
-            if (!item || !outputsElement.contains(item)) {
-                return;
+                if (global.PaintTools) {
+                    global.PaintTools.use("DESIGNED-BRUSH");
+                }
             }
-
-            image = item.querySelector("img");
-
-            if (!image) {
-                return;
-            }
-
-            selectBrushOutput(outputsElement, item, image);
         });
-    }
-
-    function selectBrushOutput(outputsElement, item, image) {
-        var selectedItems = outputsElement.querySelectorAll(".brush-output-selected");
-        var i;
-
-        for (i = 0; i < selectedItems.length; i++) {
-            selectedItems[i].className = selectedItems[i].className.replace(/\s?brush-output-selected/g, "");
-        }
-
-        item.className += item.className.indexOf("brush-output-selected") === -1 ? " brush-output-selected" : "";
-        global.App.memory.currentDesignedBrush = image;
-
-        if (global.PaintTools) {
-            global.PaintTools.use("DESIGNED-BRUSH");
-        }
     }
 
     function openSimpleColorPickerWindow() {

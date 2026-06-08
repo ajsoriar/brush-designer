@@ -41,6 +41,7 @@
         cornerRadius: 0,
         topBarGradient: null,
         toolsRow: false,
+        contentCentered: true,
         parent: null,
         content: null,
         contentId: null,
@@ -128,6 +129,10 @@
 
         if (config.toolsRow) {
             element.className += " wm-window-tools-row-visible";
+        }
+
+        if (!config.contentCentered) {
+            element.className += " wm-window-content-not-centered";
         }
 
         if (type === WINDOW_TYPES.MODAL) {

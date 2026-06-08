@@ -17,6 +17,7 @@ window.$ = $;
 window.jQuery = $;
 
 await import("./components/brushdesigner.v1/jqbrushdesigner.js");
+await import("./components/brushdesigner.v1/brushEditorOutputs.js");
 await import("./components/bigColorPicker/bigColorPicker.js");
 await import("../vendor/div-lines/dist/div-lines.min.js");
 await import("./components/paintBoard/tempLayer.js");

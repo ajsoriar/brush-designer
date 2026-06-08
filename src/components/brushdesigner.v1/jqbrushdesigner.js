@@ -410,7 +410,9 @@
 
             var link = $("body");
             link.append(htmlString);
-            link.append('<ol id="brush-editor-outputs"></ol>');
+            if (!document.getElementById("brush-editor-outputs")) {
+                link.append('<ol id="brush-editor-outputs"></ol>');
+            }
             blackBoard.init(); // This is awful! The number of binded events increase every time we create/open this component.
             mirror.init();
             circle.init();      
@@ -437,9 +439,14 @@
             var circle_cvObj = document.getElementById("cvBrushLayer");
             var circle_cvCtx = circle_cvObj.getContext("2d");
             var imgData = circle_cvCtx.canvas.toDataURL("image/png");
-            var html = '<li><img src="' + imgData + '" width="256" height="256" /></li>'; //style="display:none" 
-            var link = $("#brush-editor-outputs");
-            link.append( html );
+
+            if (window.brushEditorOutputs && window.brushEditorOutputs.addImage) {
+                window.brushEditorOutputs.addImage(imgData);
+            } else {
+                var html = '<li><img src="' + imgData + '" width="256" height="256" /></li>'; //style="display:none" 
+                var link = $("#brush-editor-outputs");
+                link.append( html );
+            }
 
             //close();
         }

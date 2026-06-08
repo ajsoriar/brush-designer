@@ -143,6 +143,33 @@
     display: flex;
 }
 
+.wm-toolbar,
+.paint-board-toolbar {
+    align-items: center;
+    display: flex;
+    gap: 4px;
+    padding: 2px 6px;
+}
+
+.wm-toolbar-btn,
+.paint-board-toolbar-btn {
+    background: #ffffff;
+    border: 1px solid #b9c2cf;
+    border-radius: 2px;
+    color: #1f2937;
+    cursor: pointer;
+    font: 11px Arial, sans-serif;
+    height: 20px;
+    line-height: 1;
+    padding: 0 4px;
+}
+
+.wm-toolbar-btn:hover,
+.paint-board-toolbar-btn:hover {
+    background: #f3f6fa;
+    border-color: #7f8ea3;
+}
+
 .wm-center {
     align-items: center;
     background: #9E9E9E;
@@ -155,6 +182,12 @@
     overflow: auto;
     position: relative;
     user-select: text;
+}
+
+.wm-window-content-not-centered .wm-center {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: flex-start;
 }
 
 .wm-middle-right {
