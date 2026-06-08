@@ -14,6 +14,12 @@
             defaultWidth: 26,
             defaultHeight: 26
         },
+        padding: {
+            top: 10,
+            right: 0,
+            bottom: 0,
+            left: 0
+        },
         colors: null,
         activeColor: null,
         resizePolicy: "SCALE",
@@ -27,8 +33,6 @@
     };
     var ACTIVE_HEIGHT = 32;
     var COMPONENT_GAP = 8;
-    var HORIZONTAL_PADDING = 20;
-    var VERTICAL_PADDING = 20;
 
     function extend(target, source) {
         var key;
@@ -45,6 +49,7 @@
     function SimpleColorPicker(options) {
         var config = extend(extend({}, DEFAULTS), options || {});
         config.color = extend(extend({}, DEFAULTS.color), config.color || {});
+        config.padding = normalizePadding(config.padding);
         config.resizePolicy = normalizeResizePolicy(config.resizePolicy);
         config.hasCustomColors = !!config.colors;
         config.baseColor = extend({}, config.color);
@@ -62,6 +67,7 @@
         element.className = "simple-color-picker";
         element.style.backgroundColor = config.bgColor;
         element.style.color = config.textColor;
+        element.style.padding = getPaddingCss(config);
 
         active.className = "simple-color-picker-active";
         preview.className = "simple-color-picker-preview";
@@ -91,6 +97,12 @@
             },
             getHeight: function() {
                 return getHeight(config);
+            },
+            getSize: function() {
+                return {
+                    width: getWidth(config),
+                    height: getHeight(config)
+                };
             },
             setActiveColor: function(color) {
                 setActiveColor(picker, color, config);
@@ -209,8 +221,8 @@
     }
 
     function scaleTo(picker, config, width, height) {
-        var gridWidth = Math.max(1, width - HORIZONTAL_PADDING);
-        var gridHeight = Math.max(1, height - ACTIVE_HEIGHT - COMPONENT_GAP - VERTICAL_PADDING);
+        var gridWidth = Math.max(1, width - getHorizontalPadding(config));
+        var gridHeight = Math.max(1, height - ACTIVE_HEIGHT - COMPONENT_GAP - getVerticalPadding(config));
         var horizontalGap = Math.max(0, (config.columns - 1) * config.colorGap);
         var verticalGap = Math.max(0, (config.rows - 1) * config.colorGap);
         var cellWidth = Math.max(5, Math.floor((gridWidth - horizontalGap) / Math.max(1, config.columns)));
@@ -222,14 +234,14 @@
     }
 
     function getColumnsForWidth(config, width) {
-        var availableWidth = Math.max(1, width - HORIZONTAL_PADDING);
+        var availableWidth = Math.max(1, width - getHorizontalPadding(config));
         var cellWidth = Math.max(1, config.baseColor.defaultWidth + config.colorGap);
 
         return Math.max(1, Math.floor((availableWidth + config.colorGap) / cellWidth));
     }
 
     function getRowsForHeight(config, height) {
-        var availableHeight = Math.max(1, height - ACTIVE_HEIGHT - COMPONENT_GAP - VERTICAL_PADDING);
+        var availableHeight = Math.max(1, height - ACTIVE_HEIGHT - COMPONENT_GAP - getVerticalPadding(config));
         var cellHeight = Math.max(1, config.baseColor.defaultHeight + config.colorGap);
 
         return Math.max(1, Math.floor((availableHeight + config.colorGap) / cellHeight));
@@ -239,13 +251,39 @@
         var gridWidth = (config.columns * config.color.defaultWidth) + ((config.columns - 1) * config.colorGap);
         var activeWidth = 140;
 
-        return Math.max(gridWidth, activeWidth) + HORIZONTAL_PADDING;
+        return Math.max(gridWidth, activeWidth) + getHorizontalPadding(config);
     }
 
     function getHeight(config) {
         var gridHeight = (config.rows * config.color.defaultHeight) + ((config.rows - 1) * config.colorGap);
 
-        return ACTIVE_HEIGHT + COMPONENT_GAP + gridHeight + VERTICAL_PADDING;
+        return ACTIVE_HEIGHT + COMPONENT_GAP + gridHeight + getVerticalPadding(config);
+    }
+
+    function normalizePadding(padding) {
+        var normalized = extend({}, DEFAULTS.padding);
+
+        if (typeof padding === "number") {
+            normalized.top = padding;
+            normalized.right = padding;
+            normalized.bottom = padding;
+            normalized.left = padding;
+            return normalized;
+        }
+
+        return extend(normalized, padding || {});
+    }
+
+    function getHorizontalPadding(config) {
+        return Number(config.padding.left) + Number(config.padding.right);
+    }
+
+    function getVerticalPadding(config) {
+        return Number(config.padding.top) + Number(config.padding.bottom);
+    }
+
+    function getPaddingCss(config) {
+        return config.padding.top + "px " + config.padding.right + "px " + config.padding.bottom + "px " + config.padding.left + "px";
     }
 
     function normalizeResizePolicy(resizePolicy) {

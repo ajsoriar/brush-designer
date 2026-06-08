@@ -385,6 +385,7 @@
 
         appBrushDesigner2 = global.createBrushDesignerV2(bdWindow.contentElement, {
             assetBaseUrl: "/components/brushdesigner.v2/",
+            algorithm: "C",
             onChange: function(brush, designer) {
                 global.App.memory.currentBrushDesigner2 = brush;
                 global.App.memory.currentDesignedBrush2 = designer.createBrushCanvas();
@@ -420,7 +421,10 @@
             y: y,
             width: outerWidth,
             height: outerHeight,
-            resizable: false,
+            minWidth: windowFrameWidth + 100,
+            minHeight: windowFrameHeight + 100,
+            resizable: true,
+            resizeContentStep: 100,
             toolsRow: true,
             contentCentered: false,
             topBarGradient: {
@@ -436,6 +440,9 @@
         global.BrushEditorOutputs({
             containerId: outputsWindow.contentId,
             toolbarElement: outputsWindow.toolsRowElement,
+            onSizeChange: function(size) {
+                outputsWindow.scaleToContent(outputsWindow.contentElement.clientWidth, size.height);
+            },
             onCreateBrush: function() {
                 openBrushDesignerInWindow();
             },
@@ -486,6 +493,14 @@
                 if (appColorPicker && appColorPicker.resizeTo) {
                     appColorPicker.resizeTo(width, height);
                 }
+            },
+            onResizeEnd: function(width, height, currentWindow) {
+                var size;
+
+                if (appColorPicker && appColorPicker.getSize) {
+                    size = appColorPicker.getSize();
+                    currentWindow.scaleToContent(size.width, size.height);
+                }
             }
         });
 
@@ -496,6 +511,12 @@
             rows: 10,
             colorGap: 0,
             activeColor: global.App.memory.currentColor,
+            padding: {
+                top: 10,
+                right: 2,
+                bottom: 2,
+                left: 2
+            },
             resizePolicy: "EXPAND",
             onColorSelected: function(color) {
                 global.App.memory.currentColor = color;
@@ -567,7 +588,7 @@
         }
 
         var pickerWidth = 120;
-        var pickerHeight = 260;
+        var pickerHeight = 460;
         var windowFrameWidth = 16;
         var windowFrameHeight = 36;
         var pickerWindow = WindowsManager.create({
@@ -591,8 +612,8 @@
             id: "app-simple-line-width-picker",
             containerId: pickerWindow.contentId,
             minWidth: 1,
-            maxWidth: 15,
-            steps: 8,
+            maxWidth: 30,
+            steps: 16,
             activeLineWidth: global.App.memory.currentLineWidth,
             onLineWidthSelected: function(lineWidth) {
                 global.App.memory.currentLineWidth = lineWidth;

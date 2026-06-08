@@ -41,6 +41,23 @@
     box-shadow: none;
 }
 
+.wm-resize-geometry-indicator {
+    background: #ffffe1;
+    border: 1px solid #111111;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35);
+    color: #111111;
+    display: none;
+    font: 12px "Courier New", monospace;
+    left: 0;
+    line-height: 1;
+    padding: 4px 6px;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    white-space: nowrap;
+    z-index: 300000;
+}
+
 .wm-window-tools-row-visible {
     grid-template-rows: 28px minmax(28px, auto) 1fr 8px;
 }

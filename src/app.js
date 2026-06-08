@@ -5,7 +5,7 @@
     global.App = global.App || {};
     global.App.memory = global.App.memory || {};
     global.App.memory.currentColor = global.App.memory.currentColor || "#000000";
-    global.App.memory.currentLineWidth = global.App.memory.currentLineWidth || 1;
+    global.App.memory.currentLineWidth = global.App.memory.currentLineWidth || 15;
     global.App.memory.currentDesignedBrush = global.App.memory.currentDesignedBrush || null;
     global.App.memory.currentStar = global.App.memory.currentStar || {
         points: 5,

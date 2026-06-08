@@ -38,6 +38,8 @@
         scrollbars: null,
         scrollBarX: true,
         scrollBarY: true,
+        resizeContentStep: null,
+        resizeGeometryIndicator: true,
         cornerRadius: 0,
         topBarGradient: null,
         toolsRow: false,
@@ -46,6 +48,7 @@
         content: null,
         contentId: null,
         onResize: null,
+        onResizeEnd: null,
         beforeClose: null
     };
 
@@ -488,6 +491,8 @@
         var startTop = element.offsetTop;
         var startWidth = element.offsetWidth;
         var startHeight = element.offsetHeight;
+        var frameWidth = element.offsetWidth - currentWindow.contentElement.clientWidth;
+        var frameHeight = element.offsetHeight - currentWindow.contentElement.clientHeight;
 
         if (currentWindow.minimized || currentWindow.maximized) {
             return;
@@ -498,6 +503,7 @@
 
         document.addEventListener("mousemove", resize);
         document.addEventListener("mouseup", stop);
+        updateResizeGeometryIndicator(currentWindow, config);
 
         function resize(moveEvent) {
             var deltaX = moveEvent.clientX - startX;
@@ -535,17 +541,110 @@
                 nextHeight = config.minHeight;
             }
 
+            nextWidth = snapSizeToContentStep(nextWidth, frameWidth, config.resizeContentStep, "width");
+            nextHeight = snapSizeToContentStep(nextHeight, frameHeight, config.resizeContentStep, "height");
+
+            if (nextWidth < config.minWidth) {
+                nextWidth = config.minWidth;
+            }
+
+            if (nextHeight < config.minHeight) {
+                nextHeight = config.minHeight;
+            }
+
+            if (direction.indexOf("w") !== -1) {
+                nextLeft = startLeft + startWidth - nextWidth;
+            }
+
+            if (direction.indexOf("n") !== -1) {
+                nextTop = startTop + startHeight - nextHeight;
+            }
+
             element.style.left = nextLeft + "px";
             element.style.top = nextTop + "px";
             element.style.width = nextWidth + "px";
             element.style.height = nextHeight + "px";
+            updateResizeGeometryIndicator(currentWindow, config);
             notifyResize(currentWindow, config);
         }
 
         function stop() {
             document.removeEventListener("mousemove", resize);
             document.removeEventListener("mouseup", stop);
+            hideResizeGeometryIndicator(currentWindow);
+            notifyResizeEnd(currentWindow, config);
         }
+    }
+
+    function updateResizeGeometryIndicator(currentWindow, config) {
+        var indicator;
+
+        if (!config.resizeGeometryIndicator) {
+            return;
+        }
+
+        indicator = getResizeGeometryIndicator(currentWindow);
+        indicator.textContent = getGeometryText(currentWindow);
+        indicator.style.display = "block";
+        positionResizeGeometryIndicator(indicator, currentWindow);
+    }
+
+    function getResizeGeometryIndicator(currentWindow) {
+        if (!currentWindow.geometryIndicatorElement) {
+            currentWindow.geometryIndicatorElement = document.createElement("div");
+            currentWindow.geometryIndicatorElement.className = "wm-resize-geometry-indicator";
+            document.body.appendChild(currentWindow.geometryIndicatorElement);
+        }
+
+        return currentWindow.geometryIndicatorElement;
+    }
+
+    function getGeometryText(currentWindow) {
+        var element = currentWindow.element;
+
+        return element.offsetWidth + "x" + element.offsetHeight + "+" + element.offsetLeft + "+" + element.offsetTop;
+    }
+
+    function positionResizeGeometryIndicator(indicator, currentWindow) {
+        var element = currentWindow.element;
+        var left = element.offsetLeft + Math.round((element.offsetWidth - indicator.offsetWidth) / 2);
+        var top = element.offsetTop + Math.round((element.offsetHeight - indicator.offsetHeight) / 2);
+
+        indicator.style.left = Math.max(0, left) + "px";
+        indicator.style.top = Math.max(0, top) + "px";
+    }
+
+    function hideResizeGeometryIndicator(currentWindow) {
+        if (currentWindow.geometryIndicatorElement) {
+            currentWindow.geometryIndicatorElement.style.display = "none";
+        }
+    }
+
+    function snapSizeToContentStep(windowSize, frameSize, resizeContentStep, axis) {
+        var step = getResizeContentStep(resizeContentStep, axis);
+        var contentSize;
+
+        if (!step) {
+            return windowSize;
+        }
+
+        contentSize = Math.max(step, Math.round(Math.max(1, windowSize - frameSize) / step) * step);
+
+        return contentSize + frameSize;
+    }
+
+    function getResizeContentStep(resizeContentStep, axis) {
+        var step;
+
+        if (typeof resizeContentStep === "number") {
+            step = resizeContentStep;
+        } else if (resizeContentStep && typeof resizeContentStep === "object") {
+            step = resizeContentStep[axis];
+        }
+
+        step = parseInt(step, 10);
+
+        return isNaN(step) || step < 1 ? 0 : step;
     }
 
     function minimizeWindow(currentWindow) {
@@ -640,6 +739,24 @@
         currentWindow.contentElement.dispatchEvent(event);
     }
 
+    function notifyResizeEnd(currentWindow, config) {
+        var detail;
+
+        if (!currentWindow || !currentWindow.contentElement) {
+            return;
+        }
+
+        detail = {
+            window: currentWindow,
+            width: currentWindow.contentElement.clientWidth,
+            height: currentWindow.contentElement.clientHeight
+        };
+
+        if (typeof config.onResizeEnd === "function") {
+            config.onResizeEnd(detail.width, detail.height, currentWindow);
+        }
+    }
+
     function getMaximizeRect(element) {
         var parent = element.parentNode;
 
@@ -673,6 +790,10 @@
 
         if (currentWindow.modalOverlay && currentWindow.modalOverlay.parentNode) {
             currentWindow.modalOverlay.parentNode.removeChild(currentWindow.modalOverlay);
+        }
+
+        if (currentWindow.geometryIndicatorElement && currentWindow.geometryIndicatorElement.parentNode) {
+            currentWindow.geometryIndicatorElement.parentNode.removeChild(currentWindow.geometryIndicatorElement);
         }
 
         manager.windows = manager.windows.filter(function(item) {

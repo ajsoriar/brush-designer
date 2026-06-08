@@ -61,11 +61,11 @@
 .brush-editor-outputs-list {
     align-content: flex-start;
     display: grid;
-    grid-template-columns: repeat(2, 100px);
+    grid-template-columns: repeat(auto-fill, 100px);
     list-style: none;
     margin: 0;
     padding: 0;
-    width: 200px;
+    width: 100%;
 }
 
 .brush-editor-outputs-list li{
@@ -88,9 +88,9 @@
 }
 
 .brush-editor-output-delete {
-    background: #ffffff;
-    border: 1px solid #111111;
-    color: #111111;
+    background: transparent;
+    border: 0 solid #111111;
+    color: #ffffff;
     cursor: pointer;
     font: 10px Arial, sans-serif;
     height: 16px;
@@ -103,5 +103,6 @@
 }
 
 .brush-editor-output-delete:hover {
-    background: #f3f3f3;
+    background: transparent;
+    color: #ff0000;
 }

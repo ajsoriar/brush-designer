@@ -11,7 +11,8 @@ import defaultBrushesUrl from "./default-brushes.json?url";
         toolbarElement: null,
         defaultBrushesUrl: defaultBrushesUrl,
         onCreateBrush: null,
-        onSelect: null
+        onSelect: null,
+        onSizeChange: null
     };
 
     function extend(target, source) {
@@ -49,7 +50,19 @@ import defaultBrushesUrl from "./default-brushes.json?url";
                 load(outputs, config);
             },
             addImage: function(src) {
-                addImage(outputs, src);
+                addImage(outputs, src, null, config);
+            },
+            getWidth: function() {
+                return getWidth(outputs);
+            },
+            getHeight: function() {
+                return getHeight(outputs);
+            },
+            getSize: function() {
+                return {
+                    width: getWidth(outputs),
+                    height: getHeight(outputs)
+                };
             },
             destroy: function() {
                 destroy(outputs);
@@ -139,11 +152,13 @@ import defaultBrushesUrl from "./default-brushes.json?url";
             .then(function(data) {
                 outputs.defaultElement.innerHTML = "";
                 getBrushesFromData(data).forEach(function(brush) {
-                    addImage(outputs, typeof brush === "string" ? brush : brush.src, outputs.defaultElement);
+                    addImage(outputs, typeof brush === "string" ? brush : brush.src, outputs.defaultElement, config);
                 });
+                notifySizeChange(outputs, config);
             })
             .catch(function() {
                 outputs.defaultElement.innerHTML = "";
+                notifySizeChange(outputs, config);
             });
     }
 
@@ -259,14 +274,14 @@ import defaultBrushesUrl from "./default-brushes.json?url";
 
             reader = new FileReader();
             reader.addEventListener("load", function() {
-                loadFromJson(outputs, reader.result);
+                loadFromJson(outputs, reader.result, config);
             });
             reader.readAsText(file);
         });
         input.click();
     }
 
-    function loadFromJson(outputs, text) {
+    function loadFromJson(outputs, text, config) {
         var data;
         var brushes;
 
@@ -280,7 +295,7 @@ import defaultBrushesUrl from "./default-brushes.json?url";
 
         outputs.element.innerHTML = "";
         brushes.forEach(function(brush) {
-            addImage(outputs, typeof brush === "string" ? brush : brush.src);
+            addImage(outputs, typeof brush === "string" ? brush : brush.src, null, config);
         });
     }
 
@@ -290,7 +305,7 @@ import defaultBrushesUrl from "./default-brushes.json?url";
         return Array.isArray(brushes) ? brushes : [];
     }
 
-    function addImage(outputs, src, targetElement) {
+    function addImage(outputs, src, targetElement, config) {
         var item;
         var image;
         var element = targetElement || outputs.element;
@@ -307,13 +322,13 @@ import defaultBrushesUrl from "./default-brushes.json?url";
         item.appendChild(image);
 
         if (element === outputs.element) {
-            item.appendChild(createDeleteButton(item));
+            item.appendChild(createDeleteButton(item, outputs, config));
         }
 
         element.appendChild(item);
     }
 
-    function createDeleteButton(item) {
+    function createDeleteButton(item, outputs, config) {
         var button = document.createElement("button");
 
         button.type = "button";
@@ -330,6 +345,24 @@ import defaultBrushesUrl from "./default-brushes.json?url";
         });
 
         return button;
+    }
+
+    function getWidth(outputs) {
+        return Math.max(outputs.defaultElement.scrollWidth, outputs.element.scrollWidth, 100);
+    }
+
+    function getHeight(outputs) {
+        return Math.max(outputs.defaultElement.scrollHeight + outputs.element.scrollHeight, 100);
+    }
+
+    function notifySizeChange(outputs, config) {
+        if (!outputs || !config || typeof config.onSizeChange !== "function") {
+            return;
+        }
+
+        global.requestAnimationFrame(function() {
+            config.onSizeChange(outputs.getSize(), outputs);
+        });
     }
 
     function destroy(outputs) {
