@@ -588,7 +588,7 @@
         }
 
         var pickerWidth = 120;
-        var pickerHeight = 460;
+        var pickerHeight = 360;
         var windowFrameWidth = 16;
         var windowFrameHeight = 36;
         var pickerWindow = WindowsManager.create({
@@ -601,8 +601,7 @@
             width: pickerWidth + windowFrameWidth,
             height: pickerHeight + windowFrameHeight,
             minWidth: 90,
-            //minHeight: 120,
-            resizable: true,
+            resizable: false,
             scrollBarX: false,
             scrollBarY: false,
             contentId: "simple-line-width-picker-window-content"

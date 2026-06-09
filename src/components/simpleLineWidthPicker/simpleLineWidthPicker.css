@@ -23,23 +23,23 @@
 
 .simple-line-width-picker-option {
     align-items: center;
-    background: #ffffff;
-    border: 1px solid #c6c6c6;
+    background: transparent;
+    border: 0;
     cursor: pointer;
     display: flex;
     gap: 6px;
-    height: 24px;
+    height: unset;
     justify-content: flex-start;
-    padding: 0 6px;
     width: 72px;
+    padding: 0;
 }
 
 .simple-line-width-picker-option:hover {
-    border-color: #111111;
+    border-color: transparent;
 }
 
 .simple-line-width-picker-option-active {
-    border-color: #00a8c8;
+    border-color: transparent;
     box-shadow: 0 0 0 2px #00a8c8;
 }
 

@@ -107,8 +107,6 @@
 
             button.type = "button";
             button.className = "simple-line-width-picker-option";
-            button.style.width = config.optionWidth + "px";
-            button.style.height = config.optionHeight + "px";
             button.setAttribute("data-line-width", lineWidth);
             button.title = lineWidth + "px";
             button.addEventListener("click", function() {
@@ -176,10 +174,14 @@
     }
 
     function getHeight(config) {
-        var verticalPadding = 16;
+        var lineWidths = createLineWidths(config.minWidth, config.maxWidth, config.steps);
+        var verticalPadding = 11;
         var valueHeight = 16;
         var componentGap = 4;
-        var listHeight = (config.steps * config.optionHeight) + ((config.steps - 1) * config.optionGap);
+        var minimumOptionHeight = 12;
+        var listHeight = lineWidths.reduce(function(total, lineWidth) {
+            return total + Math.max(lineWidth, minimumOptionHeight);
+        }, 0) + ((lineWidths.length - 1) * config.optionGap);
 
         return verticalPadding + valueHeight + componentGap + listHeight;
     }
