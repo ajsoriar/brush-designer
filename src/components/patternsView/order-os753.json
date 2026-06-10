@@ -1,0 +1,526 @@
+﻿{
+    "collectionName":  "OS753",
+    "name":  "OS753 patterns",
+    "columns":  9,
+    "tilePreviewSize":  32,
+    "items":  [
+                  {
+                      "image":  "patterns/OS753/128.png",
+                      "column":  1,
+                      "row":  1,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/129.png",
+                      "column":  2,
+                      "row":  1,
+                      "tileWidth":  8,
+                      "tileHeight":  8
+                  },
+                  {
+                      "image":  "patterns/OS753/130.png",
+                      "column":  3,
+                      "row":  1,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/131.png",
+                      "column":  4,
+                      "row":  1,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/132.png",
+                      "column":  5,
+                      "row":  1,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/133.png",
+                      "column":  6,
+                      "row":  1,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/134.png",
+                      "column":  7,
+                      "row":  1,
+                      "tileWidth":  8,
+                      "tileHeight":  8
+                  },
+                  {
+                      "image":  "patterns/OS753/136.png",
+                      "column":  8,
+                      "row":  1,
+                      "tileWidth":  8,
+                      "tileHeight":  8
+                  },
+                  {
+                      "image":  "patterns/OS753/137.png",
+                      "column":  9,
+                      "row":  1,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/139.png",
+                      "column":  1,
+                      "row":  2,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/141.png",
+                      "column":  2,
+                      "row":  2,
+                      "tileWidth":  8,
+                      "tileHeight":  8
+                  },
+                  {
+                      "image":  "patterns/OS753/142.png",
+                      "column":  3,
+                      "row":  2,
+                      "tileWidth":  8,
+                      "tileHeight":  8
+                  },
+                  {
+                      "image":  "patterns/OS753/144.png",
+                      "column":  4,
+                      "row":  2,
+                      "tileWidth":  8,
+                      "tileHeight":  8
+                  },
+                  {
+                      "image":  "patterns/OS753/145.png",
+                      "column":  5,
+                      "row":  2,
+                      "tileWidth":  8,
+                      "tileHeight":  8
+                  },
+                  {
+                      "image":  "patterns/OS753/146.png",
+                      "column":  6,
+                      "row":  2,
+                      "tileWidth":  8,
+                      "tileHeight":  8
+                  },
+                  {
+                      "image":  "patterns/OS753/147.png",
+                      "column":  7,
+                      "row":  2,
+                      "tileWidth":  8,
+                      "tileHeight":  8
+                  },
+                  {
+                      "image":  "patterns/OS753/148.png",
+                      "column":  8,
+                      "row":  2,
+                      "tileWidth":  8,
+                      "tileHeight":  8
+                  },
+                  {
+                      "image":  "patterns/OS753/149.png",
+                      "column":  9,
+                      "row":  2,
+                      "tileWidth":  8,
+                      "tileHeight":  8
+                  },
+                  {
+                      "image":  "patterns/OS753/150.png",
+                      "column":  1,
+                      "row":  3,
+                      "tileWidth":  8,
+                      "tileHeight":  8
+                  },
+                  {
+                      "image":  "patterns/OS753/151.png",
+                      "column":  2,
+                      "row":  3,
+                      "tileWidth":  8,
+                      "tileHeight":  8
+                  },
+                  {
+                      "image":  "patterns/OS753/547.png",
+                      "column":  3,
+                      "row":  3,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/870.png",
+                      "column":  4,
+                      "row":  3,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/987.png",
+                      "column":  5,
+                      "row":  3,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/1111.png",
+                      "column":  6,
+                      "row":  3,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/1969.png",
+                      "column":  7,
+                      "row":  3,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS753/1970.png",
+                      "column":  8,
+                      "row":  3,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS753/1971.png",
+                      "column":  9,
+                      "row":  3,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS753/1972.png",
+                      "column":  1,
+                      "row":  4,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS753/1973.png",
+                      "column":  2,
+                      "row":  4,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS753/1974.png",
+                      "column":  3,
+                      "row":  4,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS753/1975.png",
+                      "column":  4,
+                      "row":  4,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS753/1976.png",
+                      "column":  5,
+                      "row":  4,
+                      "tileWidth":  64,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS753/1977.png",
+                      "column":  6,
+                      "row":  4,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS753/1978.png",
+                      "column":  7,
+                      "row":  4,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS753/2767.png",
+                      "column":  8,
+                      "row":  4,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS753/3727.png",
+                      "column":  9,
+                      "row":  4,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/4193.png",
+                      "column":  1,
+                      "row":  5,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/6006.png",
+                      "column":  2,
+                      "row":  5,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/6741.png",
+                      "column":  3,
+                      "row":  5,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/7041.png",
+                      "column":  4,
+                      "row":  5,
+                      "tileWidth":  32,
+                      "tileHeight":  512
+                  },
+                  {
+                      "image":  "patterns/OS753/7321.png",
+                      "column":  5,
+                      "row":  5,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS753/7344.png",
+                      "column":  6,
+                      "row":  5,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/7527.png",
+                      "column":  7,
+                      "row":  5,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/8388.png",
+                      "column":  8,
+                      "row":  5,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/8448.png",
+                      "column":  9,
+                      "row":  5,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/9695.png",
+                      "column":  1,
+                      "row":  6,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/10042.png",
+                      "column":  2,
+                      "row":  6,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/11703.png",
+                      "column":  3,
+                      "row":  6,
+                      "tileWidth":  32,
+                      "tileHeight":  32
+                  },
+                  {
+                      "image":  "patterns/OS753/12484.png",
+                      "column":  4,
+                      "row":  6,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS753/12593.png",
+                      "column":  5,
+                      "row":  6,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/12821.png",
+                      "column":  6,
+                      "row":  6,
+                      "tileWidth":  32,
+                      "tileHeight":  32
+                  },
+                  {
+                      "image":  "patterns/OS753/13096.png",
+                      "column":  7,
+                      "row":  6,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/13665.png",
+                      "column":  8,
+                      "row":  6,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/16825.png",
+                      "column":  9,
+                      "row":  6,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/16974.png",
+                      "column":  1,
+                      "row":  7,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/17803.png",
+                      "column":  2,
+                      "row":  7,
+                      "tileWidth":  8,
+                      "tileHeight":  8
+                  },
+                  {
+                      "image":  "patterns/OS753/18078.png",
+                      "column":  3,
+                      "row":  7,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/19688.png",
+                      "column":  4,
+                      "row":  7,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS753/20318.png",
+                      "column":  5,
+                      "row":  7,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/20446.png",
+                      "column":  6,
+                      "row":  7,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/21225.png",
+                      "column":  7,
+                      "row":  7,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/22348.png",
+                      "column":  8,
+                      "row":  7,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/23295.png",
+                      "column":  9,
+                      "row":  7,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/24517.png",
+                      "column":  1,
+                      "row":  8,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/24642.png",
+                      "column":  2,
+                      "row":  8,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/24817.png",
+                      "column":  3,
+                      "row":  8,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/28851.png",
+                      "column":  4,
+                      "row":  8,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/28920.png",
+                      "column":  5,
+                      "row":  8,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/29907.png",
+                      "column":  6,
+                      "row":  8,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/30711.png",
+                      "column":  7,
+                      "row":  8,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/30930.png",
+                      "column":  8,
+                      "row":  8,
+                      "tileWidth":  512,
+                      "tileHeight":  32
+                  },
+                  {
+                      "image":  "patterns/OS753/31689.png",
+                      "column":  9,
+                      "row":  8,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  },
+                  {
+                      "image":  "patterns/OS753/32307.png",
+                      "column":  1,
+                      "row":  9,
+                      "tileWidth":  512,
+                      "tileHeight":  32
+                  },
+                  {
+                      "image":  "patterns/OS753/32623.png",
+                      "column":  2,
+                      "row":  9,
+                      "tileWidth":  64,
+                      "tileHeight":  64
+                  }
+              ]
+}

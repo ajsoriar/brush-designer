@@ -980,18 +980,19 @@
     function getPatternImageData(pattern) {
         var canvas;
         var context;
-        var size = Math.max(1, pattern.size || 16);
+        var width = Math.max(1, pattern.width || pattern.size || 16);
+        var height = Math.max(1, pattern.height || pattern.size || width);
 
         if (pattern.imageData) {
             return pattern.imageData;
         }
 
         canvas = document.createElement("canvas");
-        canvas.width = size;
-        canvas.height = size;
+        canvas.width = width;
+        canvas.height = height;
         context = canvas.getContext("2d");
-        context.drawImage(pattern.image, 0, 0, size, size);
-        pattern.imageData = context.getImageData(0, 0, size, size);
+        context.drawImage(pattern.image, 0, 0, width, height);
+        pattern.imageData = context.getImageData(0, 0, width, height);
 
         return pattern.imageData;
     }

@@ -1,12 +1,9 @@
 import orderDefault from "./order-default.json";
 import orderLightToDark from "./order-light-to-dark.json";
+import orderOs753 from "./order-os753.json";
+import orderOs8 from "./order-os8.json";
 
-var pattern16Modules = import.meta.glob("./patterns/default-bw-16x16/*.png", {
-    eager: true,
-    import: "default",
-    query: "?url"
-});
-var pattern8Modules = import.meta.glob("./patterns/default-bw-8x8/*.png", {
+var patternModules = import.meta.glob("./patterns/**/*.png", {
     eager: true,
     import: "default",
     query: "?url"
@@ -18,7 +15,9 @@ var pattern8Modules = import.meta.glob("./patterns/default-bw-8x8/*.png", {
 
     var COLLECTIONS = [
         { id: "default", manifest: orderDefault },
-        { id: "light-to-dark", manifest: orderLightToDark }
+        { id: "light-to-dark", manifest: orderLightToDark },
+        { id: "os753", manifest: orderOs753 },
+        { id: "os8", manifest: orderOs8 }
     ];
 
     var DEFAULTS = {
@@ -113,7 +112,7 @@ var pattern8Modules = import.meta.glob("./patterns/default-bw-8x8/*.png", {
             item.style.width = component.options.cellSize + "px";
             item.style.height = component.options.cellSize + "px";
             item.style.backgroundImage = "url(\"" + pattern.url + "\")";
-            item.style.backgroundSize = pattern.size + "px " + pattern.size + "px";
+            item.style.backgroundSize = pattern.width + "px " + pattern.height + "px";
             item.setAttribute("data-pattern-id", pattern.id);
 
             pattern.image = new Image();
@@ -185,12 +184,16 @@ var pattern8Modules = import.meta.glob("./patterns/default-bw-8x8/*.png", {
     function getPatternsFromManifest(manifest) {
         return manifest.items.slice().sort(sortByGridPosition).map(function(item) {
             var modulePath = "./" + item.image;
-            var url = pattern16Modules[modulePath] || pattern8Modules[modulePath];
+            var url = patternModules[modulePath];
+            var tileWidth = item.tileWidth || item.tileSize || manifest.tilePreviewSize;
+            var tileHeight = item.tileHeight || item.tileSize || tileWidth;
 
             return {
                 id: getPatternId(item.image),
                 url: url,
-                size: item.tileSize,
+                size: item.tileSize || Math.max(tileWidth, tileHeight),
+                width: tileWidth,
+                height: tileHeight,
                 column: item.column,
                 row: item.row
             };

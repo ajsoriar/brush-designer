@@ -1,0 +1,351 @@
+﻿{
+    "collectionName":  "OS8",
+    "name":  "OS8 color patterns",
+    "columns":  7,
+    "tilePreviewSize":  32,
+    "items":  [
+                  {
+                      "image":  "patterns/OS8/Azul Dark.png",
+                      "column":  1,
+                      "row":  1,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Azul Extra Light.png",
+                      "column":  2,
+                      "row":  1,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Azul Light.png",
+                      "column":  3,
+                      "row":  1,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Bondi Dark.png",
+                      "column":  4,
+                      "row":  1,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Bondi Extra Dark.png",
+                      "column":  5,
+                      "row":  1,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Bondi Light.png",
+                      "column":  6,
+                      "row":  1,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Bondi Medium.png",
+                      "column":  7,
+                      "row":  1,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Bondi.png",
+                      "column":  1,
+                      "row":  2,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Bossanova Bondi.png",
+                      "column":  2,
+                      "row":  2,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Bossanova Poppy 2.png",
+                      "column":  3,
+                      "row":  2,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Bossanova Poppy.png",
+                      "column":  4,
+                      "row":  2,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Bubbles Bondi.png",
+                      "column":  5,
+                      "row":  2,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Bubbles Poppy.png",
+                      "column":  6,
+                      "row":  2,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Candy Bar Azul.png",
+                      "column":  7,
+                      "row":  2,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Candy Bar Pistachio.png",
+                      "column":  1,
+                      "row":  3,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Candy Bar Sunny.png",
+                      "column":  2,
+                      "row":  3,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Candy Bar.png",
+                      "column":  3,
+                      "row":  3,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Diagonals Bondi Dark.png",
+                      "column":  4,
+                      "row":  3,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Diagonals Bondi.png",
+                      "column":  5,
+                      "row":  3,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Diagonals Poppy.png",
+                      "column":  6,
+                      "row":  3,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Flat Peanuts Poppy.png",
+                      "column":  7,
+                      "row":  3,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Flat Peanuts.png",
+                      "column":  1,
+                      "row":  4,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/French Blue Dark.png",
+                      "column":  2,
+                      "row":  4,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/French Blue Light.png",
+                      "column":  3,
+                      "row":  4,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Lollipop 2.png",
+                      "column":  4,
+                      "row":  4,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Lollipop 3.png",
+                      "column":  5,
+                      "row":  4,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Lollipop 4.png",
+                      "column":  6,
+                      "row":  4,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Lollipop 5.png",
+                      "column":  7,
+                      "row":  4,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Lollipop.png",
+                      "column":  1,
+                      "row":  5,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Mac OS Default.png",
+                      "column":  2,
+                      "row":  5,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Peanuts Azul.png",
+                      "column":  3,
+                      "row":  5,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Peanuts Pistachio.png",
+                      "column":  4,
+                      "row":  5,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Pistachio Dark.png",
+                      "column":  5,
+                      "row":  5,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Pistachio Light.png",
+                      "column":  6,
+                      "row":  5,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Pistachio Medium.png",
+                      "column":  7,
+                      "row":  5,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Poppy Dark.png",
+                      "column":  1,
+                      "row":  6,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Poppy Light.png",
+                      "column":  2,
+                      "row":  6,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Poppy Medium.png",
+                      "column":  3,
+                      "row":  6,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Poppy.png",
+                      "column":  4,
+                      "row":  6,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Rio Azul.png",
+                      "column":  5,
+                      "row":  6,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Rio Pistachio.png",
+                      "column":  6,
+                      "row":  6,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Ripple Azul.png",
+                      "column":  7,
+                      "row":  6,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Ripple Bondi.png",
+                      "column":  1,
+                      "row":  7,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Ripple Poppy.png",
+                      "column":  2,
+                      "row":  7,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Sunny Dark.png",
+                      "column":  3,
+                      "row":  7,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Sunny Light.png",
+                      "column":  4,
+                      "row":  7,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Sunny.png",
+                      "column":  5,
+                      "row":  7,
+                      "tileWidth":  16,
+                      "tileHeight":  16
+                  },
+                  {
+                      "image":  "patterns/OS8/Waves Azul.png",
+                      "column":  6,
+                      "row":  7,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  },
+                  {
+                      "image":  "patterns/OS8/Waves Bondi.png",
+                      "column":  7,
+                      "row":  7,
+                      "tileWidth":  128,
+                      "tileHeight":  128
+                  }
+              ]
+}
