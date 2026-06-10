@@ -45,6 +45,13 @@
     padding: 0;
 }
 
+.paint-board-temp-circle {
+    border: 2px solid rgba(255, 0, 0, 0.5);
+    border-radius: 50%;
+    display: block;
+    position: absolute;
+}
+
 .paint-board-canvas {
     display: block;
     height: 100%;

@@ -55,6 +55,27 @@
         tempLayer.innerHTML = "";
     }
 
+    function showCircle(tempLayer, point, radius) {
+        var circle;
+        var diameter;
+
+        if (!tempLayer || !point) {
+            return;
+        }
+
+        diameter = Math.max(1, Math.round(radius * 2));
+        circle = document.createElement("div");
+        circle.className = "paint-board-temp-circle";
+        circle.style.left = Math.round(point.x - radius) + "px";
+        circle.style.top = Math.round(point.y - radius) + "px";
+        circle.style.width = diameter + "px";
+        circle.style.height = diameter + "px";
+
+        tempLayer.tempShape = null;
+        tempLayer.innerHTML = "";
+        tempLayer.appendChild(circle);
+    }
+
     function renderSquare(tempLayer, point) {
         var origin = tempLayer.tempShape.origin;
         var left = Math.min(origin.x, point.x);
@@ -90,6 +111,7 @@
         setSize: setSize,
         startSquare: startSquare,
         updateSquare: updateSquare,
+        showCircle: showCircle,
         clear: clear
     };
 

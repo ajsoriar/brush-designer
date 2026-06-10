@@ -29,6 +29,10 @@
         "DESIGNED-BRUSH-2": new URL("./icons/paint-tools_31.png", import.meta.url).href
     };
 
+    var TOOL_LABELS = {
+        "OLD-BRUSH": "old brush"
+    };
+
     function extend(target, source) {
         var key;
 
@@ -95,7 +99,7 @@
             var button = document.createElement("div");
             var icon = TOOL_ICONS[tool];
 
-            button.className = "paint-tools-button";
+            button.className = "paint-tools-button" + (icon ? "" : " paint-tools-button-no-icon");
             button.setAttribute("data-paint-tool", tool);
             button.style.width = component.btnSize + "px";
             button.style.height = component.btnSize + "px";
@@ -123,7 +127,7 @@
     }
 
     function getToolLabelHtml(tool) {
-        return String(tool).split("-").map(function(part) {
+        return String(TOOL_LABELS[tool] || tool).split(/[ -]/).map(function(part) {
             return '<span class="paint-tools-button-line">' + escapeHtml(part) + '</span>';
         }).join("");
     }

@@ -29,6 +29,7 @@
         STROKED_OVALS: "STROKED-OVALS",
         PAINT_BUCKET: "PAINT-BUCKET",
         INK_DROPPER: "INK-DROPPER",
+        OLD_BRUSH: "OLD-BRUSH",
         DESIGNED_BRUSH: "DESIGNED-BRUSH",
         DESIGNED_BRUSH_2: "DESIGNED-BRUSH-2"
     };
@@ -108,12 +109,23 @@
         var tempLayer = createTempLayer(config.width, config.height);
         var context;
         var isPainting = false;
+        var clearPreviewOnPaintToolChange = function(event) {
+            var mode = event.detail && event.detail.mode;
+
+            if (mode !== PAINT_TOOL_MODES.OLD_BRUSH) {
+                clearRetroBrushPreview(board);
+            }
+        };
         var stopPainting = function(event) {
             if (isPainting && isShapeToolMode() && board.pointerStartPosition) {
                 paintShapePointerEvent(board, event);
             }
 
-            clearTempSquare(board);
+            if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH && isPointerInsideCanvas(board, event)) {
+                updateRetroBrushPreview(board, event);
+            } else {
+                clearTempSquare(board);
+            }
             isPainting = false;
             board.lastPointerPosition = null;
             board.designedBrush2Stroke = null;
@@ -196,7 +208,7 @@
                 return save(board, config);
             },
             destroy: function() {
-                destroy(board, stopPainting);
+                destroy(board, stopPainting, clearPreviewOnPaintToolChange);
             }
         };
 
@@ -204,10 +216,13 @@
             canvas.addEventListener("mousedown", function(event) {
                 isPainting = true;
                 startTempSquare(board, event);
+                updateRetroBrushPreview(board, event);
                 startPointerAction(board, event);
             });
 
             canvas.addEventListener("mousemove", function(event) {
+                updateRetroBrushPreview(board, event);
+
                 if (!isPainting) {
                     return;
                 }
@@ -226,7 +241,10 @@
                 isPainting = false;
                 board.lastPointerPosition = null;
                 board.designedBrush2Stroke = null;
+                clearRetroBrushPreview(board);
             });
+
+            global.addEventListener("paint-tools-change", clearPreviewOnPaintToolChange);
         }
 
         return board;
@@ -317,6 +335,21 @@
         };
     }
 
+    function isPointerInsideCanvas(board, event) {
+        var rect;
+
+        if (!event) {
+            return false;
+        }
+
+        rect = board.canvas.getBoundingClientRect();
+
+        return event.clientX >= rect.left &&
+            event.clientX <= rect.right &&
+            event.clientY >= rect.top &&
+            event.clientY <= rect.bottom;
+    }
+
     function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
     }
@@ -351,6 +384,27 @@
         }
 
         global.PaintBoardTempLayer.clear(board.tempLayerElement);
+    }
+
+    function updateRetroBrushPreview(board, event) {
+        var point;
+        var brush;
+
+        if (currentPaintToolMode !== PAINT_TOOL_MODES.OLD_BRUSH) {
+            return;
+        }
+
+        if (!global.PaintBoardTempLayer || !global.PaintBoardTempLayer.showCircle) {
+            return;
+        }
+
+        point = getPointerPosition(board, event);
+        brush = getCurrentRetroBrush();
+        global.PaintBoardTempLayer.showCircle(board.tempLayerElement, point, Math.max(1, brush.size / 2));
+    }
+
+    function clearRetroBrushPreview(board) {
+        clearTempSquare(board);
     }
 
     function startPointerAction(board, event) {
@@ -396,7 +450,9 @@
 
         event.preventDefault();
 
-        if (currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES && board.lastPointerPosition) {
+        if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH && board.lastPointerPosition) {
+            paintOldBrushLine(board, board.lastPointerPosition, point);
+        } else if (currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES && board.lastPointerPosition) {
             paintSquaredLine(board, board.lastPointerPosition, point);
         } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES && board.lastPointerPosition) {
             paintRoundLine(board, board.lastPointerPosition, point);
@@ -406,6 +462,8 @@
             paintDesignedBrush2(board, point.x, point.y);
         } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS) {
             paintRoundPoint(board, point.x, point.y);
+        } else if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH) {
+            paintOldBrushStamp(board, point.x, point.y);
         } else {
             paintSquaredPoint(board, point.x, point.y);
         }
@@ -467,6 +525,59 @@
 
     function paintRoundLine(board, fromPoint, toPoint) {
         paintLine(board, fromPoint, toPoint, "round", "round");
+    }
+
+    function paintOldBrushLine(board, fromPoint, toPoint) {
+        var brush = getCurrentRetroBrush();
+        var size = Math.max(1, brush.size);
+        var spacing = Math.max(1, Math.floor(size / 5));
+        var dx = toPoint.x - fromPoint.x;
+        var dy = toPoint.y - fromPoint.y;
+        var distance = Math.sqrt(dx * dx + dy * dy);
+        var steps = Math.max(1, Math.ceil(distance / spacing));
+        var i;
+        var t;
+
+        for (i = 0; i <= steps; i++) {
+            t = i / steps;
+            paintOldBrushStamp(board, fromPoint.x + dx * t, fromPoint.y + dy * t);
+        }
+    }
+
+    function paintOldBrushStamp(board, x, y) {
+        var brush = getCurrentRetroBrush();
+        var size = Math.max(1, brush.size);
+        var radius = Math.max(1, size / 2);
+        var color = getCurrentPaintColor(board);
+        var dotSize = Math.max(1, brush.pointSize);
+        var step = dotSize + Math.max(0, brush.pointSpacing);
+        var phaseX = positiveModulo(Math.round(x), step);
+        var phaseY = positiveModulo(Math.round(y), step);
+        var left = Math.floor(x - radius);
+        var top = Math.floor(y - radius);
+        var right = Math.ceil(x + radius);
+        var bottom = Math.ceil(y + radius);
+        var px;
+        var py;
+        var dx;
+        var dy;
+
+        board.context.fillStyle = color;
+
+        for (py = top - positiveModulo(top - phaseY, step); py <= bottom; py += step) {
+            for (px = left - positiveModulo(left - phaseX, step); px <= right; px += step) {
+                dx = px - x;
+                dy = py - y;
+
+                if ((dx * dx) + (dy * dy) <= radius * radius) {
+                    board.context.fillRect(Math.round(px), Math.round(py), dotSize, dotSize);
+                }
+            }
+        }
+    }
+
+    function positiveModulo(value, divisor) {
+        return ((value % divisor) + divisor) % divisor;
     }
 
     function paintLine(board, fromPoint, toPoint, lineCap, lineJoin) {
@@ -860,6 +971,26 @@
         return null;
     }
 
+    function getCurrentRetroBrush() {
+        var brush = global.App && global.App.memory && global.App.memory.currentRetroBrush;
+
+        return {
+            size: normalizeBrushNumber(brush && brush.size, 100),
+            pointSpacing: normalizeBrushNumber(brush && brush.pointSpacing, 2),
+            pointSize: normalizeBrushNumber(brush && brush.pointSize, 1)
+        };
+    }
+
+    function normalizeBrushNumber(value, fallback) {
+        var number = Math.round(Number(value));
+
+        if (!Number.isFinite(number)) {
+            return fallback;
+        }
+
+        return Math.max(1, number);
+    }
+
     function getOppositeColor(color) {
         var rgb = getRgb(color);
 
@@ -899,8 +1030,9 @@
         return data;
     }
 
-    function destroy(board, stopPainting) {
+    function destroy(board, stopPainting, clearPreviewOnPaintToolChange) {
         document.removeEventListener("mouseup", stopPainting);
+        global.removeEventListener("paint-tools-change", clearPreviewOnPaintToolChange);
 
         if (board.element.parentNode) {
             board.element.parentNode.removeChild(board.element);

@@ -10,6 +10,7 @@
     var appPaintTools = null;
     var appStarGenerator = null;
     var appBrushDesigner2 = null;
+    var appRetroBrushDesigner = null;
     var documentCount = 0;
     var activePaintBoard = null;
 
@@ -395,6 +396,56 @@
         return appBrushDesigner2;
     }
 
+    function openRetroBrushDesignerWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("retro-brush-designer");
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return appRetroBrushDesigner;
+        }
+
+        var designerWidth = 216;
+        var designerHeight = 340;
+        var windowFrameWidth = 16;
+        var windowFrameHeight = 36;
+        var outerWidth = designerWidth + windowFrameWidth;
+        var outerHeight = designerHeight + windowFrameHeight;
+        var brush = global.App.memory.currentRetroBrush || {};
+        var designerWindow = WindowsManager.create({
+            id: "retro-brush-designer-window",
+            windowId: "retro-brush-designer",
+            title: "Retro Brush",
+            type: "TOOL",
+            x: 20,
+            y: 385,
+            width: outerWidth,
+            height: outerHeight,
+            resizable: false,
+            minimizable: false,
+            scrollBarX: false,
+            scrollBarY: false,
+            topBarGradient: {
+                a: "#00c7e8",
+                b: "#2458c7",
+                orientacion: "horizontal"
+            },
+            contentId: "retro-brush-designer-window-content"
+        });
+
+        appRetroBrushDesigner = global.createRetroBrushDesigner(designerWindow.contentElement, {
+            size: brush.size,
+            pointSpacing: brush.pointSpacing,
+            pointSize: brush.pointSize,
+            onChange: function(retroBrush) {
+                global.App.memory.currentRetroBrush = retroBrush;
+            }
+        });
+
+        designerWindow.scaleToContent(appRetroBrushDesigner.options.width, appRetroBrushDesigner.options.height);
+
+        return appRetroBrushDesigner;
+    }
+
     function openBrushEditorOutputsWindow() {
         var existingWindow = WindowsManager.getWindowByWindowId("brush-editor-outputs");
         var outputsWidth = 200;
@@ -611,7 +662,7 @@
             id: "app-simple-line-width-picker",
             containerId: pickerWindow.contentId,
             minWidth: 1,
-            maxWidth: 30,
+            maxWidth: 27,
             steps: 16,
             activeLineWidth: global.App.memory.currentLineWidth,
             onLineWidthSelected: function(lineWidth) {
@@ -774,6 +825,7 @@
         openPaintBoardWindow: openPaintBoardWindow,
         openBrushDesignerInWindow: openBrushDesignerInWindow,
         openBrushDesigner2InWindow: openBrushDesigner2InWindow,
+        openRetroBrushDesignerWindow: openRetroBrushDesignerWindow,
         openBrushEditorOutputsWindow: openBrushEditorOutputsWindow,
         openSimpleColorPickerWindow: openSimpleColorPickerWindow,
         openBigColorPickerWindow: openBigColorPickerWindow,

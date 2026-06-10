@@ -1,0 +1,118 @@
+.retro-brush-designer {
+    background: #efefef;
+    color: #000;
+    font-family: "Courier New", monospace;
+    font-size: 12px;
+    font-weight: 700;
+    overflow: hidden;
+    padding: 8px 8px 0;
+    user-select: none;
+}
+
+.retro-brush-designer * {
+    box-sizing: border-box;
+}
+
+.retro-brush-designer-preview {
+    background: #fff;
+    border: 1px solid #ff3d48;
+    box-sizing: content-box;
+    display: block;
+    height: 198px;
+    image-rendering: pixelated;
+    width: 198px;
+}
+
+.retro-brush-designer-control {
+    display: block;
+    height: 41px;
+    padding-top: 2px;
+}
+
+.retro-brush-designer-label {
+    display: block;
+    height: 14px;
+    line-height: 14px;
+}
+
+.retro-brush-designer-value {
+    color: #006dff;
+    font-size: 9px;
+}
+
+.retro-brush-designer-range {
+    appearance: none;
+    background: transparent;
+    display: block;
+    height: 10px;
+    margin: 0;
+    width: 198px;
+}
+
+.retro-brush-designer-range::-webkit-slider-runnable-track {
+    background: #000;
+    height: 4px;
+}
+
+.retro-brush-designer-range::-webkit-slider-thumb {
+    appearance: none;
+    background: #ffe1fb;
+    border: 2px solid #ff35b5;
+    border-radius: 50%;
+    height: 16px;
+    margin-top: -6px;
+    width: 16px;
+}
+
+.retro-brush-designer-range::-moz-range-track {
+    background: #000;
+    height: 4px;
+}
+
+.retro-brush-designer-range::-moz-range-thumb {
+    background: #ffe1fb;
+    border: 2px solid #ff35b5;
+    border-radius: 50%;
+    height: 12px;
+    width: 12px;
+}
+
+.retro-brush-designer-limits {
+    display: flex;
+    font-size: 9px;
+    justify-content: space-between;
+    line-height: 10px;
+    width: 198px;
+}
+
+.retro-brush-designer-presets {
+    display: grid;
+    gap: 5px;
+    grid-template-columns: repeat(6, 29px);
+    margin-top: 2px;
+    width: 198px;
+}
+
+.retro-brush-designer-preset {
+    appearance: none;
+    background: #fff;
+    border: 1px solid #555;
+    display: block;
+    height: 25px;
+    margin: 0;
+    padding: 0;
+    width: 29px;
+}
+
+.retro-brush-designer-preset:hover,
+.retro-brush-designer-preset-selected {
+    border-color: #000;
+    box-shadow: inset 0 0 0 1px #000;
+}
+
+.retro-brush-designer-preset-preview {
+    display: block;
+    height: 23px;
+    image-rendering: pixelated;
+    width: 27px;
+}

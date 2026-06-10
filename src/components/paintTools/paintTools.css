@@ -48,6 +48,14 @@
     overflow: hidden;
 }
 
+.paint-tools-button-no-icon {
+    justify-content: center;
+}
+
+.paint-tools-button-no-icon .paint-tools-button-label {
+    height: auto;
+}
+
 .paint-tools-button-icon-wrap {
     align-items: center;
     display: flex;

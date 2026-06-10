@@ -7,6 +7,11 @@
     global.App.memory.currentColor = global.App.memory.currentColor || "#000000";
     global.App.memory.currentLineWidth = global.App.memory.currentLineWidth || 15;
     global.App.memory.currentDesignedBrush = global.App.memory.currentDesignedBrush || null;
+    global.App.memory.currentRetroBrush = global.App.memory.currentRetroBrush || {
+        size: 100,
+        pointSpacing: 2,
+        pointSize: 1
+    };
     global.App.memory.currentStar = global.App.memory.currentStar || {
         points: 5,
         outerRadius: 96,
@@ -49,6 +54,10 @@
 
         if (mode === "DESIGNED-BRUSH-2") {
             global.AppOpenWindows.openBrushDesigner2InWindow();
+        }
+
+        if (mode === "OLD-BRUSH") {
+            global.AppOpenWindows.openRetroBrushDesignerWindow();
         }
     });
 
@@ -139,6 +148,7 @@
     global.createDemoWindow = global.AppOpenWindows.createDemoWindow;
     global.openBrushDesignerInWindow = global.AppOpenWindows.openBrushDesignerInWindow;
     global.openBrushDesigner2InWindow = global.AppOpenWindows.openBrushDesigner2InWindow;
+    global.openRetroBrushDesignerWindow = global.AppOpenWindows.openRetroBrushDesignerWindow;
     global.openBrushEditorOutputsWindow = global.AppOpenWindows.openBrushEditorOutputsWindow;
     global.openSimpleColorPickerWindow = global.AppOpenWindows.openSimpleColorPickerWindow;
     global.openBigColorPickerWindow = global.AppOpenWindows.openBigColorPickerWindow;
