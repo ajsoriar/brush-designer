@@ -153,6 +153,9 @@
             toolsRow: true,
             scrollbars: true,
             contentId: "demo-paint-board-window-content-" + windowIndex,
+            onResize: function() {
+                updatePaintBoardZoomLayout(paintBoard);
+            },
             beforeClose: function(currentWindow) {
                 return confirmPaintBoardClose(paintBoard, currentWindow);
             }
@@ -187,6 +190,14 @@
         });
 
         return paintBoardWindow;
+    }
+
+    function updatePaintBoardZoomLayout(paintBoard) {
+        if (!paintBoard || !paintBoard.element || !global.Zoom || !global.Zoom.updateBoardLayout) {
+            return;
+        }
+
+        global.Zoom.updateBoardLayout(paintBoard.element);
     }
 
     function initPaintBoardToolbar(paintBoard) {

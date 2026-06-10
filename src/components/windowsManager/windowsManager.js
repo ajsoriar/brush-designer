@@ -15,6 +15,7 @@
     };
 
     var WINDOW_FRAME_EDGE_SIZE = 8;
+    var SUPPORTS_POINTER_EVENTS = typeof global.PointerEvent === "function";
 
     var DEFAULTS = {
         title: "Window",
@@ -230,7 +231,7 @@
 
         bindWindowEvents(currentWindow, config);
         if (modalOverlay) {
-            modalOverlay.addEventListener("mousedown", function(event) {
+            modalOverlay.addEventListener(getStartEventName(), function(event) {
                 event.preventDefault();
                 event.stopPropagation();
                 bringToFront(currentWindow.id);
@@ -385,7 +386,7 @@
         var maximizeButton = element.querySelector(".wm-btn-maximize");
         var resizeHandles = element.querySelectorAll("[data-wm-resize]");
 
-        element.addEventListener("mousedown", function() {
+        element.addEventListener(getStartEventName(), function() {
             bringToFront(currentWindow.id);
         });
 
@@ -431,7 +432,7 @@
         }
 
         if (config.movable) {
-            topBar.addEventListener("mousedown", function(event) {
+            topBar.addEventListener(getStartEventName(), function(event) {
                 if (event.target.closest(".wm-actions")) {
                     return;
                 }
@@ -442,7 +443,7 @@
 
         if (config.resizable) {
             Array.prototype.forEach.call(resizeHandles, function(handle) {
-                handle.addEventListener("mousedown", function(event) {
+                handle.addEventListener(getStartEventName(), function(event) {
                     startResize(event, currentWindow, config, handle.getAttribute("data-wm-resize"));
                 });
             });
@@ -455,24 +456,44 @@
         var startY = event.clientY;
         var startLeft = element.offsetLeft;
         var startTop = element.offsetTop;
+        var moveEventName = getMoveEventName(event);
+        var stopEventName = getStopEventName(event);
+        var cancelEventName = getCancelEventName(event);
+        var pointerId = typeof event.pointerId === "number" ? event.pointerId : null;
 
         if (currentWindow.maximized) {
             return;
         }
 
+        if (!isPrimaryInputStart(event)) {
+            return;
+        }
+
         event.preventDefault();
 
-        document.addEventListener("mousemove", move);
-        document.addEventListener("mouseup", stop);
+        capturePointer(element, pointerId);
+        document.addEventListener(moveEventName, move);
+        document.addEventListener(stopEventName, stop);
+        document.addEventListener(cancelEventName, stop);
 
         function move(moveEvent) {
+            if (!isActivePointer(moveEvent, pointerId)) {
+                return;
+            }
+
+            moveEvent.preventDefault();
             element.style.left = (startLeft + moveEvent.clientX - startX) + "px";
             element.style.top = (startTop + moveEvent.clientY - startY) + "px";
         }
 
-        function stop() {
-            document.removeEventListener("mousemove", move);
-            document.removeEventListener("mouseup", stop);
+        function stop(stopEvent) {
+            if (!isActivePointer(stopEvent, pointerId)) {
+                return;
+            }
+
+            document.removeEventListener(moveEventName, move);
+            document.removeEventListener(stopEventName, stop);
+            document.removeEventListener(cancelEventName, stop);
         }
     }
 
@@ -493,25 +514,41 @@
         var startHeight = element.offsetHeight;
         var frameWidth = element.offsetWidth - currentWindow.contentElement.clientWidth;
         var frameHeight = element.offsetHeight - currentWindow.contentElement.clientHeight;
+        var moveEventName = getMoveEventName(event);
+        var stopEventName = getStopEventName(event);
+        var cancelEventName = getCancelEventName(event);
+        var pointerId = typeof event.pointerId === "number" ? event.pointerId : null;
 
         if (currentWindow.minimized || currentWindow.maximized) {
+            return;
+        }
+
+        if (!isPrimaryInputStart(event)) {
             return;
         }
 
         event.preventDefault();
         event.stopPropagation();
 
-        document.addEventListener("mousemove", resize);
-        document.addEventListener("mouseup", stop);
+        capturePointer(element, pointerId);
+        document.addEventListener(moveEventName, resize);
+        document.addEventListener(stopEventName, stop);
+        document.addEventListener(cancelEventName, stop);
         updateResizeGeometryIndicator(currentWindow, config);
 
         function resize(moveEvent) {
+            if (!isActivePointer(moveEvent, pointerId)) {
+                return;
+            }
+
             var deltaX = moveEvent.clientX - startX;
             var deltaY = moveEvent.clientY - startY;
             var nextLeft = startLeft;
             var nextTop = startTop;
             var nextWidth = startWidth;
             var nextHeight = startHeight;
+
+            moveEvent.preventDefault();
 
             if (direction.indexOf("e") !== -1) {
                 nextWidth = startWidth + deltaX;
@@ -568,9 +605,14 @@
             notifyResize(currentWindow, config);
         }
 
-        function stop() {
-            document.removeEventListener("mousemove", resize);
-            document.removeEventListener("mouseup", stop);
+        function stop(stopEvent) {
+            if (!isActivePointer(stopEvent, pointerId)) {
+                return;
+            }
+
+            document.removeEventListener(moveEventName, resize);
+            document.removeEventListener(stopEventName, stop);
+            document.removeEventListener(cancelEventName, stop);
             hideResizeGeometryIndicator(currentWindow);
             notifyResizeEnd(currentWindow, config);
         }
@@ -645,6 +687,62 @@
         step = parseInt(step, 10);
 
         return isNaN(step) || step < 1 ? 0 : step;
+    }
+
+    function getStartEventName() {
+        return SUPPORTS_POINTER_EVENTS ? "pointerdown" : "mousedown";
+    }
+
+    function getMoveEventName(event) {
+        return typeof event.pointerId === "number" ? "pointermove" : "mousemove";
+    }
+
+    function getStopEventName(event) {
+        return typeof event.pointerId === "number" ? "pointerup" : "mouseup";
+    }
+
+    function getCancelEventName(event) {
+        return typeof event.pointerId === "number" ? "pointercancel" : "mouseup";
+    }
+
+    function isPrimaryInputStart(event) {
+        if (!event) {
+            return false;
+        }
+
+        if (typeof event.isPrimary === "boolean" && !event.isPrimary) {
+            return false;
+        }
+
+        if (event.button !== 0) {
+            return false;
+        }
+
+        return true;
+    }
+
+    function isActivePointer(event, pointerId) {
+        if (!event) {
+            return false;
+        }
+
+        if (pointerId !== null && typeof event.pointerId === "number" && event.pointerId !== pointerId) {
+            return false;
+        }
+
+        return true;
+    }
+
+    function capturePointer(element, pointerId) {
+        if (pointerId === null || typeof element.setPointerCapture !== "function") {
+            return;
+        }
+
+        try {
+            element.setPointerCapture(pointerId);
+        } catch (error) {
+            return;
+        }
     }
 
     function minimizeWindow(currentWindow) {

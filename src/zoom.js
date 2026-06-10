@@ -186,6 +186,14 @@
         return getBoardZoom(board);
     }
 
+    function updateBoardLayout(board) {
+        if (!board) {
+            return;
+        }
+
+        updateBoardZoomLayout(board);
+    }
+
     function getActiveBoard() {
         var board = document.querySelector(ACTIVE_BOARD_SELECTOR);
 
@@ -518,7 +526,8 @@
         },
         getActiveBoard: getActiveBoard,
         setActiveBoard: setActiveBoard,
-        setBoardZoom: setBoardZoom
+        setBoardZoom: setBoardZoom,
+        updateBoardLayout: updateBoardLayout
     };
 
 }(window));
