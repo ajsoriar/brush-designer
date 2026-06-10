@@ -109,6 +109,8 @@
         var tempLayer = createTempLayer(config.width, config.height);
         var context;
         var isPainting = false;
+        var activePointerId = null;
+        var supportsPointerEvents = typeof global.PointerEvent === "function";
         var clearPreviewOnPaintToolChange = function(event) {
             var mode = event.detail && event.detail.mode;
 
@@ -132,6 +134,54 @@
             board.pointerStartPosition = null;
         };
         var board;
+        var startPainting = function(event) {
+            if (!isPrimaryPaintInput(event)) {
+                return;
+            }
+
+            if (supportsPointerEvents) {
+                activePointerId = event.pointerId;
+                capturePointer(canvas, event.pointerId);
+            }
+
+            isPainting = true;
+            startTempSquare(board, event);
+            updateRetroBrushPreview(board, event);
+            startPointerAction(board, event);
+        };
+        var continuePainting = function(event) {
+            if (!isActivePaintInput(event, activePointerId)) {
+                return;
+            }
+
+            updateRetroBrushPreview(board, event);
+
+            if (!isPainting) {
+                return;
+            }
+
+            updateTempSquare(board, event);
+            continuePointerAction(board, event);
+        };
+        var endPainting = function(event) {
+            if (!isActivePaintInput(event, activePointerId)) {
+                return;
+            }
+
+            stopPainting(event);
+            activePointerId = null;
+        };
+        var leaveCanvas = function() {
+            if (isShapeToolMode()) {
+                return;
+            }
+
+            isPainting = false;
+            board.lastPointerPosition = null;
+            board.designedBrush2Stroke = null;
+            activePointerId = null;
+            clearRetroBrushPreview(board);
+        };
 
         element.id = boardId;
         element.className = "paint-board";
@@ -208,41 +258,29 @@
                 return save(board, config);
             },
             destroy: function() {
-                destroy(board, stopPainting, clearPreviewOnPaintToolChange);
+                destroy(board, {
+                    supportsPointerEvents: supportsPointerEvents,
+                    startPainting: startPainting,
+                    continuePainting: continuePainting,
+                    endPainting: endPainting,
+                    leaveCanvas: leaveCanvas
+                }, clearPreviewOnPaintToolChange);
             }
         };
 
         if (config.paintOnPointer) {
-            canvas.addEventListener("mousedown", function(event) {
-                isPainting = true;
-                startTempSquare(board, event);
-                updateRetroBrushPreview(board, event);
-                startPointerAction(board, event);
-            });
-
-            canvas.addEventListener("mousemove", function(event) {
-                updateRetroBrushPreview(board, event);
-
-                if (!isPainting) {
-                    return;
-                }
-
-                updateTempSquare(board, event);
-                continuePointerAction(board, event);
-            });
-
-            document.addEventListener("mouseup", stopPainting);
-
-            canvas.addEventListener("mouseleave", function() {
-                if (isShapeToolMode()) {
-                    return;
-                }
-
-                isPainting = false;
-                board.lastPointerPosition = null;
-                board.designedBrush2Stroke = null;
-                clearRetroBrushPreview(board);
-            });
+            if (supportsPointerEvents) {
+                canvas.addEventListener("pointerdown", startPainting);
+                canvas.addEventListener("pointermove", continuePainting);
+                document.addEventListener("pointerup", endPainting);
+                document.addEventListener("pointercancel", endPainting);
+                canvas.addEventListener("pointerleave", leaveCanvas);
+            } else {
+                canvas.addEventListener("mousedown", startPainting);
+                canvas.addEventListener("mousemove", continuePainting);
+                document.addEventListener("mouseup", endPainting);
+                canvas.addEventListener("mouseleave", leaveCanvas);
+            }
 
             global.addEventListener("paint-tools-change", clearPreviewOnPaintToolChange);
         }
@@ -348,6 +386,50 @@
             event.clientX <= rect.right &&
             event.clientY >= rect.top &&
             event.clientY <= rect.bottom;
+    }
+
+    function isPrimaryPaintInput(event) {
+        if (!event) {
+            return false;
+        }
+
+        if (typeof event.isPrimary === "boolean" && !event.isPrimary) {
+            return false;
+        }
+
+        if (event.type && event.type.indexOf("mouse") === 0 && event.button !== 0) {
+            return false;
+        }
+
+        if (event.type && event.type.indexOf("pointer") === 0 && event.button !== 0) {
+            return false;
+        }
+
+        return true;
+    }
+
+    function isActivePaintInput(event, activePointerId) {
+        if (!event) {
+            return false;
+        }
+
+        if (typeof event.pointerId === "number" && activePointerId !== null && event.pointerId !== activePointerId) {
+            return false;
+        }
+
+        return true;
+    }
+
+    function capturePointer(canvas, pointerId) {
+        if (typeof canvas.setPointerCapture !== "function") {
+            return;
+        }
+
+        try {
+            canvas.setPointerCapture(pointerId);
+        } catch (error) {
+            return;
+        }
     }
 
     function clamp(value, min, max) {
@@ -1030,8 +1112,20 @@
         return data;
     }
 
-    function destroy(board, stopPainting, clearPreviewOnPaintToolChange) {
-        document.removeEventListener("mouseup", stopPainting);
+    function destroy(board, paintHandlers, clearPreviewOnPaintToolChange) {
+        if (paintHandlers && paintHandlers.supportsPointerEvents) {
+            board.canvas.removeEventListener("pointerdown", paintHandlers.startPainting);
+            board.canvas.removeEventListener("pointermove", paintHandlers.continuePainting);
+            document.removeEventListener("pointerup", paintHandlers.endPainting);
+            document.removeEventListener("pointercancel", paintHandlers.endPainting);
+            board.canvas.removeEventListener("pointerleave", paintHandlers.leaveCanvas);
+        } else if (paintHandlers) {
+            board.canvas.removeEventListener("mousedown", paintHandlers.startPainting);
+            board.canvas.removeEventListener("mousemove", paintHandlers.continuePainting);
+            document.removeEventListener("mouseup", paintHandlers.endPainting);
+            board.canvas.removeEventListener("mouseleave", paintHandlers.leaveCanvas);
+        }
+
         global.removeEventListener("paint-tools-change", clearPreviewOnPaintToolChange);
 
         if (board.element.parentNode) {
