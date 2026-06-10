@@ -32,7 +32,8 @@
 
     var TOOL_LABELS = {
         "OLD-BRUSH": "Retro Brush",
-        "PATTERN-BUCKET": "Pattern Bucket"
+        "PATTERN-BUCKET": "Pattern Bucket",
+        "GRADIENT": "Gradient"
     };
 
     function extend(target, source) {

@@ -153,9 +153,15 @@
             button.style.width = config.color.defaultWidth + "px";
             button.style.height = config.color.defaultHeight + "px";
             button.setAttribute("data-color", color);
+            button.setAttribute("draggable", "true");
             button.title = color;
             button.addEventListener("click", function() {
                 setActiveColor(picker, color, config);
+            });
+            button.addEventListener("dragstart", function(event) {
+                event.dataTransfer.setData("text/plain", color);
+                event.dataTransfer.setData("application/x-brush-designer-color", color);
+                event.dataTransfer.effectAllowed = "copy";
             });
 
             picker.gridElement.appendChild(button);

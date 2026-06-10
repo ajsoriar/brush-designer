@@ -12,6 +12,7 @@
     var appBrushDesigner2 = null;
     var appRetroBrushDesigner = null;
     var appPatternsView = null;
+    var appGradientPanel = null;
     var documentCount = 0;
     var activePaintBoard = null;
 
@@ -552,6 +553,50 @@
         patternsWindow.toolsRowElement.appendChild(toolbar);
     }
 
+    function openGradientPanelWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("gradient-panel");
+        var panelWidth = 236;
+        var panelHeight = 108;
+        var windowFrameWidth = 16;
+        var windowFrameHeight = 36;
+        var gradientWindow;
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return appGradientPanel;
+        }
+
+        gradientWindow = WindowsManager.create({
+            id: "gradient-panel-window",
+            windowId: "gradient-panel",
+            title: "Gradient Panel",
+            type: "TOOL",
+            x: 260,
+            y: 390,
+            width: panelWidth + windowFrameWidth,
+            height: panelHeight + windowFrameHeight,
+            resizable: false,
+            scrollBarX: false,
+            scrollBarY: false,
+            contentId: "gradient-panel-window-content"
+        });
+
+        appGradientPanel = GradientPanel({
+            id: "app-gradient-panel",
+            containerId: gradientWindow.contentId,
+            fromColor: "#000000",
+            toColor: "#ffffff",
+            onChange: function(gradient) {
+                global.App.memory.currentGradient = gradient;
+            }
+        });
+        global.App.memory.currentGradient = appGradientPanel.getGradient();
+
+        gradientWindow.scaleToContent(appGradientPanel.getWidth(), appGradientPanel.getHeight());
+
+        return appGradientPanel;
+    }
+
     function openBrushEditorOutputsWindow() {
         var existingWindow = WindowsManager.getWindowByWindowId("brush-editor-outputs");
         var outputsWidth = 200;
@@ -933,6 +978,7 @@
         openBrushDesigner2InWindow: openBrushDesigner2InWindow,
         openRetroBrushDesignerWindow: openRetroBrushDesignerWindow,
         openPatternsViewWindow: openPatternsViewWindow,
+        openGradientPanelWindow: openGradientPanelWindow,
         openBrushEditorOutputsWindow: openBrushEditorOutputsWindow,
         openSimpleColorPickerWindow: openSimpleColorPickerWindow,
         openBigColorPickerWindow: openBigColorPickerWindow,

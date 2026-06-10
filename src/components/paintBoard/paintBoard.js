@@ -29,6 +29,7 @@
         STROKED_OVALS: "STROKED-OVALS",
         PAINT_BUCKET: "PAINT-BUCKET",
         PATTERN_BUCKET: "PATTERN-BUCKET",
+        GRADIENT: "GRADIENT",
         INK_DROPPER: "INK-DROPPER",
         OLD_BRUSH: "OLD-BRUSH",
         DESIGNED_BRUSH: "DESIGNED-BRUSH",
@@ -124,6 +125,10 @@
                 paintShapePointerEvent(board, event);
             }
 
+            if (isPainting && currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT && board.pointerStartPosition) {
+                paintGradientPointerEvent(board, event);
+            }
+
             if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH && isPointerInsideCanvas(board, event)) {
                 updateRetroBrushPreview(board, event);
             } else {
@@ -146,7 +151,7 @@
             }
 
             isPainting = true;
-            startTempSquare(board, event);
+            startTempPreview(board, event);
             updateRetroBrushPreview(board, event);
             startPointerAction(board, event);
         };
@@ -161,7 +166,7 @@
                 return;
             }
 
-            updateTempSquare(board, event);
+            updateTempPreview(board, event);
             continuePointerAction(board, event);
         };
         var endPainting = function(event) {
@@ -437,6 +442,24 @@
         return Math.max(min, Math.min(max, value));
     }
 
+    function startTempPreview(board, event) {
+        if (currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
+            startGradientPreview(board, event);
+            return;
+        }
+
+        startTempSquare(board, event);
+    }
+
+    function updateTempPreview(board, event) {
+        if (currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
+            updateGradientPreview(board, event);
+            return;
+        }
+
+        updateTempSquare(board, event);
+    }
+
     function startTempSquare(board, event) {
         if (!isTempPreviewToolMode()) {
             return;
@@ -467,6 +490,22 @@
         }
 
         global.PaintBoardTempLayer.clear(board.tempLayerElement);
+    }
+
+    function startGradientPreview(board, event) {
+        if (!global.PaintBoardTempLayer || !global.PaintBoardTempLayer.startLine) {
+            return;
+        }
+
+        global.PaintBoardTempLayer.startLine(board.tempLayerElement, getPointerPosition(board, event));
+    }
+
+    function updateGradientPreview(board, event) {
+        if (!global.PaintBoardTempLayer || !global.PaintBoardTempLayer.updateLine) {
+            return;
+        }
+
+        global.PaintBoardTempLayer.updateLine(board.tempLayerElement, getPointerPosition(board, event));
     }
 
     function updateRetroBrushPreview(board, event) {
@@ -509,6 +548,12 @@
             return;
         }
 
+        if (currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
+            event.preventDefault();
+            board.pointerStartPosition = getPointerPosition(board, event);
+            return;
+        }
+
         if (isShapeToolMode()) {
             event.preventDefault();
             board.pointerStartPosition = getPointerPosition(board, event);
@@ -528,6 +573,10 @@
         }
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.PATTERN_BUCKET) {
+            return;
+        }
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
             return;
         }
 
@@ -574,6 +623,18 @@
 
         event.preventDefault();
         paintShape(board, fromPoint, toPoint);
+    }
+
+    function paintGradientPointerEvent(board, event) {
+        var fromPoint = board.pointerStartPosition;
+        var toPoint = getPointerPosition(board, event);
+
+        if (!fromPoint) {
+            return;
+        }
+
+        event.preventDefault();
+        paintGradient(board, fromPoint, toPoint);
     }
 
     function paintBucketPointerEvent(board, event) {
@@ -1059,6 +1120,30 @@
         }
     }
 
+    function paintGradient(board, fromPoint, toPoint) {
+        var gradientConfig = getCurrentGradient();
+        var gradient = board.context.createLinearGradient(fromPoint.x, fromPoint.y, toPoint.x, toPoint.y);
+        var stops = gradientConfig.stops || [];
+        var i;
+        var stop;
+
+        if (fromPoint.x === toPoint.x && fromPoint.y === toPoint.y) {
+            toPoint = {
+                x: fromPoint.x + 1,
+                y: fromPoint.y
+            };
+            gradient = board.context.createLinearGradient(fromPoint.x, fromPoint.y, toPoint.x, toPoint.y);
+        }
+
+        for (i = 0; i < stops.length; i++) {
+            stop = stops[i];
+            gradient.addColorStop(clamp(stop.offset, 0, 1), stop.color);
+        }
+
+        board.context.fillStyle = gradient;
+        board.context.fillRect(0, 0, board.canvas.width, board.canvas.height);
+    }
+
     function paintSquare(board, fromPoint, toPoint, fill) {
         paintRectangle(board, fromPoint, getSquareEndPoint(fromPoint, toPoint), fill);
     }
@@ -1203,6 +1288,26 @@
 
     function getCurrentPatternUseFrontColor() {
         return !!(global.App && global.App.memory && global.App.memory.currentPatternUseFrontColor);
+    }
+
+    function getCurrentGradient() {
+        if (global.App && global.App.memory && global.App.memory.currentGradient) {
+            return global.App.memory.currentGradient;
+        }
+
+        return {
+            type: "linear",
+            stops: [
+                {
+                    offset: 0,
+                    color: "#000000"
+                },
+                {
+                    offset: 1,
+                    color: "#ffffff"
+                }
+            ]
+        };
     }
 
     function normalizeBrushNumber(value, fallback) {

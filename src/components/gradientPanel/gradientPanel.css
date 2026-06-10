@@ -1,0 +1,36 @@
+.gradient-panel {
+    background: #efefef;
+    color: #111111;
+    display: grid;
+    font-family: Arial, sans-serif;
+    gap: 8px;
+    padding: 8px;
+}
+
+.gradient-panel-preview {
+    border: 1px solid #111111;
+    height: 32px;
+    width: 220px;
+}
+
+.gradient-panel-row {
+    align-items: center;
+    display: grid;
+    gap: 6px;
+    grid-template-columns: 56px 1fr;
+}
+
+.gradient-panel-label {
+    font: 11px Arial, sans-serif;
+}
+
+.gradient-panel-swatch {
+    border: 1px solid #111111;
+    height: 20px;
+    width: 40px;
+}
+
+.gradient-panel-swatch-drop {
+    outline: 2px solid #2563eb;
+    outline-offset: 1px;
+}

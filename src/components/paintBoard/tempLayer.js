@@ -46,6 +46,28 @@
         renderSquare(tempLayer, point);
     }
 
+    function startLine(tempLayer, point) {
+        if (!tempLayer || !point) {
+            return;
+        }
+
+        tempLayer.tempShape = {
+            origin: {
+                x: point.x,
+                y: point.y
+            }
+        };
+        renderLine(tempLayer, point);
+    }
+
+    function updateLine(tempLayer, point) {
+        if (!tempLayer || !tempLayer.tempShape || !point) {
+            return;
+        }
+
+        renderLine(tempLayer, point);
+    }
+
     function clear(tempLayer) {
         if (!tempLayer) {
             return;
@@ -106,11 +128,38 @@
         ].join("");
     }
 
+    function renderLine(tempLayer, point) {
+        var origin = tempLayer.tempShape.origin;
+        var lineWeight = 1;
+        var lineColor = "#2563eb";
+        var lineOpacity = 1;
+
+        if (!global.dljs || !global.dljs.getLineString) {
+            return;
+        }
+
+        tempLayer.innerHTML = global.dljs.getLineString(
+            "temp-gradient-line",
+            origin.x,
+            origin.y,
+            point.x,
+            point.y,
+            lineWeight,
+            lineColor,
+            lineOpacity,
+            false,
+            0,
+            null
+        );
+    }
+
     global.PaintBoardTempLayer = {
         create: createTempLayer,
         setSize: setSize,
         startSquare: startSquare,
         updateSquare: updateSquare,
+        startLine: startLine,
+        updateLine: updateLine,
         showCircle: showCircle,
         clear: clear
     };
