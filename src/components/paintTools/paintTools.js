@@ -24,13 +24,15 @@
         "STROKED-CIRCLES": new URL("./icons/paint-tools_37.png", import.meta.url).href,
         "STROKED-OVALS": new URL("./icons/paint-tools_42.png", import.meta.url).href,
         "PAINT-BUCKET": new URL("./icons/paint-tools_40.png", import.meta.url).href,
+        "PATTERN-BUCKET": new URL("./icons/paint-tools_40.png", import.meta.url).href,
         "INK-DROPPER": new URL("./icons/paint-tools_29.png", import.meta.url).href,
         "DESIGNED-BRUSH": new URL("./icons/paint-tools_31.png", import.meta.url).href,
         "DESIGNED-BRUSH-2": new URL("./icons/paint-tools_31.png", import.meta.url).href
     };
 
     var TOOL_LABELS = {
-        "OLD-BRUSH": "old brush"
+        "OLD-BRUSH": "Retro Brush",
+        "PATTERN-BUCKET": "Pattern Bucket"
     };
 
     function extend(target, source) {

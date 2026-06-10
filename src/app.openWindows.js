@@ -11,6 +11,7 @@
     var appStarGenerator = null;
     var appBrushDesigner2 = null;
     var appRetroBrushDesigner = null;
+    var appPatternsView = null;
     var documentCount = 0;
     var activePaintBoard = null;
 
@@ -330,7 +331,7 @@
         var brushDesignerWidth = 660;
         var brushDesignerHeight = 700;
         var windowFrameWidth = 16;
-        var windowFrameHeight = 36;
+        var windowFrameHeight = 66;
         var outerWidth = brushDesignerWidth + windowFrameWidth;
         var outerHeight = brushDesignerHeight + windowFrameHeight;
         var x = Math.max(0, Math.round((global.innerWidth - outerWidth) / 2));
@@ -455,6 +456,100 @@
         designerWindow.scaleToContent(appRetroBrushDesigner.options.width, appRetroBrushDesigner.options.height);
 
         return appRetroBrushDesigner;
+    }
+
+    function openPatternsViewWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("patterns-view");
+        var viewWidth = 368;
+        var viewHeight = 376;
+        var windowFrameWidth = 16;
+        var windowFrameHeight = 66;
+        var patternsWindow;
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return appPatternsView;
+        }
+
+        patternsWindow = WindowsManager.create({
+            id: "patterns-view-window",
+            windowId: "patterns-view",
+            title: "Patterns",
+            type: "TOOL",
+            x: 260,
+            y: 590,
+            width: viewWidth + windowFrameWidth,
+            height: viewHeight + windowFrameHeight,
+            resizable: false,
+            toolsRow: true,
+            scrollBarX: false,
+            scrollBarY: false,
+            contentId: "patterns-view-window-content"
+        });
+
+        appPatternsView = PatternsView({
+            id: "app-patterns-view",
+            containerId: patternsWindow.contentId,
+            columns: 9,
+            activePatternId: global.App.memory.currentPattern && global.App.memory.currentPattern.id,
+            onSelect: function(pattern) {
+                global.App.memory.currentPattern = pattern;
+            }
+        });
+
+        initPatternsToolbar(patternsWindow, appPatternsView);
+        patternsWindow.scaleToContent(appPatternsView.getWidth(), appPatternsView.getHeight());
+
+        return appPatternsView;
+    }
+
+    function initPatternsToolbar(patternsWindow, patternsView) {
+        var toolbar;
+        var select;
+        var useFrontColorLabel;
+        var useFrontColorInput;
+        var collections;
+
+        if (!patternsWindow || !patternsWindow.toolsRowElement || !patternsView || !patternsView.getCollections) {
+            return;
+        }
+
+        toolbar = document.createElement("div");
+        toolbar.className = "wm-toolbar";
+        select = document.createElement("select");
+        select.className = "wm-toolbar-select";
+        collections = patternsView.getCollections();
+
+        collections.forEach(function(collection) {
+            var option = document.createElement("option");
+
+            option.value = collection.id;
+            option.textContent = collection.collectionName || collection.name || collection.id;
+            select.appendChild(option);
+        });
+
+        select.value = patternsView.options.collectionId;
+        select.addEventListener("change", function() {
+            patternsView.setCollection(select.value);
+            patternsWindow.scaleToContent(patternsView.getWidth(), patternsView.getHeight());
+        });
+
+        useFrontColorLabel = document.createElement("label");
+        useFrontColorLabel.className = "wm-toolbar-check";
+        useFrontColorInput = document.createElement("input");
+        useFrontColorInput.type = "checkbox";
+        useFrontColorInput.checked = !!global.App.memory.currentPatternUseFrontColor;
+        useFrontColorInput.addEventListener("change", function() {
+            global.App.memory.currentPatternUseFrontColor = useFrontColorInput.checked;
+        });
+
+        useFrontColorLabel.appendChild(useFrontColorInput);
+        useFrontColorLabel.appendChild(document.createTextNode("Use front color"));
+
+        toolbar.appendChild(select);
+        toolbar.appendChild(useFrontColorLabel);
+        patternsWindow.toolsRowElement.innerHTML = "";
+        patternsWindow.toolsRowElement.appendChild(toolbar);
     }
 
     function openBrushEditorOutputsWindow() {
@@ -837,6 +932,7 @@
         openBrushDesignerInWindow: openBrushDesignerInWindow,
         openBrushDesigner2InWindow: openBrushDesigner2InWindow,
         openRetroBrushDesignerWindow: openRetroBrushDesignerWindow,
+        openPatternsViewWindow: openPatternsViewWindow,
         openBrushEditorOutputsWindow: openBrushEditorOutputsWindow,
         openSimpleColorPickerWindow: openSimpleColorPickerWindow,
         openBigColorPickerWindow: openBigColorPickerWindow,

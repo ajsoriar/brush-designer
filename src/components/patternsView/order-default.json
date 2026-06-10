@@ -1,0 +1,482 @@
+{
+  "collectionName": "Default",
+  "name": "Default black and white patterns",
+  "columns": 9,
+  "tilePreviewSize": 32,
+  "items": [
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_03.png",
+      "column": 1,
+      "row": 1,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_05.png",
+      "column": 2,
+      "row": 1,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_07.png",
+      "column": 3,
+      "row": 1,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_09.png",
+      "column": 4,
+      "row": 1,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_11.png",
+      "column": 5,
+      "row": 1,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_13.png",
+      "column": 6,
+      "row": 1,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_15.png",
+      "column": 7,
+      "row": 1,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_17.png",
+      "column": 8,
+      "row": 1,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_27.png",
+      "column": 9,
+      "row": 1,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_28.png",
+      "column": 1,
+      "row": 2,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_29.png",
+      "column": 2,
+      "row": 2,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_30.png",
+      "column": 3,
+      "row": 2,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_31.png",
+      "column": 4,
+      "row": 2,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_32.png",
+      "column": 5,
+      "row": 2,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_33.png",
+      "column": 6,
+      "row": 2,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_34.png",
+      "column": 7,
+      "row": 2,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_44.png",
+      "column": 8,
+      "row": 2,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_46.png",
+      "column": 9,
+      "row": 2,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_47.png",
+      "column": 1,
+      "row": 3,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_48.png",
+      "column": 2,
+      "row": 3,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_49.png",
+      "column": 3,
+      "row": 3,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_50.png",
+      "column": 4,
+      "row": 3,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_51.png",
+      "column": 5,
+      "row": 3,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_52.png",
+      "column": 6,
+      "row": 3,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_53.png",
+      "column": 7,
+      "row": 3,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_63.png",
+      "column": 8,
+      "row": 3,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_64.png",
+      "column": 9,
+      "row": 3,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_65.png",
+      "column": 1,
+      "row": 4,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_66.png",
+      "column": 2,
+      "row": 4,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_67.png",
+      "column": 3,
+      "row": 4,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_68.png",
+      "column": 4,
+      "row": 4,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_69.png",
+      "column": 5,
+      "row": 4,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_70.png",
+      "column": 6,
+      "row": 4,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-16x16/pattern-16x16_71.png",
+      "column": 7,
+      "row": 4,
+      "tileSize": 16
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_03.png",
+      "column": 8,
+      "row": 4,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_05.png",
+      "column": 9,
+      "row": 4,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_07.png",
+      "column": 1,
+      "row": 5,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_09.png",
+      "column": 2,
+      "row": 5,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_11.png",
+      "column": 3,
+      "row": 5,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_13.png",
+      "column": 4,
+      "row": 5,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_15.png",
+      "column": 5,
+      "row": 5,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_17.png",
+      "column": 6,
+      "row": 5,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_19.png",
+      "column": 7,
+      "row": 5,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_21.png",
+      "column": 8,
+      "row": 5,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_23.png",
+      "column": 9,
+      "row": 5,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_25.png",
+      "column": 1,
+      "row": 6,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_27.png",
+      "column": 2,
+      "row": 6,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_29.png",
+      "column": 3,
+      "row": 6,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_31.png",
+      "column": 4,
+      "row": 6,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_33.png",
+      "column": 5,
+      "row": 6,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_35.png",
+      "column": 6,
+      "row": 6,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_37.png",
+      "column": 7,
+      "row": 6,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_39.png",
+      "column": 8,
+      "row": 6,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_41.png",
+      "column": 9,
+      "row": 6,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_43.png",
+      "column": 1,
+      "row": 7,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_45.png",
+      "column": 2,
+      "row": 7,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_69.png",
+      "column": 3,
+      "row": 7,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_70.png",
+      "column": 4,
+      "row": 7,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_71.png",
+      "column": 5,
+      "row": 7,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_72.png",
+      "column": 6,
+      "row": 7,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_73.png",
+      "column": 7,
+      "row": 7,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_74.png",
+      "column": 8,
+      "row": 7,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_75.png",
+      "column": 9,
+      "row": 7,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_76.png",
+      "column": 1,
+      "row": 8,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_77.png",
+      "column": 2,
+      "row": 8,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_78.png",
+      "column": 3,
+      "row": 8,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_79.png",
+      "column": 4,
+      "row": 8,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_80.png",
+      "column": 5,
+      "row": 8,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_82.png",
+      "column": 6,
+      "row": 8,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_84.png",
+      "column": 7,
+      "row": 8,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_85.png",
+      "column": 8,
+      "row": 8,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_86.png",
+      "column": 9,
+      "row": 8,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_87.png",
+      "column": 1,
+      "row": 9,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_88.png",
+      "column": 2,
+      "row": 9,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_89.png",
+      "column": 3,
+      "row": 9,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_90.png",
+      "column": 4,
+      "row": 9,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_91.png",
+      "column": 5,
+      "row": 9,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_92.png",
+      "column": 6,
+      "row": 9,
+      "tileSize": 8
+    },
+    {
+      "image": "patterns/default-bw-8x8/pattern-8x8_115.png",
+      "column": 7,
+      "row": 9,
+      "tileSize": 8
+    }
+  ]
+}

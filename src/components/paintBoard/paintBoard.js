@@ -28,6 +28,7 @@
         STROKED_CIRCLES: "STROKED-CIRCLES",
         STROKED_OVALS: "STROKED-OVALS",
         PAINT_BUCKET: "PAINT-BUCKET",
+        PATTERN_BUCKET: "PATTERN-BUCKET",
         INK_DROPPER: "INK-DROPPER",
         OLD_BRUSH: "OLD-BRUSH",
         DESIGNED_BRUSH: "DESIGNED-BRUSH",
@@ -502,6 +503,12 @@
             return;
         }
 
+        if (currentPaintToolMode === PAINT_TOOL_MODES.PATTERN_BUCKET) {
+            event.preventDefault();
+            patternBucketPointerEvent(board, event);
+            return;
+        }
+
         if (isShapeToolMode()) {
             event.preventDefault();
             board.pointerStartPosition = getPointerPosition(board, event);
@@ -517,6 +524,10 @@
         }
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.PAINT_BUCKET) {
+            return;
+        }
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.PATTERN_BUCKET) {
             return;
         }
 
@@ -569,6 +580,12 @@
         var point = getPointerPosition(board, event);
 
         paintBucket(board, point.x, point.y);
+    }
+
+    function patternBucketPointerEvent(board, event) {
+        var point = getPointerPosition(board, event);
+
+        paintPatternBucket(board, point.x, point.y);
     }
 
     function inkDropperPointerEvent(board, event) {
@@ -833,6 +850,119 @@
         board.context.putImageData(imageData, 0, 0);
     }
 
+    function paintPatternBucket(board, x, y) {
+        var pattern = getCurrentPattern();
+        var patternData;
+        var imageData;
+        var data;
+        var targetColor;
+        var stack;
+        var visited;
+        var point;
+        var index;
+        var pixelIndex;
+        var patternColor;
+        var frontColor = getRgb(getCurrentPaintColor(board));
+        var useFrontColor = getCurrentPatternUseFrontColor();
+
+        if (!pattern || !pattern.image || !pattern.image.complete) {
+            return;
+        }
+
+        patternData = getPatternImageData(pattern);
+
+        if (!patternData) {
+            return;
+        }
+
+        imageData = board.context.getImageData(0, 0, board.canvas.width, board.canvas.height);
+        data = imageData.data;
+        targetColor = getPixelColor(data, imageData.width, x, y);
+        stack = [{ x: x, y: y }];
+        visited = new Uint8Array(imageData.width * imageData.height);
+
+        while (stack.length) {
+            point = stack.pop();
+
+            if (point.x < 0 || point.x >= imageData.width || point.y < 0 || point.y >= imageData.height) {
+                continue;
+            }
+
+            pixelIndex = (point.y * imageData.width) + point.x;
+
+            if (visited[pixelIndex]) {
+                continue;
+            }
+
+            visited[pixelIndex] = 1;
+            index = getPixelIndex(imageData.width, point.x, point.y);
+
+            if (!colorsMatchAt(data, index, targetColor)) {
+                continue;
+            }
+
+            patternColor = getPatternPixelColor(patternData, point.x, point.y, frontColor, useFrontColor);
+            data[index] = patternColor.r;
+            data[index + 1] = patternColor.g;
+            data[index + 2] = patternColor.b;
+            data[index + 3] = patternColor.a;
+
+            stack.push({ x: point.x + 1, y: point.y });
+            stack.push({ x: point.x - 1, y: point.y });
+            stack.push({ x: point.x, y: point.y + 1 });
+            stack.push({ x: point.x, y: point.y - 1 });
+        }
+
+        board.context.putImageData(imageData, 0, 0);
+    }
+
+    function getPatternImageData(pattern) {
+        var canvas;
+        var context;
+        var size = Math.max(1, pattern.size || 16);
+
+        if (pattern.imageData) {
+            return pattern.imageData;
+        }
+
+        canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        context = canvas.getContext("2d");
+        context.drawImage(pattern.image, 0, 0, size, size);
+        pattern.imageData = context.getImageData(0, 0, size, size);
+
+        return pattern.imageData;
+    }
+
+    function getPatternPixelColor(patternData, x, y, frontColor, useFrontColor) {
+        var px = positiveModulo(x, patternData.width);
+        var py = positiveModulo(y, patternData.height);
+        var index = getPixelIndex(patternData.width, px, py);
+        var data = patternData.data;
+        var brightness;
+
+        if (useFrontColor) {
+            brightness = (data[index] + data[index + 1] + data[index + 2]) / 3;
+
+            if (brightness < 128) {
+                return {
+                    r: frontColor.r,
+                    g: frontColor.g,
+                    b: frontColor.b,
+                    a: data[index + 3]
+                };
+            }
+        }
+
+        return {
+            r: data[index],
+            g: data[index + 1],
+            b: data[index + 2],
+            a: data[index + 3]
+        };
+    }
+
     function getPixelIndex(width, x, y) {
         return ((y * width) + x) * 4;
     }
@@ -1061,6 +1191,18 @@
             pointSpacing: normalizeBrushNumber(brush && brush.pointSpacing, 2),
             pointSize: normalizeBrushNumber(brush && brush.pointSize, 1)
         };
+    }
+
+    function getCurrentPattern() {
+        if (global.App && global.App.memory && global.App.memory.currentPattern) {
+            return global.App.memory.currentPattern;
+        }
+
+        return null;
+    }
+
+    function getCurrentPatternUseFrontColor() {
+        return !!(global.App && global.App.memory && global.App.memory.currentPatternUseFrontColor);
     }
 
     function normalizeBrushNumber(value, fallback) {

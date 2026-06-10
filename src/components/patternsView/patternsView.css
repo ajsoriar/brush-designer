@@ -1,0 +1,28 @@
+.patterns-view {
+    align-content: start;
+    background: #efefef;
+    display: grid;
+}
+
+.patterns-view-item {
+    appearance: none;
+    background: #ffffff;
+    background-position: 0 0;
+    background-repeat: repeat;
+    border: 1px solid #000000;
+    cursor: pointer;
+    display: block;
+    margin: 0;
+    padding: 0;
+}
+
+.patterns-view-item:hover,
+.patterns-view-item:focus {
+    outline: 2px solid #149cff;
+    outline-offset: 1px;
+}
+
+.patterns-view-item-active {
+    outline: 2px solid #000000;
+    outline-offset: 1px;
+}

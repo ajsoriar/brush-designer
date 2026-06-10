@@ -189,6 +189,33 @@
     border-color: #7f8ea3;
 }
 
+.wm-toolbar-select {
+    background: #ffffff;
+    border: 1px solid #b9c2cf;
+    color: #1f2937;
+    font: 11px Arial, sans-serif;
+    height: 20px;
+    min-width: 120px;
+}
+
+.wm-toolbar-check {
+    align-items: center;
+    color: #1f2937;
+    cursor: pointer;
+    display: inline-flex;
+    font: 11px Arial, sans-serif;
+    gap: 3px;
+    height: 20px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.wm-toolbar-check input {
+    height: 13px;
+    margin: 0;
+    width: 13px;
+}
+
 .wm-center {
     align-items: center;
     background: #9E9E9E;
