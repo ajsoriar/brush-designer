@@ -13,6 +13,44 @@
     width: 220px;
 }
 
+.gradient-panel-type-row {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    min-height: 18px;
+}
+
+.gradient-panel-type-option {
+    align-items: center;
+    cursor: pointer;
+    display: inline-flex;
+    font: 11px Arial, sans-serif;
+    gap: 3px;
+    line-height: 1;
+}
+
+.gradient-panel-type-option input {
+    height: 12px;
+    margin: 0;
+    width: 12px;
+}
+
+.gradient-panel-reverse-btn {
+    background: #ffffff;
+    border: 1px solid #9ca3af;
+    color: #111111;
+    cursor: pointer;
+    font: 11px Arial, sans-serif;
+    height: 20px;
+    line-height: 1;
+    margin-left: auto;
+    padding: 0 5px;
+}
+
+.gradient-panel-reverse-btn:hover {
+    background: #f3f6fa;
+}
+
 .gradient-panel-row {
     align-items: center;
     display: grid;

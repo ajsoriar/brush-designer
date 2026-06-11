@@ -556,7 +556,7 @@
     function openGradientPanelWindow() {
         var existingWindow = WindowsManager.getWindowByWindowId("gradient-panel");
         var panelWidth = 236;
-        var panelHeight = 108;
+        var panelHeight = 132;
         var windowFrameWidth = 16;
         var windowFrameHeight = 36;
         var gradientWindow;
@@ -584,6 +584,7 @@
         appGradientPanel = GradientPanel({
             id: "app-gradient-panel",
             containerId: gradientWindow.contentId,
+            type: (global.App.memory.currentGradient && global.App.memory.currentGradient.type) || "linear",
             fromColor: "#000000",
             toColor: "#ffffff",
             onChange: function(gradient) {

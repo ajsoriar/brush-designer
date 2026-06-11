@@ -6,7 +6,8 @@
         id: null,
         containerId: null,
         width: 236,
-        height: 108,
+        height: 132,
+        type: "linear",
         fromColor: "#000000",
         toColor: "#ffffff",
         onChange: null
@@ -64,17 +65,62 @@
     }
 
     function render(component) {
+        var typeControls = createTypeControls(component);
         var preview = document.createElement("div");
         var fromRow = createColorRow(component, "From", "from", component.options.fromColor);
         var toRow = createColorRow(component, "To", "to", component.options.toColor);
 
         preview.className = "gradient-panel-preview";
-        preview.style.background = "linear-gradient(90deg, " + component.options.fromColor + ", " + component.options.toColor + ")";
+        preview.style.background = getPreviewBackground(component);
 
         component.element.innerHTML = "";
+        component.element.appendChild(typeControls);
         component.element.appendChild(preview);
         component.element.appendChild(fromRow);
         component.element.appendChild(toRow);
+    }
+
+    function createTypeControls(component) {
+        var row = document.createElement("div");
+        var reverseButton = document.createElement("button");
+
+        row.className = "gradient-panel-type-row";
+        row.appendChild(createTypeRadio(component, "linear", "Linear"));
+        row.appendChild(createTypeRadio(component, "radial", "Radial"));
+        reverseButton.type = "button";
+        reverseButton.className = "gradient-panel-reverse-btn";
+        reverseButton.textContent = "Reverse colors";
+        reverseButton.addEventListener("click", function() {
+            reverseColors(component);
+        });
+        row.appendChild(reverseButton);
+
+        return row;
+    }
+
+    function createTypeRadio(component, value, labelText) {
+        var label = document.createElement("label");
+        var input = document.createElement("input");
+
+        label.className = "gradient-panel-type-option";
+        input.type = "radio";
+        input.name = component.id + "-type";
+        input.value = value;
+        input.checked = component.options.type === value;
+        input.addEventListener("change", function() {
+            if (input.checked) {
+                setGradientType(component, value);
+            }
+        });
+
+        label.appendChild(input);
+        label.appendChild(document.createTextNode(labelText));
+
+        return label;
+    }
+
+    function getPreviewBackground(component) {
+        return "linear-gradient(90deg, " + component.options.fromColor + ", " + component.options.toColor + ")";
     }
 
     function createColorRow(component, labelText, stopId, color) {
@@ -126,7 +172,25 @@
         }
 
         render(component);
+        notifyChange(component);
+    }
 
+    function setGradientType(component, type) {
+        component.options.type = type === "radial" ? "radial" : "linear";
+        render(component);
+        notifyChange(component);
+    }
+
+    function reverseColors(component) {
+        var fromColor = component.options.fromColor;
+
+        component.options.fromColor = component.options.toColor;
+        component.options.toColor = fromColor;
+        render(component);
+        notifyChange(component);
+    }
+
+    function notifyChange(component) {
         if (typeof component.options.onChange === "function") {
             component.options.onChange(getGradient(component), component);
         }
@@ -134,7 +198,7 @@
 
     function getGradient(component) {
         return {
-            type: "linear",
+            type: component.options.type,
             stops: [
                 {
                     offset: 0,

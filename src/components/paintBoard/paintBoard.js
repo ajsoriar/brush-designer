@@ -501,11 +501,19 @@
     }
 
     function updateGradientPreview(board, event) {
+        var fromPoint = board.pointerStartPosition;
+        var toPoint;
+
         if (!global.PaintBoardTempLayer || !global.PaintBoardTempLayer.updateLine) {
             return;
         }
 
-        global.PaintBoardTempLayer.updateLine(board.tempLayerElement, getPointerPosition(board, event));
+        if (!fromPoint) {
+            return;
+        }
+
+        toPoint = getGradientEndPoint(fromPoint, getPointerPosition(board, event), event);
+        global.PaintBoardTempLayer.updateLine(board.tempLayerElement, toPoint);
     }
 
     function updateRetroBrushPreview(board, event) {
@@ -627,7 +635,7 @@
 
     function paintGradientPointerEvent(board, event) {
         var fromPoint = board.pointerStartPosition;
-        var toPoint = getPointerPosition(board, event);
+        var toPoint = getGradientEndPoint(fromPoint, getPointerPosition(board, event), event);
 
         if (!fromPoint) {
             return;
@@ -635,6 +643,30 @@
 
         event.preventDefault();
         paintGradient(board, fromPoint, toPoint);
+    }
+
+    function getGradientEndPoint(fromPoint, toPoint, event) {
+        var dx;
+        var dy;
+
+        if (!fromPoint || !toPoint || !event || !event.shiftKey) {
+            return toPoint;
+        }
+
+        dx = Math.abs(toPoint.x - fromPoint.x);
+        dy = Math.abs(toPoint.y - fromPoint.y);
+
+        if (dx >= dy) {
+            return {
+                x: toPoint.x,
+                y: fromPoint.y
+            };
+        }
+
+        return {
+            x: fromPoint.x,
+            y: toPoint.y
+        };
     }
 
     function paintBucketPointerEvent(board, event) {
@@ -1123,18 +1155,10 @@
 
     function paintGradient(board, fromPoint, toPoint) {
         var gradientConfig = getCurrentGradient();
-        var gradient = board.context.createLinearGradient(fromPoint.x, fromPoint.y, toPoint.x, toPoint.y);
+        var gradient = createCanvasGradient(board, gradientConfig, fromPoint, toPoint);
         var stops = gradientConfig.stops || [];
         var i;
         var stop;
-
-        if (fromPoint.x === toPoint.x && fromPoint.y === toPoint.y) {
-            toPoint = {
-                x: fromPoint.x + 1,
-                y: fromPoint.y
-            };
-            gradient = board.context.createLinearGradient(fromPoint.x, fromPoint.y, toPoint.x, toPoint.y);
-        }
 
         for (i = 0; i < stops.length; i++) {
             stop = stops[i];
@@ -1143,6 +1167,36 @@
 
         board.context.fillStyle = gradient;
         board.context.fillRect(0, 0, board.canvas.width, board.canvas.height);
+    }
+
+    function createCanvasGradient(board, gradientConfig, fromPoint, toPoint) {
+        var dx;
+        var dy;
+        var radius;
+
+        if (gradientConfig.type === "radial") {
+            dx = toPoint.x - fromPoint.x;
+            dy = toPoint.y - fromPoint.y;
+            radius = Math.max(1, Math.sqrt((dx * dx) + (dy * dy)));
+
+            return board.context.createRadialGradient(
+                fromPoint.x,
+                fromPoint.y,
+                0,
+                fromPoint.x,
+                fromPoint.y,
+                radius
+            );
+        }
+
+        if (fromPoint.x === toPoint.x && fromPoint.y === toPoint.y) {
+            toPoint = {
+                x: fromPoint.x + 1,
+                y: fromPoint.y
+            };
+        }
+
+        return board.context.createLinearGradient(fromPoint.x, fromPoint.y, toPoint.x, toPoint.y);
     }
 
     function paintSquare(board, fromPoint, toPoint, fill) {
