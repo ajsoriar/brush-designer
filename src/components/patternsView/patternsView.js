@@ -120,6 +120,10 @@ var patternModules = import.meta.glob("./patterns/**/*.png", {
 
             item.addEventListener("click", function() {
                 setActivePattern(component, pattern.id);
+
+                if (global.PaintTools && typeof global.PaintTools.use === "function") {
+                    global.PaintTools.use("PATTERN-BUCKET");
+                }
             });
 
             component.element.appendChild(item);

@@ -36,6 +36,13 @@
         "GRADIENT": "Gradient"
     };
 
+    var HIDDEN_TOOLS = {
+        "FILLED-SQUARES": true,
+        "FILLED-CIRCLES": true,
+        "STROKED-SQUARES": true,
+        "STROKED-CIRCLES": true
+    };
+
     function extend(target, source) {
         var key;
 
@@ -168,7 +175,9 @@
 
         for (key in global.PaintTools.modes) {
             if (Object.prototype.hasOwnProperty.call(global.PaintTools.modes, key)) {
-                modes.push(global.PaintTools.modes[key]);
+                if (!HIDDEN_TOOLS[global.PaintTools.modes[key]]) {
+                    modes.push(global.PaintTools.modes[key]);
+                }
             }
         }
 

@@ -15,6 +15,23 @@
     var appGradientPanel = null;
     var documentCount = 0;
     var activePaintBoard = null;
+    var VISIBLE_PAINT_TOOLS = [
+        "SQUARED-POINTS",
+        "ROUND-POINTS",
+        "SQUARED-LINES",
+        "ROUND-LINES",
+        "FILLED-RECTANGLES",
+        "FILLED-OVALS",
+        "STROKED-RECTANGLES",
+        "STROKED-OVALS",
+        "PAINT-BUCKET",
+        "PATTERN-BUCKET",
+        "INK-DROPPER",
+        "GRADIENT",
+        "OLD-BRUSH",
+        "DESIGNED-BRUSH",
+        "DESIGNED-BRUSH-2"
+    ];
 
     function openEditor() {
         be = $.brushEditor({
@@ -204,6 +221,7 @@
 
     function initPaintBoardToolbar(paintBoard) {
         var toolbar;
+        var undoButton;
         var zoomOptions = [
             { label: "50%", zoom: 0.5 },
             { label: "Actual Size", zoom: 1, title: "100%" },
@@ -217,6 +235,22 @@
 
         toolbar = document.createElement("div");
         toolbar.className = "wm-toolbar";
+
+        undoButton = document.createElement("button");
+        undoButton.type = "button";
+        undoButton.className = "wm-toolbar-btn";
+        undoButton.textContent = "Undo";
+        undoButton.title = "Undo";
+        undoButton.disabled = !paintBoard.canUndo || !paintBoard.canUndo();
+        undoButton.addEventListener("click", function() {
+            activePaintBoard = paintBoard;
+            setActiveZoomBoard(paintBoard);
+
+            if (paintBoard.undo && paintBoard.undo()) {
+                updatePaintBoardToolbarState(paintBoard);
+            }
+        });
+        toolbar.appendChild(undoButton);
 
         zoomOptions.forEach(function(option) {
             var button = document.createElement("button");
@@ -239,6 +273,16 @@
 
         paintBoard.window.toolsRowElement.innerHTML = "";
         paintBoard.window.toolsRowElement.appendChild(toolbar);
+        paintBoard.undoButton = undoButton;
+        updatePaintBoardToolbarState(paintBoard);
+    }
+
+    function updatePaintBoardToolbarState(paintBoard) {
+        if (!paintBoard || !paintBoard.undoButton) {
+            return;
+        }
+
+        paintBoard.undoButton.disabled = !paintBoard.canUndo || !paintBoard.canUndo();
     }
 
     function setActiveZoomBoard(paintBoard) {
@@ -556,7 +600,7 @@
     function openGradientPanelWindow() {
         var existingWindow = WindowsManager.getWindowByWindowId("gradient-panel");
         var panelWidth = 236;
-        var panelHeight = 132;
+        var panelHeight = 292;
         var windowFrameWidth = 16;
         var windowFrameHeight = 36;
         var gradientWindow;
@@ -585,6 +629,10 @@
             id: "app-gradient-panel",
             containerId: gradientWindow.contentId,
             type: (global.App.memory.currentGradient && global.App.memory.currentGradient.type) || "linear",
+            bounded: !!(global.App.memory.currentGradient && global.App.memory.currentGradient.bounded),
+            retro: !!(global.App.memory.currentGradient && global.App.memory.currentGradient.retro),
+            ditheringMethod: (global.App.memory.currentGradient && global.App.memory.currentGradient.ditheringMethod) || "ordered-bayer-8x8",
+            ditheringOptions: global.App.memory.currentGradient && global.App.memory.currentGradient.ditheringOptions,
             fromColor: "#000000",
             toColor: "#ffffff",
             onChange: function(gradient) {
@@ -863,7 +911,8 @@
             id: "app-paint-tools",
             containerId: toolsWindow.contentId,
             btnSize: btnSize,
-            rows: rows
+            rows: rows,
+            tools: VISIBLE_PAINT_TOOLS.slice()
         });
 
         toolsWindow.scaleToContent(appPaintTools.getWidth(), appPaintTools.getHeight());
@@ -930,20 +979,7 @@
     }
 
     function getPaintToolsCount() {
-        var count = 0;
-        var key;
-
-        if (!global.PaintTools || !global.PaintTools.modes) {
-            return count;
-        }
-
-        for (key in global.PaintTools.modes) {
-            if (Object.prototype.hasOwnProperty.call(global.PaintTools.modes, key)) {
-                count += 1;
-            }
-        }
-
-        return count;
+        return VISIBLE_PAINT_TOOLS.length;
     }
 
     function getActivePaintBoard() {
@@ -987,6 +1023,7 @@
         openPaintToolsWindow: openPaintToolsWindow,
         openStarGeneratorWindow: openStarGeneratorWindow,
         updatePaintBoardWindowTitle: updatePaintBoardWindowTitle,
+        updatePaintBoardToolbarState: updatePaintBoardToolbarState,
         getActivePaintBoard: getActivePaintBoard,
         clearBoard: clearBoard,
         setActiveColor: setActiveColor

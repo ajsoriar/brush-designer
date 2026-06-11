@@ -10,6 +10,16 @@
     global.App.memory.currentPatternUseFrontColor = global.App.memory.currentPatternUseFrontColor || false;
     global.App.memory.currentGradient = global.App.memory.currentGradient || {
         type: "linear",
+        bounded: false,
+        retro: false,
+        ditheringMethod: "ordered-bayer-8x8",
+        ditheringOptions: {
+            diffusionStrength: 1,
+            noiseAmount: 1,
+            halftoneCellSize: 6,
+            patternLevels: 6,
+            patternCellSize: 4
+        },
         stops: [
             {
                 offset: 0,
@@ -57,6 +67,16 @@
         }
 
         global.AppOpenWindows.setActiveColor(event.detail.color);
+    });
+
+    global.addEventListener("paint-board-undo-change", function(event) {
+        if (!event.detail || !event.detail.paintBoard) {
+            return;
+        }
+
+        if (global.AppOpenWindows.updatePaintBoardToolbarState) {
+            global.AppOpenWindows.updatePaintBoardToolbarState(event.detail.paintBoard);
+        }
     });
 
     global.addEventListener("paint-tools-change", function(event) {
@@ -153,6 +173,48 @@
         global.AppOpenWindows.clearBoard();
     }
 
+    function undoLastAction() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (!targetBoard || typeof targetBoard.undo !== "function") {
+            return false;
+        }
+
+        return targetBoard.undo();
+    }
+
+    function isEditableTarget(target) {
+        if (!target) {
+            return false;
+        }
+
+        if (target.isContentEditable) {
+            return true;
+        }
+
+        return !!target.closest("input, textarea, select, [contenteditable=\"true\"]");
+    }
+
+    global.addEventListener("keydown", function(event) {
+        var isUndoShortcut;
+
+        if (isEditableTarget(event.target)) {
+            return;
+        }
+
+        isUndoShortcut = (event.ctrlKey || event.metaKey) &&
+            !event.altKey &&
+            String(event.key || "").toLowerCase() === "z";
+
+        if (!isUndoShortcut) {
+            return;
+        }
+
+        if (undoLastAction()) {
+            event.preventDefault();
+        }
+    });
+
     function renderBruses() {
         console.log("beforeClose!");
     }
@@ -167,6 +229,7 @@
     global.copyToClipboard = copyToClipboard;
     global.saveImage = saveImage;
     global.clearBoard = clearBoard;
+    global.undoLastAction = undoLastAction;
     global.createDemoWindow = global.AppOpenWindows.createDemoWindow;
     global.openBrushDesignerInWindow = global.AppOpenWindows.openBrushDesignerInWindow;
     global.openBrushDesigner2InWindow = global.AppOpenWindows.openBrushDesigner2InWindow;

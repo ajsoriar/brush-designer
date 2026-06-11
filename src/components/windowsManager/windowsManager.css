@@ -189,6 +189,14 @@
     border-color: #7f8ea3;
 }
 
+.wm-toolbar-btn:disabled,
+.paint-board-toolbar-btn:disabled {
+    background: #f4f4f4;
+    border-color: #d3d7df;
+    color: #9aa3b2;
+    cursor: default;
+}
+
 .wm-toolbar-select {
     background: #ffffff;
     border: 1px solid #b9c2cf;

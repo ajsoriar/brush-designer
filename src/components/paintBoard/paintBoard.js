@@ -87,6 +87,32 @@
         global.dispatchEvent(event);
     }
 
+    function notifyUndoStateChange(board) {
+        var event;
+        var detail;
+
+        if (!board) {
+            return;
+        }
+
+        detail = {
+            board: board.element,
+            paintBoard: board,
+            canUndo: !!board.undoSnapshot
+        };
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-board-undo-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-board-undo-change", false, false, detail);
+        }
+
+        global.dispatchEvent(event);
+    }
+
     function extend(target, source) {
         var key;
 
@@ -134,6 +160,7 @@
             } else {
                 clearTempSquare(board);
             }
+            commitUndoableAction(board);
             isPainting = false;
             board.lastPointerPosition = null;
             board.designedBrush2Stroke = null;
@@ -245,6 +272,9 @@
             lastPointerPosition: null,
             designedBrush2Stroke: null,
             pointerStartPosition: null,
+            undoSnapshot: null,
+            pendingUndoSnapshot: null,
+            actionHasChanges: false,
             clear: function() {
                 clear(board);
             },
@@ -262,6 +292,12 @@
             },
             save: function() {
                 return save(board, config);
+            },
+            undo: function() {
+                return undo(board);
+            },
+            canUndo: function() {
+                return !!board.undoSnapshot;
             },
             destroy: function() {
                 destroy(board, {
@@ -314,9 +350,12 @@
     }
 
     function clear(board) {
+        beginUndoableAction(board);
+        markUndoableChange(board);
         board.context.clearRect(0, 0, board.canvas.width, board.canvas.height);
         board.context.fillStyle = board.backgroundColor;
         board.context.fillRect(0, 0, board.canvas.width, board.canvas.height);
+        commitUndoableAction(board);
     }
 
     function createTempLayer(width, height) {
@@ -362,10 +401,97 @@
     }
 
     function setBackgroundColor(board, backgroundColor) {
+        beginUndoableAction(board);
+        markUndoableChange(board);
         board.backgroundColor = backgroundColor;
         board.paintColor = getOppositeColor(backgroundColor);
         board.element.style.backgroundColor = backgroundColor;
         clear(board);
+        commitUndoableAction(board);
+    }
+
+    function captureBoardSnapshot(board) {
+        return {
+            width: board.canvas.width,
+            height: board.canvas.height,
+            backgroundColor: board.backgroundColor,
+            imageData: board.context.getImageData(0, 0, board.canvas.width, board.canvas.height)
+        };
+    }
+
+    function restoreBoardSnapshot(board, snapshot) {
+        if (!snapshot || !snapshot.imageData) {
+            return false;
+        }
+
+        board.width = snapshot.width;
+        board.height = snapshot.height;
+        board.backgroundColor = snapshot.backgroundColor;
+        board.paintColor = getOppositeColor(snapshot.backgroundColor);
+        board.element.style.width = snapshot.width + "px";
+        board.element.style.height = snapshot.height + "px";
+        board.element.style.backgroundColor = snapshot.backgroundColor;
+        board.layersElement.style.width = snapshot.width + "px";
+        board.layersElement.style.height = snapshot.height + "px";
+        setTempLayerSize(board.tempLayerElement, snapshot.width, snapshot.height);
+        board.activeLayerElement.style.width = snapshot.width + "px";
+        board.activeLayerElement.style.height = snapshot.height + "px";
+        board.canvas.width = snapshot.width;
+        board.canvas.height = snapshot.height;
+        board.canvas.style.width = snapshot.width + "px";
+        board.canvas.style.height = snapshot.height + "px";
+        board.context.putImageData(snapshot.imageData, 0, 0);
+        return true;
+    }
+
+    function beginUndoableAction(board) {
+        if (!board || board.pendingUndoSnapshot) {
+            return;
+        }
+
+        board.pendingUndoSnapshot = captureBoardSnapshot(board);
+        board.actionHasChanges = false;
+    }
+
+    function markUndoableChange(board) {
+        if (!board || !board.pendingUndoSnapshot) {
+            return;
+        }
+
+        board.actionHasChanges = true;
+    }
+
+    function commitUndoableAction(board) {
+        if (!board) {
+            return;
+        }
+
+        if (board.pendingUndoSnapshot && board.actionHasChanges) {
+            board.undoSnapshot = board.pendingUndoSnapshot;
+        }
+
+        board.pendingUndoSnapshot = null;
+        board.actionHasChanges = false;
+        notifyUndoStateChange(board);
+    }
+
+    function undo(board) {
+        var snapshot;
+
+        if (!board || !board.undoSnapshot) {
+            return false;
+        }
+
+        snapshot = board.undoSnapshot;
+        board.undoSnapshot = null;
+        board.pendingUndoSnapshot = null;
+        board.actionHasChanges = false;
+        board.lastPointerPosition = null;
+        board.designedBrush2Stroke = null;
+        board.pointerStartPosition = null;
+        clearTempSquare(board);
+        notifyUndoStateChange(board);
+        return restoreBoardSnapshot(board, snapshot);
     }
 
     function getPointerPosition(board, event) {
@@ -473,6 +599,8 @@
     }
 
     function updateTempSquare(board, event) {
+        var point;
+
         if (!isTempPreviewToolMode()) {
             return;
         }
@@ -481,7 +609,8 @@
             return;
         }
 
-        global.PaintBoardTempLayer.updateSquare(board.tempLayerElement, getPointerPosition(board, event));
+        point = getShapeEndPoint(board.pointerStartPosition, getPointerPosition(board, event), event);
+        global.PaintBoardTempLayer.updateSquare(board.tempLayerElement, point);
     }
 
     function clearTempSquare(board) {
@@ -544,6 +673,8 @@
             return;
         }
 
+        beginUndoableAction(board);
+
         if (currentPaintToolMode === PAINT_TOOL_MODES.PAINT_BUCKET) {
             event.preventDefault();
             paintBucketPointerEvent(board, event);
@@ -599,6 +730,7 @@
         var point = getPointerPosition(board, event);
 
         event.preventDefault();
+        markUndoableChange(board);
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH && board.lastPointerPosition) {
             paintOldBrushLine(board, board.lastPointerPosition, point);
@@ -623,13 +755,14 @@
 
     function paintShapePointerEvent(board, event) {
         var fromPoint = board.pointerStartPosition;
-        var toPoint = getPointerPosition(board, event);
+        var toPoint = getShapeEndPoint(fromPoint, getPointerPosition(board, event), event);
 
         if (!fromPoint) {
             return;
         }
 
         event.preventDefault();
+        markUndoableChange(board);
         paintShape(board, fromPoint, toPoint);
     }
 
@@ -642,30 +775,36 @@
         }
 
         event.preventDefault();
+        markUndoableChange(board);
         paintGradient(board, fromPoint, toPoint);
     }
 
     function getGradientEndPoint(fromPoint, toPoint, event) {
         var dx;
         var dy;
+        var angle;
+        var distance;
+        var snappedAngle;
+        var step = Math.PI / 36;
 
         if (!fromPoint || !toPoint || !event || !event.shiftKey) {
             return toPoint;
         }
 
-        dx = Math.abs(toPoint.x - fromPoint.x);
-        dy = Math.abs(toPoint.y - fromPoint.y);
+        dx = toPoint.x - fromPoint.x;
+        dy = toPoint.y - fromPoint.y;
+        distance = Math.sqrt((dx * dx) + (dy * dy));
 
-        if (dx >= dy) {
-            return {
-                x: toPoint.x,
-                y: fromPoint.y
-            };
+        if (distance === 0) {
+            return toPoint;
         }
 
+        angle = Math.atan2(dy, dx);
+        snappedAngle = Math.round(angle / step) * step;
+
         return {
-            x: fromPoint.x,
-            y: toPoint.y
+            x: Math.round(fromPoint.x + Math.cos(snappedAngle) * distance),
+            y: Math.round(fromPoint.y + Math.sin(snappedAngle) * distance)
         };
     }
 
@@ -690,7 +829,10 @@
     }
 
     function paintAt(board, x, y) {
+        beginUndoableAction(board);
+        markUndoableChange(board);
         paintSquaredPoint(board, x, y);
+        commitUndoableAction(board);
     }
 
     function paintSquaredPoint(board, x, y) {
@@ -1155,18 +1297,57 @@
 
     function paintGradient(board, fromPoint, toPoint) {
         var gradientConfig = getCurrentGradient();
-        var gradient = createCanvasGradient(board, gradientConfig, fromPoint, toPoint);
         var stops = gradientConfig.stops || [];
+        var gradient;
         var i;
         var stop;
+
+        if (gradientConfig.retro) {
+            paintRetroGradient(board, gradientConfig, fromPoint, toPoint);
+            return;
+        }
+
+        gradient = createCanvasGradient(board, gradientConfig, fromPoint, toPoint);
 
         for (i = 0; i < stops.length; i++) {
             stop = stops[i];
             gradient.addColorStop(clamp(stop.offset, 0, 1), stop.color);
         }
 
+        board.context.save();
+        clipGradientBounds(board, gradientConfig, fromPoint, toPoint);
         board.context.fillStyle = gradient;
         board.context.fillRect(0, 0, board.canvas.width, board.canvas.height);
+        board.context.restore();
+    }
+
+    function clipGradientBounds(board, gradientConfig, fromPoint, toPoint) {
+        var dx;
+        var dy;
+        var radius;
+        var strip;
+
+        if (!gradientConfig.bounded) {
+            return;
+        }
+
+        board.context.beginPath();
+
+        if (gradientConfig.type === "radial") {
+            dx = toPoint.x - fromPoint.x;
+            dy = toPoint.y - fromPoint.y;
+            radius = Math.max(1, Math.sqrt((dx * dx) + (dy * dy)));
+            board.context.arc(fromPoint.x, fromPoint.y, radius, 0, Math.PI * 2);
+        } else {
+            strip = getLinearGradientStrip(fromPoint, toPoint, board.canvas.width, board.canvas.height);
+            board.context.moveTo(strip.a.x, strip.a.y);
+            board.context.lineTo(strip.b.x, strip.b.y);
+            board.context.lineTo(strip.c.x, strip.c.y);
+            board.context.lineTo(strip.d.x, strip.d.y);
+            board.context.closePath();
+        }
+
+        board.context.clip();
     }
 
     function createCanvasGradient(board, gradientConfig, fromPoint, toPoint) {
@@ -1197,6 +1378,355 @@
         }
 
         return board.context.createLinearGradient(fromPoint.x, fromPoint.y, toPoint.x, toPoint.y);
+    }
+
+    function paintRetroGradient(board, gradientConfig, fromPoint, toPoint) {
+        var stops = gradientConfig.stops || [];
+        var fromColor = getRgb((stops[0] && stops[0].color) || "#000000");
+        var toColor = getRgb((stops[stops.length - 1] && stops[stops.length - 1].color) || "#ffffff");
+        var imageData = getRetroGradientImageData(board, gradientConfig);
+        var data = imageData.data;
+        var x;
+        var y;
+        var index;
+        var useFrom;
+        var color;
+
+        if (isErrorDiffusionMethod(gradientConfig.ditheringMethod)) {
+            paintErrorDiffusionGradient(board, imageData, gradientConfig, fromPoint, toPoint, fromColor, toColor);
+            return;
+        }
+
+        for (y = 0; y < imageData.height; y++) {
+            for (x = 0; x < imageData.width; x++) {
+                if (!isInsideGradientBounds(gradientConfig, fromPoint, toPoint, x, y)) {
+                    continue;
+                }
+
+                useFrom = shouldUseRetroFromColor(gradientConfig, fromPoint, toPoint, x, y);
+                color = useFrom ? fromColor : toColor;
+                index = getPixelIndex(imageData.width, x, y);
+                setImageDataPixel(data, index, color);
+            }
+        }
+
+        board.context.putImageData(imageData, 0, 0);
+    }
+
+    function getRetroGradientImageData(board, gradientConfig) {
+        if (gradientConfig.bounded) {
+            return board.context.getImageData(0, 0, board.canvas.width, board.canvas.height);
+        }
+
+        return board.context.createImageData(board.canvas.width, board.canvas.height);
+    }
+
+    function shouldUseRetroFromColor(gradientConfig, fromPoint, toPoint, x, y) {
+        var bayer8 = getBayer8x8();
+        var bayer4 = getBayer4x4();
+        var options = getDitheringOptions(gradientConfig);
+        var t = getGradientT(gradientConfig, fromPoint, toPoint, x, y);
+        var fromAmount = 1 - t;
+        var threshold;
+
+        if (gradientConfig.ditheringMethod === "halftone") {
+            return shouldUseHalftone(x, y, fromAmount, options.halftoneCellSize);
+        }
+
+        if (gradientConfig.ditheringMethod === "pattern") {
+            threshold = getPatternThreshold(x, y, fromAmount, options.patternLevels, options.patternCellSize);
+        } else if (gradientConfig.ditheringMethod === "noise") {
+            threshold = getScaledNoiseThreshold(x, y, options.noiseAmount);
+        } else if (gradientConfig.ditheringMethod === "blue-noise") {
+            threshold = getScaledBlueNoiseThreshold(x, y, options.noiseAmount);
+        } else if (gradientConfig.ditheringMethod === "ordered-bayer-4x4") {
+            threshold = (bayer4[y % 4][x % 4] + 0.5) / 16;
+        } else {
+            threshold = (bayer8[y % 8][x % 8] + 0.5) / 64;
+        }
+
+        return fromAmount >= threshold;
+    }
+
+    function paintErrorDiffusionGradient(board, imageData, gradientConfig, fromPoint, toPoint, fromColor, toColor) {
+        var data = imageData.data;
+        var width = imageData.width;
+        var height = imageData.height;
+        var errorBuffer = new Array(width * height);
+        var kernel = getErrorDiffusionKernel(gradientConfig.ditheringMethod);
+        var options = getDitheringOptions(gradientConfig);
+        var x;
+        var y;
+        var bufferIndex;
+        var dataIndex;
+        var value;
+        var output;
+        var error;
+        var i;
+        var item;
+
+        for (y = 0; y < height; y++) {
+            for (x = 0; x < width; x++) {
+                errorBuffer[(y * width) + x] = 1 - getGradientT(gradientConfig, fromPoint, toPoint, x, y);
+            }
+        }
+
+        for (y = 0; y < height; y++) {
+            for (x = 0; x < width; x++) {
+                if (!isInsideGradientBounds(gradientConfig, fromPoint, toPoint, x, y)) {
+                    continue;
+                }
+
+                bufferIndex = (y * width) + x;
+                dataIndex = getPixelIndex(width, x, y);
+                value = clamp(errorBuffer[bufferIndex], 0, 1);
+                output = value >= 0.5 ? 1 : 0;
+                error = value - output;
+                setImageDataPixel(data, dataIndex, output ? fromColor : toColor);
+                for (i = 0; i < kernel.items.length; i++) {
+                    item = kernel.items[i];
+                    diffuseGradientError(errorBuffer, width, height, x + item.x, y + item.y, error * item.weight / kernel.divisor * options.diffusionStrength);
+                }
+            }
+        }
+
+        board.context.putImageData(imageData, 0, 0);
+    }
+
+    function diffuseGradientError(buffer, width, height, x, y, error) {
+        if (x < 0 || x >= width || y < 0 || y >= height) {
+            return;
+        }
+
+        buffer[(y * width) + x] += error;
+    }
+
+    function isErrorDiffusionMethod(method) {
+        return method === "floyd-steinberg" ||
+            method === "atkinson" ||
+            method === "stucki" ||
+            method === "jarvis";
+    }
+
+    function getErrorDiffusionKernel(method) {
+        if (method === "atkinson") {
+            return {
+                divisor: 8,
+                items: [
+                    { x: 1, y: 0, weight: 1 },
+                    { x: 2, y: 0, weight: 1 },
+                    { x: -1, y: 1, weight: 1 },
+                    { x: 0, y: 1, weight: 1 },
+                    { x: 1, y: 1, weight: 1 },
+                    { x: 0, y: 2, weight: 1 }
+                ]
+            };
+        }
+
+        if (method === "stucki") {
+            return {
+                divisor: 42,
+                items: [
+                    { x: 1, y: 0, weight: 8 }, { x: 2, y: 0, weight: 4 },
+                    { x: -2, y: 1, weight: 2 }, { x: -1, y: 1, weight: 4 }, { x: 0, y: 1, weight: 8 }, { x: 1, y: 1, weight: 4 }, { x: 2, y: 1, weight: 2 },
+                    { x: -2, y: 2, weight: 1 }, { x: -1, y: 2, weight: 2 }, { x: 0, y: 2, weight: 4 }, { x: 1, y: 2, weight: 2 }, { x: 2, y: 2, weight: 1 }
+                ]
+            };
+        }
+
+        if (method === "jarvis") {
+            return {
+                divisor: 48,
+                items: [
+                    { x: 1, y: 0, weight: 7 }, { x: 2, y: 0, weight: 5 },
+                    { x: -2, y: 1, weight: 3 }, { x: -1, y: 1, weight: 5 }, { x: 0, y: 1, weight: 7 }, { x: 1, y: 1, weight: 5 }, { x: 2, y: 1, weight: 3 },
+                    { x: -2, y: 2, weight: 1 }, { x: -1, y: 2, weight: 3 }, { x: 0, y: 2, weight: 5 }, { x: 1, y: 2, weight: 3 }, { x: 2, y: 2, weight: 1 }
+                ]
+            };
+        }
+
+        return {
+            divisor: 16,
+            items: [
+                { x: 1, y: 0, weight: 7 },
+                { x: -1, y: 1, weight: 3 },
+                { x: 0, y: 1, weight: 5 },
+                { x: 1, y: 1, weight: 1 }
+            ]
+        };
+    }
+
+    function setImageDataPixel(data, index, color) {
+        data[index] = color.r;
+        data[index + 1] = color.g;
+        data[index + 2] = color.b;
+        data[index + 3] = 255;
+    }
+
+    function getNoiseThreshold(x, y) {
+        var value = Math.sin((x * 12.9898) + (y * 78.233)) * 43758.5453;
+
+        return value - Math.floor(value);
+    }
+
+    function getBlueNoiseThreshold(x, y) {
+        var value = (getNoiseThreshold(x, y) + getNoiseThreshold(x + 19, y + 37) * 0.5) % 1;
+
+        return value;
+    }
+
+    function getScaledNoiseThreshold(x, y, amount) {
+        return clamp(0.5 + ((getNoiseThreshold(x, y) - 0.5) * amount), 0, 1);
+    }
+
+    function getScaledBlueNoiseThreshold(x, y, amount) {
+        return clamp(0.5 + ((getBlueNoiseThreshold(x, y) - 0.5) * amount), 0, 1);
+    }
+
+    function shouldUseHalftone(x, y, fromAmount, cellSize) {
+        var cx = (x % cellSize) - ((cellSize - 1) / 2);
+        var cy = (y % cellSize) - ((cellSize - 1) / 2);
+        var radius = fromAmount * (cellSize * 0.62);
+
+        return (cx * cx) + (cy * cy) <= radius * radius;
+    }
+
+    function getPatternThreshold(x, y, fromAmount, levels, cellSize) {
+        var level = Math.floor(fromAmount * levels);
+        var patternIndex = (x % cellSize) + ((y % cellSize) * cellSize);
+        var limit = Math.round((level / Math.max(1, levels)) * cellSize * cellSize);
+
+        return patternIndex < limit ? 0.25 : 0.85;
+    }
+
+    function getDitheringOptions(gradientConfig) {
+        var options = gradientConfig.ditheringOptions || {};
+
+        return {
+            diffusionStrength: normalizeNumber(options.diffusionStrength, 1),
+            noiseAmount: normalizeNumber(options.noiseAmount, 1),
+            halftoneCellSize: normalizeNumber(options.halftoneCellSize, 6),
+            patternLevels: normalizeNumber(options.patternLevels, 6),
+            patternCellSize: normalizeNumber(options.patternCellSize, 4)
+        };
+    }
+
+    function normalizeNumber(value, fallback) {
+        var number = Number(value);
+
+        return Number.isFinite(number) ? number : fallback;
+    }
+
+    function getGradientT(gradientConfig, fromPoint, toPoint, x, y) {
+        var dx = toPoint.x - fromPoint.x;
+        var dy = toPoint.y - fromPoint.y;
+        var lengthSquared = (dx * dx) + (dy * dy);
+        var radius;
+        var px;
+        var py;
+
+        if (gradientConfig.type === "radial") {
+            radius = Math.max(1, Math.sqrt(lengthSquared));
+            px = x - fromPoint.x;
+            py = y - fromPoint.y;
+
+            return clamp(Math.sqrt((px * px) + (py * py)) / radius, 0, 1);
+        }
+
+        if (lengthSquared === 0) {
+            return 0;
+        }
+
+        return clamp(getLinearGradientProjection(fromPoint, toPoint, x, y), 0, 1);
+    }
+
+    function isInsideGradientBounds(gradientConfig, fromPoint, toPoint, x, y) {
+        var dx;
+        var dy;
+        var radius;
+        var px;
+        var py;
+        var projection;
+
+        if (!gradientConfig.bounded) {
+            return true;
+        }
+
+        if (gradientConfig.type === "radial") {
+            dx = toPoint.x - fromPoint.x;
+            dy = toPoint.y - fromPoint.y;
+            radius = Math.max(1, Math.sqrt((dx * dx) + (dy * dy)));
+            px = x - fromPoint.x;
+            py = y - fromPoint.y;
+
+            return ((px * px) + (py * py)) <= radius * radius;
+        }
+
+        projection = getLinearGradientProjection(fromPoint, toPoint, x, y);
+
+        return projection >= 0 && projection <= 1;
+    }
+
+    function getLinearGradientProjection(fromPoint, toPoint, x, y) {
+        var dx = toPoint.x - fromPoint.x;
+        var dy = toPoint.y - fromPoint.y;
+        var lengthSquared = (dx * dx) + (dy * dy);
+
+        if (lengthSquared === 0) {
+            return 0;
+        }
+
+        return (((x - fromPoint.x) * dx) + ((y - fromPoint.y) * dy)) / lengthSquared;
+    }
+
+    function getLinearGradientStrip(fromPoint, toPoint, canvasWidth, canvasHeight) {
+        var dx = toPoint.x - fromPoint.x;
+        var dy = toPoint.y - fromPoint.y;
+        var length = Math.sqrt((dx * dx) + (dy * dy)) || 1;
+        var perpX = -dy / length;
+        var perpY = dx / length;
+        var reach = Math.sqrt((canvasWidth * canvasWidth) + (canvasHeight * canvasHeight)) + length;
+
+        return {
+            a: {
+                x: fromPoint.x + perpX * reach,
+                y: fromPoint.y + perpY * reach
+            },
+            b: {
+                x: fromPoint.x - perpX * reach,
+                y: fromPoint.y - perpY * reach
+            },
+            c: {
+                x: toPoint.x - perpX * reach,
+                y: toPoint.y - perpY * reach
+            },
+            d: {
+                x: toPoint.x + perpX * reach,
+                y: toPoint.y + perpY * reach
+            }
+        };
+    }
+
+    function getBayer8x8() {
+        return [
+            [0, 32, 8, 40, 2, 34, 10, 42],
+            [48, 16, 56, 24, 50, 18, 58, 26],
+            [12, 44, 4, 36, 14, 46, 6, 38],
+            [60, 28, 52, 20, 62, 30, 54, 22],
+            [3, 35, 11, 43, 1, 33, 9, 41],
+            [51, 19, 59, 27, 49, 17, 57, 25],
+            [15, 47, 7, 39, 13, 45, 5, 37],
+            [63, 31, 55, 23, 61, 29, 53, 21]
+        ];
+    }
+
+    function getBayer4x4() {
+        return [
+            [0, 8, 2, 10],
+            [12, 4, 14, 6],
+            [3, 11, 1, 9],
+            [15, 7, 13, 5]
+        ];
     }
 
     function paintSquare(board, fromPoint, toPoint, fill) {
@@ -1265,6 +1795,36 @@
         };
     }
 
+    function getShapeEndPoint(fromPoint, toPoint, event) {
+        if (!fromPoint || !toPoint) {
+            return toPoint;
+        }
+
+        if (usesFixedAspectShape(event)) {
+            return getSquareEndPoint(fromPoint, toPoint);
+        }
+
+        return toPoint;
+    }
+
+    function usesFixedAspectShape(event) {
+        if (currentPaintToolMode === PAINT_TOOL_MODES.FILLED_SQUARES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.FILLED_CIRCLES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.STROKED_SQUARES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.STROKED_CIRCLES) {
+            return true;
+        }
+
+        if (!event || !event.shiftKey) {
+            return false;
+        }
+
+        return currentPaintToolMode === PAINT_TOOL_MODES.FILLED_RECTANGLES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.FILLED_OVALS ||
+            currentPaintToolMode === PAINT_TOOL_MODES.STROKED_RECTANGLES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.STROKED_OVALS;
+    }
+
     function isShapeToolMode() {
         return currentPaintToolMode === PAINT_TOOL_MODES.FILLED_SQUARES ||
             currentPaintToolMode === PAINT_TOOL_MODES.FILLED_RECTANGLES ||
@@ -1288,7 +1848,10 @@
     }
 
     function drawImage(board, image, x, y) {
+        beginUndoableAction(board);
+        markUndoableChange(board);
         board.context.drawImage(image, x || 0, y || 0);
+        commitUndoableAction(board);
     }
 
     function getCurrentPaintColor(board) {
@@ -1352,6 +1915,9 @@
 
         return {
             type: "linear",
+            bounded: false,
+            retro: false,
+            ditheringMethod: "ordered-bayer-8x8",
             stops: [
                 {
                     offset: 0,
