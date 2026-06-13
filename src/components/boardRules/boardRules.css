@@ -1,0 +1,79 @@
+.board-rules-viewport {
+    position: relative;
+}
+
+.board-rules {
+    display: block;
+    height: 0;
+    left: 0;
+    overflow: visible;
+    pointer-events: none;
+    position: sticky;
+    top: 0;
+    width: 0;
+    z-index: 4;
+}
+
+.board-rules-corner,
+.board-rules-rule {
+    background: #2f3437;
+    box-sizing: border-box;
+    color: #b8c5cf;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10px;
+    font-weight: 400;
+    line-height: 1;
+    overflow: hidden;
+    position: absolute;
+    user-select: none;
+}
+
+.board-rules-corner {
+    border-bottom: 1px solid #1b1f21;
+    border-right: 1px solid #1b1f21;
+    left: 0;
+    top: 0;
+}
+
+.board-rules-rule-horizontal {
+    border-bottom: 1px solid #1b1f21;
+    top: 0;
+}
+
+.board-rules-rule-vertical {
+    border-right: 1px solid #1b1f21;
+    left: 0;
+}
+
+.board-rules-tick {
+    background: #6f777d;
+    display: block;
+    position: absolute;
+}
+
+.board-rules-rule-horizontal .board-rules-tick {
+    width: 1px;
+}
+
+.board-rules-rule-vertical .board-rules-tick {
+    height: 1px;
+}
+
+.board-rules-label {
+    color: #b7c7d4;
+    display: block;
+    position: absolute;
+    text-shadow: 0 1px 0 #141719;
+}
+
+.board-rules-rule-horizontal .board-rules-label {
+    top: 3px;
+}
+
+.board-rules-rule-vertical .board-rules-label {
+    left: 3px;
+    line-height: 0.86;
+    max-width: 18px;
+    overflow-wrap: anywhere;
+    text-align: center;
+}

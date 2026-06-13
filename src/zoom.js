@@ -315,6 +315,8 @@
         board.style.top = layout.top + "px";
         scrollArea.style.width = layout.width + "px";
         scrollArea.style.height = layout.height + "px";
+
+        updateBoardRules(board, zoom);
     }
 
     function updateViewportZoomLayout(viewport) {
@@ -376,18 +378,21 @@
     }
 
     function getZoomLayout(board, viewport, zoom) {
+        var ruleSize = getViewportRuleSize(viewport);
+        var availableWidth = Math.max(0, viewport.clientWidth - ruleSize);
+        var availableHeight = Math.max(0, viewport.clientHeight - ruleSize);
         var scaledWidth = Math.ceil(board.offsetWidth * zoom);
         var scaledHeight = Math.ceil(board.offsetHeight * zoom);
-        var left = Math.max(0, Math.floor((viewport.clientWidth - scaledWidth) / 2));
-        var top = Math.max(0, Math.floor((viewport.clientHeight - scaledHeight) / 2));
-        var needsHorizontalScroll = scaledWidth > viewport.clientWidth;
-        var needsVerticalScroll = scaledHeight > viewport.clientHeight;
+        var left = ruleSize + Math.max(0, Math.floor((availableWidth - scaledWidth) / 2));
+        var top = ruleSize + Math.max(0, Math.floor((availableHeight - scaledHeight) / 2));
+        var needsHorizontalScroll = scaledWidth > availableWidth;
+        var needsVerticalScroll = scaledHeight > availableHeight;
 
         return {
             left: left,
             top: top,
-            width: needsHorizontalScroll ? scaledWidth : 1,
-            height: needsVerticalScroll ? scaledHeight : 1
+            width: needsHorizontalScroll ? scaledWidth + ruleSize : 1,
+            height: needsVerticalScroll ? scaledHeight + ruleSize : 1
         };
     }
 
@@ -463,6 +468,22 @@
 
         viewport.scrollLeft = Math.max(0, left + (anchor.x * zoom) - anchor.viewportX);
         viewport.scrollTop = Math.max(0, top + (anchor.y * zoom) - anchor.viewportY);
+    }
+
+    function getViewportRuleSize(viewport) {
+        var rules = viewport && viewport.querySelector(".board-rules");
+
+        if (!rules || !rules._boardRules) {
+            return 0;
+        }
+
+        return rules._boardRules.ruleSize || 0;
+    }
+
+    function updateBoardRules(board, zoom) {
+        if (board && board._boardRules && typeof board._boardRules.setZoom === "function") {
+            board._boardRules.setZoom(zoom);
+        }
     }
 
     function notifyZoomChange(board, zoom) {

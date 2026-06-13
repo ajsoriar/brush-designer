@@ -412,6 +412,7 @@
         board.canvas.height = height;
         board.canvas.style.width = width + "px";
         board.canvas.style.height = height + "px";
+        updateBoardRulesSize(board, width, height);
         clear(board);
     }
 
@@ -469,6 +470,7 @@
         board.canvas.height = snapshot.height;
         board.canvas.style.width = snapshot.width + "px";
         board.canvas.style.height = snapshot.height + "px";
+        updateBoardRulesSize(board, snapshot.width, snapshot.height);
         board.context.putImageData(snapshot.imageData, 0, 0);
         return true;
     }
@@ -524,6 +526,10 @@
     }
 
     function getPointerPosition(board, event) {
+        return getClampedPointerPosition(board, event);
+    }
+
+    function getClampedPointerPosition(board, event) {
         var rect = board.canvas.getBoundingClientRect();
         var scaleX = board.canvas.width / rect.width;
         var scaleY = board.canvas.height / rect.height;
@@ -531,6 +537,32 @@
         return {
             x: clamp(Math.floor((event.clientX - rect.left) * scaleX), 0, board.canvas.width),
             y: clamp(Math.floor((event.clientY - rect.top) * scaleY), 0, board.canvas.height)
+        };
+    }
+
+    function getCanvasPointerPosition(board, event) {
+        var rect = board.canvas.getBoundingClientRect();
+        var scaleX;
+        var scaleY;
+        var x;
+        var y;
+
+        if (!event || typeof event.clientX !== "number" || typeof event.clientY !== "number") {
+            return null;
+        }
+
+        if (!isPointerInsideCanvas(board, event)) {
+            return null;
+        }
+
+        scaleX = board.canvas.width / rect.width;
+        scaleY = board.canvas.height / rect.height;
+        x = Math.floor((event.clientX - rect.left) * scaleX);
+        y = Math.floor((event.clientY - rect.top) * scaleY);
+
+        return {
+            x: clamp(x, 0, board.canvas.width),
+            y: clamp(y, 0, board.canvas.height)
         };
     }
 
@@ -543,12 +575,18 @@
     }
 
     function rememberPreviewInput(board, event, preserveModifiers) {
+        var point;
+
         if (!board || !event) {
             return;
         }
 
         if (typeof event.clientX === "number" && typeof event.clientY === "number") {
-            board.previewPointerPosition = getPointerPosition(board, event);
+            point = getCanvasPointerPosition(board, event);
+
+            if (point) {
+                board.previewPointerPosition = point;
+            }
         }
 
         if (preserveModifiers) {
@@ -793,7 +831,13 @@
             return;
         }
 
-        point = getPointerPosition(board, event);
+        point = getCanvasPointerPosition(board, event);
+
+        if (!point) {
+            clearRetroBrushPreview(board);
+            return;
+        }
+
         brush = getCurrentRetroBrush();
         global.PaintBoardTempLayer.showCircle(board.tempLayerElement, point, Math.max(1, brush.size / 2));
     }
@@ -865,9 +909,16 @@
     }
 
     function paintPointerEvent(board, event) {
-        var point = getPointerPosition(board, event);
+        var point = getCanvasPointerPosition(board, event);
 
         event.preventDefault();
+
+        if (!point) {
+            board.lastPointerPosition = null;
+            board.designedBrush2Stroke = null;
+            return;
+        }
+
         markUndoableChange(board);
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH && board.lastPointerPosition) {
@@ -2175,8 +2226,18 @@
 
         global.removeEventListener("paint-tools-change", clearPreviewOnPaintToolChange);
 
+        if (board.rules && board.rules.element && board.rules.element.parentNode) {
+            board.rules.element.parentNode.removeChild(board.rules.element);
+        }
+
         if (board.element.parentNode) {
             board.element.parentNode.removeChild(board.element);
+        }
+    }
+
+    function updateBoardRulesSize(board, width, height) {
+        if (board && board.rules && typeof board.rules.setSize === "function") {
+            board.rules.setSize(width, height);
         }
     }
 

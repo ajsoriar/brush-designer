@@ -158,6 +158,7 @@
         var windowFrameHeight = 66;
         var windowIndex = documentCount + 1;
         var paintBoard;
+        var rules;
         var paintBoardWindow = WindowsManager.create({
             id: "demo-paint-board-window-" + windowIndex,
             title: "Paint Board " + windowIndex,
@@ -187,6 +188,14 @@
         paintBoardWindow.element.className += " wm-window-paint-board";
         documentCount += 1;
 
+        rules = BoardRules({
+            id: "demo-paint-board-rules-" + windowIndex,
+            containerId: paintBoardWindow.contentId,
+            width: paintBoardWidth,
+            height: paintBoardHeight,
+            units: config.units || "px"
+        });
+
         paintBoard = PaintBoard({
             id: "demo-paint-board-" + windowIndex,
             containerId: paintBoardWindow.contentId,
@@ -194,11 +203,13 @@
             height: paintBoardHeight,
             backgroundColor: config.backgroundColor || "#ffffff"
         });
+        paintBoard.rules = rules;
+        rules.setBoardElement(paintBoard.element);
         paintBoard.window = paintBoardWindow;
         paintBoardWindow.baseTitle = paintBoardWindow.title;
         activePaintBoard = paintBoard;
         initPaintBoardToolbar(paintBoard);
-        paintBoardWindow.scaleToContent(paintBoardWidth, paintBoardHeight);
+        paintBoardWindow.scaleToContent(paintBoardWidth + rules.ruleSize, paintBoardHeight + rules.ruleSize);
         setActiveZoomBoard(paintBoard);
         updatePaintBoardWindowTitle(paintBoard);
 

@@ -222,24 +222,31 @@
         var lineWeight = 1;
         var lineColor = "#2563eb";
         var lineOpacity = 1;
+        var fragments;
 
         if (!global.dljs || !global.dljs.getLineString) {
             return;
         }
 
-        tempLayer.innerHTML = global.dljs.getLineString(
-            "temp-gradient-line",
-            origin.x,
-            origin.y,
-            point.x,
-            point.y,
-            lineWeight,
-            lineColor,
-            lineOpacity,
-            false,
-            0,
-            null
-        );
+        fragments = [
+            global.dljs.getLineString(
+                "temp-gradient-line",
+                origin.x,
+                origin.y,
+                point.x,
+                point.y,
+                lineWeight,
+                lineColor,
+                lineOpacity,
+                false,
+                0,
+                null
+            )
+        ];
+
+        addCoordinateLabels(fragments, origin, null, point);
+
+        tempLayer.innerHTML = fragments.join("");
     }
 
     global.PaintBoardTempLayer = {
