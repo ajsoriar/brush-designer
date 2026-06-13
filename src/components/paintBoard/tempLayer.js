@@ -175,7 +175,36 @@
             fragments.push(getOvalString(left, top, right, bottom, lineWeight, lineColor));
         }
 
+        addCoordinateLabels(fragments, {
+            x: left,
+            y: top
+        }, {
+            x: left + ((right - left) / 2),
+            y: top + ((bottom - top) / 2)
+        }, {
+            x: right,
+            y: bottom
+        });
+
         tempLayer.innerHTML = fragments.join("");
+    }
+
+    function addCoordinateLabels(fragments, startPoint, centerPoint, endPoint) {
+        var labelConfig = {
+            bgOpacity: 0.5,
+            borderColor: "blue",
+            borderWidth: 1,
+            bgColor: "white",
+            fontSize: 10
+        };
+
+        if (!global.PaintBoardCoordinateLabel || !global.PaintBoardCoordinateLabel.getString) {
+            return;
+        }
+
+        fragments.push(global.PaintBoardCoordinateLabel.getString(startPoint, labelConfig));
+        fragments.push(global.PaintBoardCoordinateLabel.getString(centerPoint, labelConfig));
+        fragments.push(global.PaintBoardCoordinateLabel.getString(endPoint, labelConfig));
     }
 
     function getOvalString(left, top, right, bottom, lineWeight, lineColor) {

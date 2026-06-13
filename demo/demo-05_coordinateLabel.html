@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Coordinate Label Demo</title>
+    <link rel="stylesheet" href="../src/components/coordinateLabel/coordinateLabel.css" />
+    <style>
+        body {
+            background-color: #444;
+            color: #f3f3f3;
+            font-family: Arial, sans-serif;
+            margin: 30px;
+        }
+
+        h1 {
+            font-size: 44px;
+            margin: 0 0 120px;
+        }
+
+        .demo-area {
+            box-sizing: border-box;
+            max-width: 100%;
+        }
+
+        .label-row,
+        .box-row {
+            align-items: center;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 34px;
+            margin-bottom: 86px;
+        }
+
+        .label-sample {
+            height: 32px;
+            position: relative;
+            width: 130px;
+        }
+
+        .demo-box {
+            align-items: center;
+            background: #fff;
+            border: 2px solid #222;
+            box-sizing: border-box;
+            color: #222;
+            cursor: default;
+            display: flex;
+            font-size: 24px;
+            height: 96px;
+            justify-content: center;
+            position: relative;
+            width: 132px;
+        }
+
+        .demo-box .coordinate-label {
+            z-index: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Coordinate Label Demo</h1>
+
+    <div class="demo-area">
+        <div id="label-row" class="label-row"></div>
+        <div id="box-row-1" class="box-row"></div>
+        <div id="box-row-2" class="box-row"></div>
+    </div>
+
+    <script src="../src/components/coordinateLabel/coordinateLabel.js"></script>
+    <script>
+        var styles = [
+            {
+                name: "Estilo 1",
+                point: {
+                    x: 35,
+                    y: 35
+                },
+                config: {}
+            },
+            {
+                name: "Estilo 2",
+                point: {
+                    x: 80,
+                    y: 60
+                },
+                config: {
+                    bgOpacity: 0.5,
+                    borderColor: "blue",
+                    borderWidth: 2,
+                    bgColor: "white",
+                    fontSize: 10
+                }
+            },
+            {
+                name: "Estilo 3",
+                point: {
+                    x: 35,
+                    y: 35
+                },
+                config: {
+                    bgOpacity: 0.75,
+                    borderColor: "#70a77a",
+                    borderWidth: 1,
+                    bgColor: "#b7d08a",
+                    color: "#1f5d5e",
+                    fontSize: 14
+                }
+            },
+            {
+                name: "Estilo 4",
+                point: {
+                    x: 80,
+                    y: 60
+                },
+                config: {
+                    bgOpacity: 0.7,
+                    borderColor: "#8f6ad1",
+                    borderWidth: 2,
+                    bgColor: "#d8addf",
+                    color: "#6b5279",
+                    fontSize: 12
+                }
+            },
+            {
+                name: "Estilo 5",
+                point: {
+                    x: 100,
+                    y: 120
+                },
+                config: {
+                    bgOpacity: 0.65,
+                    borderColor: "#111",
+                    borderWidth: 1,
+                    bgColor: "#fff",
+                    color: "#111",
+                    fontSize: 11
+                }
+            },
+            {
+                name: "Estilo 6",
+                point: {
+                    x: 140,
+                    y: 95
+                },
+                config: {
+                    bgOpacity: 0.8,
+                    borderColor: "#00695c",
+                    borderWidth: 2,
+                    bgColor: "#e0f2f1",
+                    color: "#004d40",
+                    fontSize: 10
+                }
+            },
+            {
+                name: "Estilo 7",
+                point: {
+                    x: 55,
+                    y: 150
+                },
+                config: {
+                    bgOpacity: 0.85,
+                    borderColor: "#8a4b00",
+                    borderWidth: 1,
+                    bgColor: "#ffe0a6",
+                    color: "#5f3500",
+                    fontSize: 12
+                }
+            },
+            {
+                name: "Estilo 8",
+                point: {
+                    x: 180,
+                    y: 40
+                },
+                config: {
+                    bgOpacity: 0.55,
+                    borderColor: "#5e3bbd",
+                    borderWidth: 2,
+                    bgColor: "#efe7ff",
+                    color: "#41298a",
+                    fontSize: 10
+                }
+            },
+            {
+                name: "Estilo 9",
+                point: {
+                    x: 70,
+                    y: 210
+                },
+                config: {
+                    bgOpacity: 0.7,
+                    borderColor: "#b00020",
+                    borderWidth: 1,
+                    bgColor: "#fff1f3",
+                    color: "#6f0014",
+                    fontSize: 11
+                }
+            },
+            {
+                name: "Estilo 10",
+                point: {
+                    x: 124,
+                    y: 86
+                },
+                hoverOptions: {
+                    horizontal: "left",
+                    vertical: "top",
+                    offset: 3
+                },
+                config: {
+                    bgOpacity: 0.75,
+                    borderColor: "#2e7d32",
+                    borderWidth: 2,
+                    bgColor: "#f1f8e9",
+                    color: "#1b5e20",
+                    fontSize: 10
+                }
+            }
+        ];
+
+        renderStaticLabels();
+        renderHoverRow(document.getElementById("box-row-1"), styles.slice(0, 6));
+        renderHoverRow(document.getElementById("box-row-2"), styles.slice(4, 10));
+
+        function renderStaticLabels() {
+            var row = document.getElementById("label-row");
+
+            styles.slice(0, 4).forEach(function(style) {
+                var sample = document.createElement("div");
+                var config = Object.assign({
+                    horizontal: "right",
+                    vertical: "bottom",
+                    offset: 0
+                }, style.config);
+
+                sample.className = "label-sample";
+                sample.innerHTML = PaintBoardCoordinateLabel.getString(style.point, config);
+                row.appendChild(sample);
+            });
+        }
+
+        function renderHoverRow(row, rowStyles) {
+            rowStyles.forEach(function(style) {
+                var box = document.createElement("div");
+
+                box.className = "demo-box";
+                box.textContent = style.name;
+                box.addEventListener("mouseenter", function() {
+                    showBoxLabel(box, style);
+                });
+                box.addEventListener("mouseleave", function() {
+                    clearBoxLabel(box);
+                });
+                row.appendChild(box);
+            });
+        }
+
+        function showBoxLabel(box, style) {
+            clearBoxLabel(box);
+            box.insertAdjacentHTML("beforeend", PaintBoardCoordinateLabel.getString(style.point, Object.assign({
+                horizontal: "right",
+                vertical: "bottom",
+                offset: 8
+            }, style.hoverOptions || {}, style.config)));
+        }
+
+        function clearBoxLabel(box) {
+            var label = box.querySelector(".coordinate-label");
+
+            if (label) {
+                label.remove();
+            }
+        }
+    </script>
+</body>
+
+</html>

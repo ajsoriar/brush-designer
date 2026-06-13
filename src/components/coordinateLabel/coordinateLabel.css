@@ -1,0 +1,17 @@
+.coordinate-label {
+    background: #fff4bd;
+    border: 1px solid #7aa2ff;
+    box-sizing: border-box;
+    color: #111;
+    display: inline-block;
+    font-family: "Courier New", monospace;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    min-width: 54px;
+    padding: 3px 6px 2px;
+    pointer-events: none;
+    position: absolute;
+    text-align: center;
+    white-space: nowrap;
+}
