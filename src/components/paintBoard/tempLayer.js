@@ -38,12 +38,42 @@
         renderSquare(tempLayer, point);
     }
 
+    function startShape(tempLayer, point, options) {
+        if (!tempLayer || !point) {
+            return;
+        }
+
+        tempLayer.tempShape = {
+            origin: {
+                x: point.x,
+                y: point.y
+            }
+        };
+        renderShape(tempLayer, point, options);
+    }
+
     function updateSquare(tempLayer, point) {
         if (!tempLayer || !tempLayer.tempShape || !point) {
             return;
         }
 
         renderSquare(tempLayer, point);
+    }
+
+    function updateShape(tempLayer, point, options) {
+        if (!tempLayer || !tempLayer.tempShape || !point) {
+            return;
+        }
+
+        renderShape(tempLayer, point, options);
+    }
+
+    function updateShapeBounds(tempLayer, fromPoint, toPoint, options) {
+        if (!tempLayer || !fromPoint || !toPoint) {
+            return;
+        }
+
+        renderShapeFromPoints(tempLayer, fromPoint, toPoint, options);
     }
 
     function startLine(tempLayer, point) {
@@ -99,14 +129,26 @@
     }
 
     function renderSquare(tempLayer, point) {
-        var origin = tempLayer.tempShape.origin;
-        var left = Math.min(origin.x, point.x);
-        var top = Math.min(origin.y, point.y);
-        var right = Math.max(origin.x, point.x);
-        var bottom = Math.max(origin.y, point.y);
+        renderShape(tempLayer, point, {
+            oval: false
+        });
+    }
+
+    function renderShape(tempLayer, point, options) {
+        renderShapeFromPoints(tempLayer, tempLayer.tempShape.origin, point, options);
+    }
+
+    function renderShapeFromPoints(tempLayer, fromPoint, toPoint, options) {
+        var left = Math.min(fromPoint.x, toPoint.x);
+        var top = Math.min(fromPoint.y, toPoint.y);
+        var right = Math.max(fromPoint.x, toPoint.x);
+        var bottom = Math.max(fromPoint.y, toPoint.y);
         var lineWeight = 1;
         var lineColor = "#2563eb";
         var lineOpacity = 1;
+        var guideOpacity = 0.5;
+        var outlineOpacity = options && options.oval ? 0.5 : lineOpacity;
+        var fragments;
 
         if (right === left) {
             right += 1;
@@ -120,12 +162,30 @@
             return;
         }
 
-        tempLayer.innerHTML = [
-            global.dljs.getLineString("temp-top", left, top, right, top, lineWeight, lineColor, lineOpacity, false, 0, null),
-            global.dljs.getLineString("temp-right", right, top, right, bottom, lineWeight, lineColor, lineOpacity, false, 0, null),
-            global.dljs.getLineString("temp-bottom", left, bottom, right, bottom, lineWeight, lineColor, lineOpacity, false, 0, null),
-            global.dljs.getLineString("temp-left", left, top, left, bottom, lineWeight, lineColor, lineOpacity, false, 0, null)
-        ].join("");
+        fragments = [
+            global.dljs.getLineString("temp-top", left, top, right, top, lineWeight, lineColor, outlineOpacity, false, 0, null),
+            global.dljs.getLineString("temp-right", right, top, right, bottom, lineWeight, lineColor, outlineOpacity, false, 0, null),
+            global.dljs.getLineString("temp-bottom", left, bottom, right, bottom, lineWeight, lineColor, outlineOpacity, false, 0, null),
+            global.dljs.getLineString("temp-left", left, top, left, bottom, lineWeight, lineColor, outlineOpacity, false, 0, null),
+            global.dljs.getLineString("temp-center-x", left, top + ((bottom - top) / 2), right, top + ((bottom - top) / 2), lineWeight, lineColor, guideOpacity, false, 0, null),
+            global.dljs.getLineString("temp-center-y", left + ((right - left) / 2), top, left + ((right - left) / 2), bottom, lineWeight, lineColor, guideOpacity, false, 0, null)
+        ];
+
+        if (options && options.oval) {
+            fragments.push(getOvalString(left, top, right, bottom, lineWeight, lineColor));
+        }
+
+        tempLayer.innerHTML = fragments.join("");
+    }
+
+    function getOvalString(left, top, right, bottom, lineWeight, lineColor) {
+        return "<div class=\"paint-board-temp-oval\" style=\"" +
+            "left:" + Math.round(left) + "px;" +
+            "top:" + Math.round(top) + "px;" +
+            "width:" + Math.max(1, Math.round(right - left)) + "px;" +
+            "height:" + Math.max(1, Math.round(bottom - top)) + "px;" +
+            "border:" + lineWeight + "px solid " + lineColor + ";" +
+            "\"></div>";
     }
 
     function renderLine(tempLayer, point) {
@@ -157,7 +217,10 @@
         create: createTempLayer,
         setSize: setSize,
         startSquare: startSquare,
+        startShape: startShape,
         updateSquare: updateSquare,
+        updateShape: updateShape,
+        updateShapeBounds: updateShapeBounds,
         startLine: startLine,
         updateLine: updateLine,
         showCircle: showCircle,

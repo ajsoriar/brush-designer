@@ -43,6 +43,15 @@
     list-style: none;
     margin: 0;
     padding: 0;
+    pointer-events: none;
+}
+
+.paint-board-temp-oval {
+    border-radius: 50%;
+    box-sizing: border-box;
+    display: block;
+    pointer-events: none;
+    position: absolute;
 }
 
 .paint-board-temp-circle {

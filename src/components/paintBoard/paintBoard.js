@@ -165,6 +165,8 @@
             board.lastPointerPosition = null;
             board.designedBrush2Stroke = null;
             board.pointerStartPosition = null;
+            board.previewPointerPosition = null;
+            board.previewModifierState = null;
         };
         var board;
         var startPainting = function(event) {
@@ -178,6 +180,7 @@
             }
 
             isPainting = true;
+            rememberPreviewInput(board, event);
             startTempPreview(board, event);
             updateRetroBrushPreview(board, event);
             startPointerAction(board, event);
@@ -193,14 +196,33 @@
                 return;
             }
 
+            rememberPreviewInput(board, event);
             updateTempPreview(board, event);
             continuePointerAction(board, event);
         };
+        var updatePreviewModifier = function(event) {
+            if (!event || (event.key !== "Shift" && event.key !== "Alt")) {
+                return;
+            }
+
+            if (!isPainting) {
+                return;
+            }
+
+            event.preventDefault();
+            updatePreviewModifierState(board, event);
+            updateTempPreviewFromLastPoint(board, event);
+        };
         var endPainting = function(event) {
+            if (!isPainting) {
+                return;
+            }
+
             if (!isActivePaintInput(event, activePointerId)) {
                 return;
             }
 
+            rememberPreviewInput(board, event, true);
             stopPainting(event);
             activePointerId = null;
         };
@@ -213,6 +235,8 @@
             board.lastPointerPosition = null;
             board.designedBrush2Stroke = null;
             activePointerId = null;
+            board.previewPointerPosition = null;
+            board.previewModifierState = null;
             clearRetroBrushPreview(board);
         };
 
@@ -270,6 +294,8 @@
             paintColor: getOppositeColor(config.backgroundColor),
             brushSize: config.brushSize,
             lastPointerPosition: null,
+            previewPointerPosition: null,
+            previewModifierState: null,
             designedBrush2Stroke: null,
             pointerStartPosition: null,
             undoSnapshot: null,
@@ -305,7 +331,8 @@
                     startPainting: startPainting,
                     continuePainting: continuePainting,
                     endPainting: endPainting,
-                    leaveCanvas: leaveCanvas
+                    leaveCanvas: leaveCanvas,
+                    updatePreviewModifier: updatePreviewModifier
                 }, clearPreviewOnPaintToolChange);
             }
         };
@@ -314,16 +341,18 @@
             if (supportsPointerEvents) {
                 canvas.addEventListener("pointerdown", startPainting);
                 canvas.addEventListener("pointermove", continuePainting);
-                document.addEventListener("pointerup", endPainting);
-                document.addEventListener("pointercancel", endPainting);
+                document.addEventListener("pointerup", endPainting, true);
+                document.addEventListener("pointercancel", endPainting, true);
                 canvas.addEventListener("pointerleave", leaveCanvas);
             } else {
                 canvas.addEventListener("mousedown", startPainting);
                 canvas.addEventListener("mousemove", continuePainting);
-                document.addEventListener("mouseup", endPainting);
+                document.addEventListener("mouseup", endPainting, true);
                 canvas.addEventListener("mouseleave", leaveCanvas);
             }
 
+            document.addEventListener("keydown", updatePreviewModifier);
+            document.addEventListener("keyup", updatePreviewModifier);
             global.addEventListener("paint-tools-change", clearPreviewOnPaintToolChange);
         }
 
@@ -505,6 +534,68 @@
         };
     }
 
+    function getEventPointerPosition(board, event) {
+        if (!event || typeof event.clientX !== "number" || typeof event.clientY !== "number") {
+            return board.previewPointerPosition || board.pointerStartPosition;
+        }
+
+        return getPointerPosition(board, event);
+    }
+
+    function rememberPreviewInput(board, event, preserveModifiers) {
+        if (!board || !event) {
+            return;
+        }
+
+        if (typeof event.clientX === "number" && typeof event.clientY === "number") {
+            board.previewPointerPosition = getPointerPosition(board, event);
+        }
+
+        if (preserveModifiers) {
+            return;
+        }
+
+        if (typeof event.shiftKey === "boolean" || typeof event.altKey === "boolean") {
+            board.previewModifierState = {
+                shiftKey: !!event.shiftKey,
+                altKey: !!event.altKey
+            };
+        }
+    }
+
+    function updatePreviewModifierState(board, event) {
+        var state;
+
+        if (!board || !event) {
+            return;
+        }
+
+        state = board.previewModifierState || {
+            shiftKey: false,
+            altKey: false
+        };
+
+        if (event.key === "Shift") {
+            state.shiftKey = event.type !== "keyup";
+        }
+
+        if (event.key === "Alt") {
+            state.altKey = event.type !== "keyup";
+        }
+
+        board.previewModifierState = state;
+    }
+
+    function getPreviewModifierEvent(board, event) {
+        var state = (board && board.previewModifierState) || {};
+        var source = event || {};
+
+        return {
+            shiftKey: typeof source.shiftKey === "boolean" ? source.shiftKey : !!state.shiftKey,
+            altKey: typeof source.altKey === "boolean" ? source.altKey : !!state.altKey
+        };
+    }
+
     function isPointerInsideCanvas(board, event) {
         var rect;
 
@@ -578,6 +669,8 @@
     }
 
     function updateTempPreview(board, event) {
+        board.previewPointerPosition = getPointerPosition(board, event);
+
         if (currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
             updateGradientPreview(board, event);
             return;
@@ -586,8 +679,28 @@
         updateTempSquare(board, event);
     }
 
+    function updateTempPreviewFromLastPoint(board, event) {
+        if (!board || !board.previewPointerPosition) {
+            return;
+        }
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
+            updateGradientPreviewToPoint(board, board.previewPointerPosition, event);
+            return;
+        }
+
+        updateTempSquareToPoint(board, board.previewPointerPosition, event);
+    }
+
     function startTempSquare(board, event) {
         if (!isTempPreviewToolMode()) {
+            return;
+        }
+
+        if (global.PaintBoardTempLayer && global.PaintBoardTempLayer.startShape) {
+            global.PaintBoardTempLayer.startShape(board.tempLayerElement, getPointerPosition(board, event), {
+                oval: isOvalToolMode()
+            });
             return;
         }
 
@@ -599,9 +712,28 @@
     }
 
     function updateTempSquare(board, event) {
+        updateTempSquareToPoint(board, getPointerPosition(board, event), event);
+    }
+
+    function updateTempSquareToPoint(board, rawPoint, event) {
         var point;
+        var options;
+        var points;
 
         if (!isTempPreviewToolMode()) {
+            return;
+        }
+
+        if (global.PaintBoardTempLayer && global.PaintBoardTempLayer.updateShape) {
+            points = getShapeDrawPoints(board.pointerStartPosition, rawPoint, getPreviewModifierEvent(board, event));
+            options = {
+                oval: isOvalToolMode()
+            };
+            if (global.PaintBoardTempLayer.updateShapeBounds) {
+                global.PaintBoardTempLayer.updateShapeBounds(board.tempLayerElement, points.from, points.to, options);
+            } else {
+                global.PaintBoardTempLayer.updateShape(board.tempLayerElement, points.to, options);
+            }
             return;
         }
 
@@ -609,7 +741,7 @@
             return;
         }
 
-        point = getShapeEndPoint(board.pointerStartPosition, getPointerPosition(board, event), event);
+        point = getShapeEndPoint(board.pointerStartPosition, rawPoint, getPreviewModifierEvent(board, event));
         global.PaintBoardTempLayer.updateSquare(board.tempLayerElement, point);
     }
 
@@ -630,6 +762,10 @@
     }
 
     function updateGradientPreview(board, event) {
+        updateGradientPreviewToPoint(board, getPointerPosition(board, event), event);
+    }
+
+    function updateGradientPreviewToPoint(board, rawPoint, event) {
         var fromPoint = board.pointerStartPosition;
         var toPoint;
 
@@ -641,7 +777,7 @@
             return;
         }
 
-        toPoint = getGradientEndPoint(fromPoint, getPointerPosition(board, event), event);
+        toPoint = getGradientEndPoint(fromPoint, rawPoint, event);
         global.PaintBoardTempLayer.updateLine(board.tempLayerElement, toPoint);
     }
 
@@ -690,12 +826,14 @@
         if (currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
             event.preventDefault();
             board.pointerStartPosition = getPointerPosition(board, event);
+            board.previewPointerPosition = board.pointerStartPosition;
             return;
         }
 
         if (isShapeToolMode()) {
             event.preventDefault();
             board.pointerStartPosition = getPointerPosition(board, event);
+            board.previewPointerPosition = board.pointerStartPosition;
             return;
         }
 
@@ -755,15 +893,20 @@
 
     function paintShapePointerEvent(board, event) {
         var fromPoint = board.pointerStartPosition;
-        var toPoint = getShapeEndPoint(fromPoint, getPointerPosition(board, event), event);
+        var rawPoint;
+        var points;
 
         if (!fromPoint) {
             return;
         }
 
-        event.preventDefault();
+        rawPoint = getEventPointerPosition(board, event);
+        points = getShapeDrawPoints(fromPoint, rawPoint, getPreviewModifierEvent(board, event));
+        if (event && typeof event.preventDefault === "function") {
+            event.preventDefault();
+        }
         markUndoableChange(board);
-        paintShape(board, fromPoint, toPoint);
+        paintShape(board, points.from, points.to);
     }
 
     function paintGradientPointerEvent(board, event) {
@@ -1807,6 +1950,30 @@
         return toPoint;
     }
 
+    function getShapeDrawPoints(fromPoint, rawPoint, event) {
+        var toPoint = getShapeEndPoint(fromPoint, rawPoint, event);
+        var dx;
+        var dy;
+
+        if (!fromPoint || !toPoint || !event || !event.altKey) {
+            return {
+                from: fromPoint,
+                to: toPoint
+            };
+        }
+
+        dx = toPoint.x - fromPoint.x;
+        dy = toPoint.y - fromPoint.y;
+
+        return {
+            from: {
+                x: fromPoint.x - dx,
+                y: fromPoint.y - dy
+            },
+            to: toPoint
+        };
+    }
+
     function usesFixedAspectShape(event) {
         if (currentPaintToolMode === PAINT_TOOL_MODES.FILLED_SQUARES ||
             currentPaintToolMode === PAINT_TOOL_MODES.FILLED_CIRCLES ||
@@ -1832,6 +1999,13 @@
             currentPaintToolMode === PAINT_TOOL_MODES.FILLED_OVALS ||
             currentPaintToolMode === PAINT_TOOL_MODES.STROKED_SQUARES ||
             currentPaintToolMode === PAINT_TOOL_MODES.STROKED_RECTANGLES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.STROKED_CIRCLES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.STROKED_OVALS;
+    }
+
+    function isOvalToolMode() {
+        return currentPaintToolMode === PAINT_TOOL_MODES.FILLED_CIRCLES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.FILLED_OVALS ||
             currentPaintToolMode === PAINT_TOOL_MODES.STROKED_CIRCLES ||
             currentPaintToolMode === PAINT_TOOL_MODES.STROKED_OVALS;
     }
@@ -1984,14 +2158,19 @@
         if (paintHandlers && paintHandlers.supportsPointerEvents) {
             board.canvas.removeEventListener("pointerdown", paintHandlers.startPainting);
             board.canvas.removeEventListener("pointermove", paintHandlers.continuePainting);
-            document.removeEventListener("pointerup", paintHandlers.endPainting);
-            document.removeEventListener("pointercancel", paintHandlers.endPainting);
+            document.removeEventListener("pointerup", paintHandlers.endPainting, true);
+            document.removeEventListener("pointercancel", paintHandlers.endPainting, true);
             board.canvas.removeEventListener("pointerleave", paintHandlers.leaveCanvas);
         } else if (paintHandlers) {
             board.canvas.removeEventListener("mousedown", paintHandlers.startPainting);
             board.canvas.removeEventListener("mousemove", paintHandlers.continuePainting);
-            document.removeEventListener("mouseup", paintHandlers.endPainting);
+            document.removeEventListener("mouseup", paintHandlers.endPainting, true);
             board.canvas.removeEventListener("mouseleave", paintHandlers.leaveCanvas);
+        }
+
+        if (paintHandlers && paintHandlers.updatePreviewModifier) {
+            document.removeEventListener("keydown", paintHandlers.updatePreviewModifier);
+            document.removeEventListener("keyup", paintHandlers.updatePreviewModifier);
         }
 
         global.removeEventListener("paint-tools-change", clearPreviewOnPaintToolChange);
