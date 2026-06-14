@@ -12,7 +12,7 @@
     var spacePanActive = false;
     var panState = null;
 
-    function handlePointerDown(event) {
+    function handlePanPointerDown(event) {
         var board = getBoardFromEvent(event);
         var pointerBoard;
 
@@ -95,6 +95,8 @@
         panState = {
             board: board,
             viewport: viewport,
+            pointerId: typeof event.pointerId === "number" ? event.pointerId : null,
+            pointerEvents: event.type && event.type.indexOf("pointer") === 0,
             startX: event.clientX,
             startY: event.clientY,
             startScrollLeft: viewport.scrollLeft,
@@ -102,12 +104,15 @@
         };
 
         board.className += board.className.indexOf("paint-board-panning") === -1 ? " paint-board-panning" : "";
-        document.addEventListener("mousemove", continuePan, true);
-        document.addEventListener("mouseup", stopPan, true);
+        addPanListeners(panState.pointerEvents);
     }
 
     function continuePan(event) {
         if (!panState) {
+            return;
+        }
+
+        if (!isPanPointerEvent(event)) {
             return;
         }
 
@@ -116,14 +121,49 @@
         panState.viewport.scrollTop = panState.startScrollTop - (event.clientY - panState.startY);
     }
 
-    function stopPan() {
+    function stopPan(event) {
+        if (event && !isPanPointerEvent(event)) {
+            return;
+        }
+
         if (panState && panState.board) {
             panState.board.className = panState.board.className.replace(/\s?paint-board-panning/g, "");
         }
 
+        removePanListeners(panState && panState.pointerEvents);
         panState = null;
+    }
+
+    function addPanListeners(pointerEvents) {
+        if (pointerEvents) {
+            document.addEventListener("pointermove", continuePan, true);
+            document.addEventListener("pointerup", stopPan, true);
+            document.addEventListener("pointercancel", stopPan, true);
+            return;
+        }
+
+        document.addEventListener("mousemove", continuePan, true);
+        document.addEventListener("mouseup", stopPan, true);
+    }
+
+    function removePanListeners(pointerEvents) {
+        if (pointerEvents) {
+            document.removeEventListener("pointermove", continuePan, true);
+            document.removeEventListener("pointerup", stopPan, true);
+            document.removeEventListener("pointercancel", stopPan, true);
+            return;
+        }
+
         document.removeEventListener("mousemove", continuePan, true);
         document.removeEventListener("mouseup", stopPan, true);
+    }
+
+    function isPanPointerEvent(event) {
+        if (!panState || panState.pointerId === null || typeof event.pointerId !== "number") {
+            return true;
+        }
+
+        return event.pointerId === panState.pointerId;
     }
 
     function setSpacePanActive(active) {
@@ -526,7 +566,8 @@
         ));
     }
 
-    document.addEventListener("mousedown", handlePointerDown, true);
+    document.addEventListener("pointerdown", handlePanPointerDown, true);
+    document.addEventListener("mousedown", handlePanPointerDown, true);
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
     document.addEventListener("wheel", handleWheel, {
