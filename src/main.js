@@ -46,6 +46,6 @@ await import("./components/brushdesigner.v2/brushdesigner.v2.js");
 await import("../vendor/ajsr-confirm/dist/ajsr-js-confirm.min.js");
 await import("../vendor/ajsr-notify/dist/ajsr-notify.min.js");
 await import("./app.clipboard.js");
+await import("./zoom.js");
 await import("./app.openWindows.js");
 await import("./app.js");
-await import("./zoom.js");
