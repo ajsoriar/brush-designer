@@ -6,6 +6,22 @@
     global.App.memory = global.App.memory || {};
     global.App.memory.currentColor = global.App.memory.currentColor || "#000000";
     global.App.memory.currentLineWidth = global.App.memory.currentLineWidth || 15;
+    global.App.memory.currentLineDesign = global.App.memory.currentLineDesign || {
+        weight: global.App.memory.currentLineWidth,
+        unit: "pt",
+        cap: "butt",
+        corner: "miter",
+        limit: 10,
+        align: "center",
+        dashed: false,
+        dashes: [12, 8, 12, 8, 12, 8],
+        arrowStart: "none",
+        arrowEnd: "none",
+        startScale: 100,
+        endScale: 100,
+        arrowLinked: false,
+        active: false
+    };
     global.App.memory.currentDesignedBrush = global.App.memory.currentDesignedBrush || null;
     global.App.memory.currentPatternUseFrontColor = global.App.memory.currentPatternUseFrontColor || false;
     global.App.memory.currentGradient = global.App.memory.currentGradient || {
@@ -100,6 +116,13 @@
 
         if (mode === "GRADIENT") {
             global.AppOpenWindows.openGradientPanelWindow();
+        }
+
+        if (mode === "STRAIGHT-LINE") {
+            if (global.App.memory && global.App.memory.currentLineDesign) {
+                global.App.memory.currentLineDesign.active = true;
+            }
+            global.AppOpenWindows.openLinesDesignerWindow();
         }
     });
 
@@ -240,6 +263,7 @@
     global.openSimpleColorPickerWindow = global.AppOpenWindows.openSimpleColorPickerWindow;
     global.openBigColorPickerWindow = global.AppOpenWindows.openBigColorPickerWindow;
     global.openSimpleLineWidthPickerWindow = global.AppOpenWindows.openSimpleLineWidthPickerWindow;
+    global.openLinesDesignerWindow = global.AppOpenWindows.openLinesDesignerWindow;
     global.openPaintToolsWindow = global.AppOpenWindows.openPaintToolsWindow;
     global.openStarGeneratorWindow = global.AppOpenWindows.openStarGeneratorWindow;
     global.renderBruses = renderBruses;

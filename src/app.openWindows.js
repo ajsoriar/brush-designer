@@ -13,6 +13,7 @@
     var appRetroBrushDesigner = null;
     var appPatternsView = null;
     var appGradientPanel = null;
+    var appLinesDesigner = null;
     var documentCount = 0;
     var activePaintBoard = null;
     var VISIBLE_PAINT_TOOLS = [
@@ -20,6 +21,7 @@
         "ROUND-POINTS",
         "SQUARED-LINES",
         "ROUND-LINES",
+        "STRAIGHT-LINE",
         "FILLED-RECTANGLES",
         "FILLED-OVALS",
         "STROKED-RECTANGLES",
@@ -887,6 +889,53 @@
         return appLineWidthPicker;
     }
 
+    function openLinesDesignerWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("lines-designer");
+        var panelWidth = 320;
+        var panelHeight = 390;
+        var windowFrameWidth = 16;
+        var windowFrameHeight = 36;
+        var designerWindow;
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return appLinesDesigner;
+        }
+
+        designerWindow = WindowsManager.create({
+            id: "lines-designer-window",
+            windowId: "lines-designer",
+            title: "Lines Designer",
+            type: "TOOL",
+            x: 160,
+            y: 300,
+            width: panelWidth + windowFrameWidth,
+            height: panelHeight + windowFrameHeight,
+            resizable: false,
+            scrollBarX: false,
+            scrollBarY: false,
+            contentId: "lines-designer-window-content"
+        });
+
+        appLinesDesigner = LinesDesigner({
+            id: "app-lines-designer",
+            containerId: designerWindow.contentId,
+            width: panelWidth,
+            height: panelHeight,
+            current: global.App.memory.currentLineDesign,
+            onChange: function(lineDesign) {
+                lineDesign.active = true;
+                global.App.memory.currentLineDesign = lineDesign;
+                global.App.memory.currentLineWidth = lineDesign.weight;
+                console.log("Selected line design:", lineDesign);
+            }
+        });
+
+        designerWindow.scaleToContent(appLinesDesigner.getWidth(), appLinesDesigner.getHeight());
+
+        return appLinesDesigner;
+    }
+
     function openPaintToolsWindow() {
         var existingWindow = WindowsManager.getWindowByWindowId("paint-tools");
 
@@ -1031,6 +1080,7 @@
         openSimpleColorPickerWindow: openSimpleColorPickerWindow,
         openBigColorPickerWindow: openBigColorPickerWindow,
         openSimpleLineWidthPickerWindow: openSimpleLineWidthPickerWindow,
+        openLinesDesignerWindow: openLinesDesignerWindow,
         openPaintToolsWindow: openPaintToolsWindow,
         openStarGeneratorWindow: openStarGeneratorWindow,
         updatePaintBoardWindowTitle: updatePaintBoardWindowTitle,

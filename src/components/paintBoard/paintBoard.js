@@ -19,6 +19,7 @@
         ROUND_POINTS: "ROUND-POINTS",
         SQUARED_LINES: "SQUARED-LINES",
         ROUND_LINES: "ROUND-LINES",
+        STRAIGHT_LINE: "STRAIGHT-LINE",
         FILLED_SQUARES: "FILLED-SQUARES",
         FILLED_RECTANGLES: "FILLED-RECTANGLES",
         FILLED_CIRCLES: "FILLED-CIRCLES",
@@ -147,6 +148,10 @@
             }
         };
         var stopPainting = function(event) {
+            if (isPainting && isStraightLineToolMode() && board.pointerStartPosition) {
+                paintStraightLinePointerEvent(board, event);
+            }
+
             if (isPainting && isShapeToolMode() && board.pointerStartPosition) {
                 paintShapePointerEvent(board, event);
             }
@@ -703,6 +708,11 @@
             return;
         }
 
+        if (isStraightLineToolMode()) {
+            startStraightLinePreview(board, event);
+            return;
+        }
+
         startTempSquare(board, event);
     }
 
@@ -711,6 +721,11 @@
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
             updateGradientPreview(board, event);
+            return;
+        }
+
+        if (isStraightLineToolMode()) {
+            updateStraightLinePreview(board, event);
             return;
         }
 
@@ -724,6 +739,11 @@
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
             updateGradientPreviewToPoint(board, board.previewPointerPosition, event);
+            return;
+        }
+
+        if (isStraightLineToolMode()) {
+            updateStraightLinePreviewToPoint(board, board.previewPointerPosition, event);
             return;
         }
 
@@ -819,6 +839,34 @@
         global.PaintBoardTempLayer.updateLine(board.tempLayerElement, toPoint);
     }
 
+    function startStraightLinePreview(board, event) {
+        if (!global.PaintBoardTempLayer || !global.PaintBoardTempLayer.startLine) {
+            return;
+        }
+
+        global.PaintBoardTempLayer.startLine(board.tempLayerElement, getPointerPosition(board, event));
+    }
+
+    function updateStraightLinePreview(board, event) {
+        updateStraightLinePreviewToPoint(board, getPointerPosition(board, event), event);
+    }
+
+    function updateStraightLinePreviewToPoint(board, rawPoint, event) {
+        var fromPoint = board.pointerStartPosition;
+        var toPoint;
+
+        if (!global.PaintBoardTempLayer || !global.PaintBoardTempLayer.updateLine) {
+            return;
+        }
+
+        if (!fromPoint) {
+            return;
+        }
+
+        toPoint = getGradientEndPoint(fromPoint, rawPoint, event);
+        global.PaintBoardTempLayer.updateLine(board.tempLayerElement, toPoint);
+    }
+
     function updateRetroBrushPreview(board, event) {
         var point;
         var brush;
@@ -874,6 +922,13 @@
             return;
         }
 
+        if (isStraightLineToolMode()) {
+            event.preventDefault();
+            board.pointerStartPosition = getPointerPosition(board, event);
+            board.previewPointerPosition = board.pointerStartPosition;
+            return;
+        }
+
         if (isShapeToolMode()) {
             event.preventDefault();
             board.pointerStartPosition = getPointerPosition(board, event);
@@ -898,6 +953,10 @@
         }
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
+            return;
+        }
+
+        if (isStraightLineToolMode()) {
             return;
         }
 
@@ -971,6 +1030,26 @@
         event.preventDefault();
         markUndoableChange(board);
         paintGradient(board, fromPoint, toPoint);
+    }
+
+    function paintStraightLinePointerEvent(board, event) {
+        var fromPoint = board.pointerStartPosition;
+        var rawPoint;
+        var toPoint;
+        var lineDesign;
+
+        if (!fromPoint) {
+            return;
+        }
+
+        rawPoint = getEventPointerPosition(board, event);
+        toPoint = getGradientEndPoint(fromPoint, rawPoint, event);
+        lineDesign = getCurrentStoredLineDesign();
+        if (event && typeof event.preventDefault === "function") {
+            event.preventDefault();
+        }
+        markUndoableChange(board);
+        paintLine(board, fromPoint, toPoint, "butt", "miter", lineDesign);
     }
 
     function getGradientEndPoint(fromPoint, toPoint, event) {
@@ -1108,17 +1187,24 @@
         return ((value % divisor) + divisor) % divisor;
     }
 
-    function paintLine(board, fromPoint, toPoint, lineCap, lineJoin) {
-        var size = Math.max(1, getCurrentBrushSize(board));
+    function paintLine(board, fromPoint, toPoint, lineCap, lineJoin, lineDesignOverride) {
+        var lineDesign = lineDesignOverride || getCurrentLineDesign();
+        var designWeight = lineDesign ? Number(lineDesign.weight) : NaN;
+        var designLimit = lineDesign ? Number(lineDesign.limit) : NaN;
+        var size = isNaN(designWeight) ? Math.max(1, getCurrentBrushSize(board)) : Math.max(1, designWeight);
 
+        board.context.save();
         board.context.beginPath();
         board.context.strokeStyle = getCurrentPaintColor(board);
         board.context.lineWidth = size;
-        board.context.lineCap = lineCap;
-        board.context.lineJoin = lineJoin;
+        board.context.lineCap = lineDesign ? lineDesign.cap : lineCap;
+        board.context.lineJoin = lineDesign ? lineDesign.corner : lineJoin;
+        board.context.miterLimit = lineDesign && !isNaN(designLimit) ? designLimit : board.context.miterLimit;
+        board.context.setLineDash(lineDesign && lineDesign.dashed && Array.isArray(lineDesign.dashes) ? lineDesign.dashes : []);
         board.context.moveTo(fromPoint.x, fromPoint.y);
         board.context.lineTo(toPoint.x, toPoint.y);
         board.context.stroke();
+        board.context.restore();
     }
 
     function paintDesignedBrush(board, x, y) {
@@ -2054,6 +2140,10 @@
             currentPaintToolMode === PAINT_TOOL_MODES.STROKED_OVALS;
     }
 
+    function isStraightLineToolMode() {
+        return currentPaintToolMode === PAINT_TOOL_MODES.STRAIGHT_LINE;
+    }
+
     function isOvalToolMode() {
         return currentPaintToolMode === PAINT_TOOL_MODES.FILLED_CIRCLES ||
             currentPaintToolMode === PAINT_TOOL_MODES.FILLED_OVALS ||
@@ -2093,6 +2183,24 @@
         }
 
         return board.brushSize;
+    }
+
+    function getCurrentLineDesign() {
+        var lineDesign = global.App && global.App.memory && global.App.memory.currentLineDesign;
+
+        if (!lineDesign || !lineDesign.active) {
+            return null;
+        }
+
+        return lineDesign;
+    }
+
+    function getCurrentStoredLineDesign() {
+        if (global.App && global.App.memory && global.App.memory.currentLineDesign) {
+            return global.App.memory.currentLineDesign;
+        }
+
+        return null;
     }
 
     function getCurrentDesignedBrush() {

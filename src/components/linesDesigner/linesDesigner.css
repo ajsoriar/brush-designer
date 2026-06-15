@@ -1,0 +1,232 @@
+.lines-designer {
+    background: #d8d8d8;
+    color: #111111;
+    display: flex;
+    flex-direction: column;
+    font-family: Arial, sans-serif;
+    gap: 6px;
+    padding: 8px 7px;
+}
+
+.lines-designer-preview {
+    background: #ffffff;
+    border: 1px solid #9b9b9b;
+    height: 70px;
+    width: 304px;
+}
+
+.lines-designer-preview svg {
+    display: block;
+    height: 100%;
+    width: 100%;
+}
+
+.lines-designer-preview-line {
+    fill: none;
+    stroke: #111111;
+}
+
+.lines-designer-preview-arrow {
+    fill: #111111;
+    stroke: #111111;
+    stroke-width: 2;
+}
+
+.lines-designer-row,
+.lines-designer-arrow-row,
+.lines-designer-scale-row,
+.lines-designer-align-arrow-row {
+    align-items: center;
+    display: flex;
+    gap: 5px;
+    min-height: 26px;
+}
+
+.lines-designer-weight-row {
+    min-height: 30px;
+}
+
+.lines-designer-label {
+    flex: 0 0 88px;
+    font: bold 16px Arial, sans-serif;
+    line-height: 1;
+    text-align: right;
+}
+
+.lines-designer-number,
+.lines-designer-select {
+    background: #ffffff;
+    border: 2px inset #efefef;
+    box-sizing: border-box;
+    color: #111111;
+    font: bold 14px Arial, sans-serif;
+    height: 28px;
+}
+
+.lines-designer-weight {
+    width: 54px;
+}
+
+.lines-designer-limit,
+.lines-designer-scale {
+    width: 48px;
+}
+
+.lines-designer-unit {
+    width: 62px;
+}
+
+.lines-designer-arrow-select {
+    font-weight: normal;
+    width: 78px;
+}
+
+.lines-designer-button-group {
+    display: flex;
+    gap: 4px;
+}
+
+.lines-designer-icon-button,
+.lines-designer-swap,
+.lines-designer-link,
+.lines-designer-ghost-button {
+    align-items: center;
+    background: linear-gradient(#eeeeee, #bfbfbf);
+    border: 2px outset #f6f6f6;
+    color: #111111;
+    cursor: pointer;
+    display: inline-flex;
+    height: 26px;
+    justify-content: center;
+    padding: 0;
+    width: 26px;
+}
+
+.lines-designer-icon-button-active,
+.lines-designer-link-active {
+    background: #c8ecff;
+    border: 2px inset #f6f6f6;
+}
+
+.lines-designer-icon {
+    height: 20px;
+    width: 20px;
+}
+
+.lines-designer-row-spacer {
+    flex: 1 1 auto;
+}
+
+.lines-designer-muted {
+    color: #555555;
+    font: bold 14px Arial, sans-serif;
+}
+
+.lines-designer-rule {
+    border-top: 2px groove #eeeeee;
+    height: 1px;
+    margin: 2px 0;
+}
+
+.lines-designer-dash-section,
+.lines-designer-arrow-section {
+    display: grid;
+    gap: 5px;
+}
+
+.lines-designer-check {
+    align-items: center;
+    display: inline-flex;
+    font: bold 14px Arial, sans-serif;
+    gap: 5px;
+    line-height: 1;
+}
+
+.lines-designer-check input {
+    height: 20px;
+    margin: 0;
+    width: 20px;
+}
+
+.lines-designer-dash-grid {
+    display: grid;
+    gap: 4px 7px;
+    grid-template-columns: repeat(6, 1fr);
+}
+
+.lines-designer-dash-field {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.lines-designer-dash-input {
+    background: #ffffff;
+    border: 2px inset #efefef;
+    box-sizing: border-box;
+    font: 12px Arial, sans-serif;
+    height: 26px;
+    min-width: 0;
+    width: 100%;
+}
+
+.lines-designer-dash-input:disabled {
+    background: #eeeeee;
+    color: #8a8a8a;
+}
+
+.lines-designer-dash-field span,
+.lines-designer-ghost-label {
+    color: #ffffff;
+    font: bold 14px Arial, sans-serif;
+    line-height: 1;
+    text-shadow: 0 1px 0 #8f8f8f;
+}
+
+.lines-designer-arrow-row {
+    gap: 8px;
+}
+
+.lines-designer-arrow-row .lines-designer-label {
+    flex-basis: 88px;
+}
+
+.lines-designer-swap {
+    color: #777777;
+    font: bold 13px Arial, sans-serif;
+    margin-left: auto;
+}
+
+.lines-designer-scale-row,
+.lines-designer-align-arrow-row {
+    padding-left: 48px;
+}
+
+.lines-designer-ghost-label {
+    flex: 0 0 44px;
+    text-align: right;
+}
+
+.lines-designer-link {
+    color: #777777;
+    font: 0/0 Arial, sans-serif;
+    position: relative;
+}
+
+.lines-designer-link::before {
+    content: "";
+    border: 2px solid currentColor;
+    border-radius: 7px;
+    height: 14px;
+    position: absolute;
+    transform: rotate(-35deg);
+    width: 8px;
+}
+
+.lines-designer-ghost-button {
+    color: #777777;
+    cursor: default;
+    font: bold 14px Arial, sans-serif;
+    opacity: .65;
+    width: 34px;
+}

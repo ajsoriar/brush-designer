@@ -15,6 +15,7 @@
         "ROUND-POINTS": new URL("./icons/paint-tools_05.png", import.meta.url).href,
         "SQUARED-LINES": new URL("./icons/paint-tools_07.png", import.meta.url).href,
         "ROUND-LINES": new URL("./icons/paint-tools_09.png", import.meta.url).href,
+        "STRAIGHT-LINE": new URL("./icons/paint-tools_07.png", import.meta.url).href,
         "FILLED-SQUARES": new URL("./icons/paint-tools_12.png", import.meta.url).href,
         "FILLED-RECTANGLES": new URL("./icons/paint-tools_14.png", import.meta.url).href,
         "FILLED-CIRCLES": new URL("./icons/paint-tools_16.png", import.meta.url).href,
@@ -33,7 +34,8 @@
     var TOOL_LABELS = {
         "OLD-BRUSH": "Retro Brush",
         "PATTERN-BUCKET": "Pattern Bucket",
-        "GRADIENT": "Gradient"
+        "GRADIENT": "Gradient",
+        "STRAIGHT-LINE": "Line"
     };
 
     var HIDDEN_TOOLS = {
