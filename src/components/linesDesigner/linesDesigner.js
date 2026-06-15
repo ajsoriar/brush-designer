@@ -5,15 +5,16 @@
     var DEFAULTS = {
         id: null,
         containerId: null,
-        width: 320,
-        height: 390,
+        width: 310,
+        height: 352,
         current: {
             weight: 1,
-            unit: "pt",
+            unit: "px",
             cap: "butt",
             corner: "miter",
             limit: 10,
             align: "center",
+            antialiasing: false,
             dashed: false,
             dashes: [12, 8, 12, 8, 12, 8],
             arrowStart: "none",
@@ -75,6 +76,7 @@
         element.style.width = config.width + "px";
         element.style.height = config.height + "px";
 
+        element.appendChild(createAntialiasingRow(componentId, controls));
         controls.preview = createPreview();
         element.appendChild(controls.preview.wrap);
 
@@ -162,6 +164,20 @@
             start: start,
             end: end
         };
+    }
+
+    function createAntialiasingRow(componentId, controls) {
+        var row = document.createElement("label");
+        var checkbox = document.createElement("input");
+
+        row.className = "lines-designer-check lines-designer-antialiasing";
+        checkbox.id = componentId + "-antialiasing";
+        checkbox.type = "checkbox";
+        controls.antialiasing = checkbox;
+
+        row.appendChild(checkbox);
+        row.appendChild(document.createTextNode("Antialiasing"));
+        return row;
     }
 
     function createWeightRow(componentId, controls) {
@@ -473,6 +489,7 @@
         bind(controls.weight);
         bind(controls.unit);
         bind(controls.limit);
+        bind(controls.antialiasing);
         bind(controls.dashed);
         bind(controls.arrowStart);
         bind(controls.arrowEnd);
@@ -514,6 +531,7 @@
             weight: controls.weight.value,
             unit: controls.unit.value,
             limit: controls.limit.value,
+            antialiasing: controls.antialiasing.checked,
             dashed: controls.dashed.checked,
             dashes: controls.dashes.map(function(input) {
                 return input.value;
@@ -548,6 +566,7 @@
         controls.weight.value = current.weight;
         controls.unit.value = current.unit;
         controls.limit.value = current.limit;
+        controls.antialiasing.checked = current.antialiasing;
         controls.dashed.checked = current.dashed;
         controls.arrowStart.value = current.arrowStart;
         controls.arrowEnd.value = current.arrowEnd;
@@ -585,6 +604,7 @@
         component.controls.preview.path.setAttribute("stroke-linejoin", current.corner);
         component.controls.preview.path.setAttribute("stroke-miterlimit", current.limit);
         component.controls.preview.path.setAttribute("stroke-dasharray", dash);
+        component.controls.preview.svg.style.shapeRendering = current.antialiasing ? "auto" : "crispEdges";
         component.controls.preview.start.setAttribute("d", getArrowPath(current.arrowStart, 38, 32, -1, current.startScale));
         component.controls.preview.end.setAttribute("d", getArrowPath(current.arrowEnd, 242, 32, 1, current.endScale));
     }
@@ -616,6 +636,7 @@
             corner: normalizeOption(current.corner, CORNER_OPTIONS, DEFAULTS.current.corner),
             limit: Math.round(clamp(parseFloat(current.limit), 1, 50, DEFAULTS.current.limit)),
             align: normalizeOption(current.align, ALIGN_OPTIONS, DEFAULTS.current.align),
+            antialiasing: typeof current.antialiasing === "boolean" ? current.antialiasing : DEFAULTS.current.antialiasing,
             dashed: !!current.dashed,
             dashes: normalizeDashes(current.dashes),
             arrowStart: normalizeArrow(current.arrowStart),

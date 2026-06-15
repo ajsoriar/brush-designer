@@ -1193,6 +1193,11 @@
         var designLimit = lineDesign ? Number(lineDesign.limit) : NaN;
         var size = isNaN(designWeight) ? Math.max(1, getCurrentBrushSize(board)) : Math.max(1, designWeight);
 
+        if (lineDesign && lineDesign.antialiasing === false) {
+            paintHardLine(board, fromPoint, toPoint, size, lineDesign);
+            return;
+        }
+
         board.context.save();
         board.context.beginPath();
         board.context.strokeStyle = getCurrentPaintColor(board);
@@ -1205,6 +1210,104 @@
         board.context.lineTo(toPoint.x, toPoint.y);
         board.context.stroke();
         board.context.restore();
+    }
+
+    function paintHardLine(board, fromPoint, toPoint, size, lineDesign) {
+        var points = getHardLinePoints(fromPoint, toPoint);
+        var width = Math.max(1, Math.round(size));
+        var half = Math.floor(width / 2);
+        var color = getCurrentPaintColor(board);
+        var dashState = createHardLineDashState(lineDesign);
+
+        board.context.save();
+        board.context.fillStyle = color;
+
+        points.forEach(function(point, index) {
+            if (dashState && !isHardLineDashOn(dashState, index)) {
+                return;
+            }
+
+            board.context.fillRect(point.x - half, point.y - half, width, width);
+        });
+
+        board.context.restore();
+    }
+
+    function getHardLinePoints(fromPoint, toPoint) {
+        var x0 = Math.round(fromPoint.x);
+        var y0 = Math.round(fromPoint.y);
+        var x1 = Math.round(toPoint.x);
+        var y1 = Math.round(toPoint.y);
+        var dx = Math.abs(x1 - x0);
+        var dy = Math.abs(y1 - y0);
+        var sx = x0 < x1 ? 1 : -1;
+        var sy = y0 < y1 ? 1 : -1;
+        var err = dx - dy;
+        var points = [];
+        var e2;
+
+        while (true) {
+            points.push({ x: x0, y: y0 });
+
+            if (x0 === x1 && y0 === y1) {
+                break;
+            }
+
+            e2 = err * 2;
+
+            if (e2 > -dy) {
+                err -= dy;
+                x0 += sx;
+            }
+
+            if (e2 < dx) {
+                err += dx;
+                y0 += sy;
+            }
+        }
+
+        return points;
+    }
+
+    function createHardLineDashState(lineDesign) {
+        var dashes;
+
+        if (!lineDesign || !lineDesign.dashed || !Array.isArray(lineDesign.dashes)) {
+            return null;
+        }
+
+        dashes = lineDesign.dashes.map(function(value) {
+            return Math.max(0, Math.round(Number(value) || 0));
+        }).filter(function(value) {
+            return value > 0;
+        });
+
+        if (!dashes.length) {
+            return null;
+        }
+
+        return {
+            dashes: dashes,
+            total: dashes.reduce(function(total, value) {
+                return total + value;
+            }, 0)
+        };
+    }
+
+    function isHardLineDashOn(dashState, index) {
+        var offset = index % dashState.total;
+        var total = 0;
+        var i;
+
+        for (i = 0; i < dashState.dashes.length; i++) {
+            total += dashState.dashes[i];
+
+            if (offset < total) {
+                return i % 2 === 0;
+            }
+        }
+
+        return true;
     }
 
     function paintDesignedBrush(board, x, y) {

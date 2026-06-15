@@ -14,6 +14,7 @@
     var appPatternsView = null;
     var appGradientPanel = null;
     var appLinesDesigner = null;
+    var syncingLineWidthComponents = false;
     var documentCount = 0;
     var activePaintBoard = null;
     var VISIBLE_PAINT_TOOLS = [
@@ -34,6 +35,18 @@
         "DESIGNED-BRUSH",
         "DESIGNED-BRUSH-2"
     ];
+
+    function extend(target, source) {
+        var key;
+
+        for (key in source) {
+            if (Object.prototype.hasOwnProperty.call(source, key)) {
+                target[key] = source[key];
+            }
+        }
+
+        return target;
+    }
 
     function openEditor() {
         be = $.brushEditor({
@@ -865,6 +878,7 @@
             width: pickerWidth + windowFrameWidth,
             height: pickerHeight + windowFrameHeight,
             minWidth: 90,
+            minimizable: false,
             resizable: false,
             scrollBarX: false,
             scrollBarY: false,
@@ -880,6 +894,7 @@
             activeLineWidth: global.App.memory.currentLineWidth,
             onLineWidthSelected: function(lineWidth) {
                 global.App.memory.currentLineWidth = lineWidth;
+                syncLinesDesignerFromLineWidth(lineWidth);
                 console.log("Selected line width:", lineWidth);
             }
         });
@@ -891,8 +906,8 @@
 
     function openLinesDesignerWindow() {
         var existingWindow = WindowsManager.getWindowByWindowId("lines-designer");
-        var panelWidth = 320;
-        var panelHeight = 390;
+        var panelWidth = 310;
+        var panelHeight = 352;
         var windowFrameWidth = 16;
         var windowFrameHeight = 36;
         var designerWindow;
@@ -927,6 +942,7 @@
                 lineDesign.active = true;
                 global.App.memory.currentLineDesign = lineDesign;
                 global.App.memory.currentLineWidth = lineDesign.weight;
+                syncSimpleLineWidthPickerFromLineWidth(lineDesign.weight);
                 console.log("Selected line design:", lineDesign);
             }
         });
@@ -934,6 +950,118 @@
         designerWindow.scaleToContent(appLinesDesigner.getWidth(), appLinesDesigner.getHeight());
 
         return appLinesDesigner;
+    }
+
+    function normalizeConsoleLineWidth(lineWidth) {
+        var value = Math.round(parseFloat(lineWidth));
+
+        if (isNaN(value)) {
+            throw new Error("Line width must be a number.");
+        }
+
+        return Math.max(1, Math.min(value, 200));
+    }
+
+    function setSimpleLineWidthPickerWidth(lineWidth) {
+        var value = normalizeConsoleLineWidth(lineWidth);
+
+        global.App.memory.currentLineWidth = value;
+        syncSimpleLineWidthPickerFromLineWidth(value);
+        syncLinesDesignerFromLineWidth(value);
+
+        return value;
+    }
+
+    function setLinesDesignerWidth(lineWidth) {
+        var value = normalizeConsoleLineWidth(lineWidth);
+        var lineDesign = extend(extend({}, global.App.memory.currentLineDesign || {}), {
+            weight: value,
+            active: true
+        });
+
+        global.App.memory.currentLineWidth = value;
+        global.App.memory.currentLineDesign = lineDesign;
+        syncLinesDesignerFromLineDesign(lineDesign);
+        syncSimpleLineWidthPickerFromLineWidth(value);
+
+        return value;
+    }
+
+    function syncSimpleLineWidthPickerFromLineWidth(lineWidth) {
+        var value = normalizeConsoleLineWidth(lineWidth);
+
+        if (syncingLineWidthComponents) {
+            return;
+        }
+
+        if (!appLineWidthPicker || !appLineWidthPicker.setActiveLineWidth) {
+            return;
+        }
+
+        syncingLineWidthComponents = true;
+
+        try {
+            appLineWidthPicker.setActiveLineWidth(value);
+        } finally {
+            syncingLineWidthComponents = false;
+        }
+    }
+
+    function syncLinesDesignerFromLineWidth(lineWidth) {
+        var value = normalizeConsoleLineWidth(lineWidth);
+        var lineDesign = extend(extend({}, global.App.memory.currentLineDesign || {}), {
+            weight: value,
+            active: true
+        });
+
+        global.App.memory.currentLineDesign = lineDesign;
+        syncLinesDesignerFromLineDesign(lineDesign);
+    }
+
+    function syncLinesDesignerFromLineDesign(lineDesign) {
+        if (syncingLineWidthComponents) {
+            return;
+        }
+
+        if (!appLinesDesigner || !appLinesDesigner.setLine) {
+            return;
+        }
+
+        syncingLineWidthComponents = true;
+
+        try {
+            appLinesDesigner.setLine(lineDesign);
+        } finally {
+            syncingLineWidthComponents = false;
+        }
+    }
+
+    function getSimpleLineWidthPickerApi() {
+        return {
+            open: openSimpleLineWidthPickerWindow,
+            getInstance: function() {
+                return appLineWidthPicker;
+            },
+            setLineWidth: setSimpleLineWidthPickerWidth,
+            getLineWidth: function() {
+                return appLineWidthPicker && appLineWidthPicker.getActiveLineWidth ? appLineWidthPicker.getActiveLineWidth() : global.App.memory.currentLineWidth;
+            }
+        };
+    }
+
+    function getLinesDesignerApi() {
+        return {
+            open: openLinesDesignerWindow,
+            getInstance: function() {
+                return appLinesDesigner;
+            },
+            setLineWidth: setLinesDesignerWidth,
+            getLineWidth: function() {
+                var lineDesign = global.App.memory.currentLineDesign || {};
+
+                return lineDesign.weight || global.App.memory.currentLineWidth;
+            }
+        };
     }
 
     function openPaintToolsWindow() {
@@ -1081,6 +1209,10 @@
         openBigColorPickerWindow: openBigColorPickerWindow,
         openSimpleLineWidthPickerWindow: openSimpleLineWidthPickerWindow,
         openLinesDesignerWindow: openLinesDesignerWindow,
+        setSimpleLineWidthPickerWidth: setSimpleLineWidthPickerWidth,
+        setLinesDesignerWidth: setLinesDesignerWidth,
+        getSimpleLineWidthPickerApi: getSimpleLineWidthPickerApi,
+        getLinesDesignerApi: getLinesDesignerApi,
         openPaintToolsWindow: openPaintToolsWindow,
         openStarGeneratorWindow: openStarGeneratorWindow,
         updatePaintBoardWindowTitle: updatePaintBoardWindowTitle,

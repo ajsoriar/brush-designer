@@ -11,8 +11,27 @@
 }
 
 .simple-line-width-picker-value {
-    font-size: 12px;
-    min-height: 16px;
+    align-items: center;
+    display: flex;
+    gap: 4px;
+    min-height: 23px;
+}
+
+.simple-line-width-picker-value-input {
+    background: #ffffff;
+    border: 1px solid #9e9e9e;
+    border-color: #8c8c8c #f4f4f4 #f4f4f4 #8c8c8c;
+    box-sizing: border-box;
+    color: #111111;
+    font: bold 12px Arial, sans-serif;
+    height: 22px;
+    padding: 1px 3px;
+    width: 50px;
+}
+
+.simple-line-width-picker-value-unit {
+    font: bold 12px Arial, sans-serif;
+    line-height: 1;
 }
 
 .simple-line-width-picker-list {

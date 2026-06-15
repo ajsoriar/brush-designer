@@ -33,7 +33,9 @@
         var pickerId = config.id || ("simple-line-width-picker-" + Date.now());
         var container = getContainer(config.containerId);
         var element = document.createElement("div");
-        var value = document.createElement("div");
+        var value = document.createElement("label");
+        var valueInput = document.createElement("input");
+        var valueUnit = document.createElement("span");
         var list = document.createElement("div");
         var lineWidths = createLineWidths(config.minWidth, config.maxWidth, config.steps);
         var picker;
@@ -42,6 +44,15 @@
         element.className = "simple-line-width-picker";
 
         value.className = "simple-line-width-picker-value";
+        valueInput.type = "number";
+        valueInput.min = "1";
+        valueInput.max = "200";
+        valueInput.step = "1";
+        valueInput.className = "simple-line-width-picker-value-input";
+        valueUnit.className = "simple-line-width-picker-value-unit";
+        valueUnit.textContent = "px";
+        value.appendChild(valueInput);
+        value.appendChild(valueUnit);
         list.className = "simple-line-width-picker-list";
         list.style.gap = config.optionGap + "px";
 
@@ -53,8 +64,9 @@
             id: pickerId,
             element: element,
             listElement: list,
+            valueInput: valueInput,
             lineWidths: lineWidths,
-            activeLineWidth: config.activeLineWidth || lineWidths[0],
+            activeLineWidth: normalizeLineWidth(config.activeLineWidth || lineWidths[0]),
             getActiveLineWidth: function() {
                 return picker.activeLineWidth;
             },
@@ -73,6 +85,12 @@
         };
 
         renderOptions(picker, config);
+        valueInput.addEventListener("input", function() {
+            setActiveLineWidth(picker, valueInput.value, config);
+        });
+        valueInput.addEventListener("change", function() {
+            setActiveLineWidth(picker, valueInput.value, config);
+        });
         setActiveLineWidth(picker, picker.activeLineWidth, config);
 
         return picker;
@@ -127,13 +145,13 @@
 
     function setActiveLineWidth(picker, lineWidth, config) {
         var buttons = picker.listElement.querySelectorAll(".simple-line-width-picker-option");
-        var value = picker.element.querySelector(".simple-line-width-picker-value");
+        var normalizedLineWidth = normalizeLineWidth(lineWidth);
 
-        picker.activeLineWidth = lineWidth;
-        value.textContent = lineWidth + "px";
+        picker.activeLineWidth = normalizedLineWidth;
+        picker.valueInput.value = normalizedLineWidth;
 
         Array.prototype.forEach.call(buttons, function(button) {
-            if (parseFloat(button.getAttribute("data-line-width")) === lineWidth) {
+            if (parseFloat(button.getAttribute("data-line-width")) === normalizedLineWidth) {
                 button.className = "simple-line-width-picker-option simple-line-width-picker-option-active";
             } else {
                 button.className = "simple-line-width-picker-option";
@@ -141,12 +159,22 @@
         });
 
         if (typeof config.onChange === "function") {
-            config.onChange(lineWidth, picker);
+            config.onChange(normalizedLineWidth, picker);
         }
 
         if (typeof config.onLineWidthSelected === "function") {
-            config.onLineWidthSelected(lineWidth, picker);
+            config.onLineWidthSelected(normalizedLineWidth, picker);
         }
+    }
+
+    function normalizeLineWidth(lineWidth) {
+        var value = Math.round(parseFloat(lineWidth));
+
+        if (isNaN(value)) {
+            return 1;
+        }
+
+        return Math.max(1, Math.min(value, 200));
     }
 
     function createLineWidths(minWidth, maxWidth, steps) {
@@ -176,7 +204,7 @@
     function getHeight(config) {
         var lineWidths = createLineWidths(config.minWidth, config.maxWidth, config.steps);
         var verticalPadding = 11;
-        var valueHeight = 16;
+        var valueHeight = 23;
         var componentGap = 4;
         var minimumOptionHeight = 12;
         var listHeight = lineWidths.reduce(function(total, lineWidth) {

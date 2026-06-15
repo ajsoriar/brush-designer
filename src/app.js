@@ -8,11 +8,12 @@
     global.App.memory.currentLineWidth = global.App.memory.currentLineWidth || 15;
     global.App.memory.currentLineDesign = global.App.memory.currentLineDesign || {
         weight: global.App.memory.currentLineWidth,
-        unit: "pt",
+        unit: "px",
         cap: "butt",
         corner: "miter",
         limit: 10,
         align: "center",
+        antialiasing: false,
         dashed: false,
         dashes: [12, 8, 12, 8, 12, 8],
         arrowStart: "none",
@@ -264,6 +265,8 @@
     global.openBigColorPickerWindow = global.AppOpenWindows.openBigColorPickerWindow;
     global.openSimpleLineWidthPickerWindow = global.AppOpenWindows.openSimpleLineWidthPickerWindow;
     global.openLinesDesignerWindow = global.AppOpenWindows.openLinesDesignerWindow;
+    global.SimpleLineWidthPickerApi = global.AppOpenWindows.getSimpleLineWidthPickerApi();
+    global.LinesDesignerApi = global.AppOpenWindows.getLinesDesignerApi();
     global.openPaintToolsWindow = global.AppOpenWindows.openPaintToolsWindow;
     global.openStarGeneratorWindow = global.AppOpenWindows.openStarGeneratorWindow;
     global.renderBruses = renderBruses;
