@@ -978,6 +978,13 @@
             return;
         }
 
+        if (isContinuousLineToolMode() && !board.lastPointerPosition) {
+            markUndoableChange(board);
+            paintContinuousLineStart(board, point);
+            board.lastPointerPosition = point;
+            return;
+        }
+
         markUndoableChange(board);
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH && board.lastPointerPosition) {
@@ -999,6 +1006,26 @@
         }
 
         board.lastPointerPosition = point;
+    }
+
+    function isContinuousLineToolMode() {
+        return currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH;
+    }
+
+    function paintContinuousLineStart(board, point) {
+        if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES) {
+            paintRoundPoint(board, point.x, point.y);
+            return;
+        }
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH) {
+            paintOldBrushStamp(board, point.x, point.y);
+            return;
+        }
+
+        paintSquaredPoint(board, point.x, point.y);
     }
 
     function paintShapePointerEvent(board, event) {
@@ -1111,27 +1138,105 @@
     function paintSquaredPoint(board, x, y) {
         var size = Math.max(1, getCurrentBrushSize(board));
         var offset = Math.floor(size / 2);
+        var left = Math.round(x - offset);
+        var top = Math.round(y - offset);
+
+        if (getCurrentBrushStroke()) {
+            paintHardSquareStroke(board, left, top, size);
+            return;
+        }
 
         board.context.fillStyle = getCurrentPaintColor(board);
-        board.context.fillRect(x - offset, y - offset, size, size);
+        board.context.fillRect(left, top, size, size);
     }
 
     function paintRoundPoint(board, x, y) {
         var size = Math.max(1, getCurrentBrushSize(board));
         var radius = size / 2;
 
+        if (!getCurrentBrushAntialiasing()) {
+            paintHardRoundPoint(board, x, y, radius, getCurrentBrushStroke());
+            return;
+        }
+
         board.context.beginPath();
-        board.context.fillStyle = getCurrentPaintColor(board);
         board.context.arc(x, y, radius, 0, Math.PI * 2);
+
+        if (getCurrentBrushStroke()) {
+            board.context.strokeStyle = getCurrentPaintColor(board);
+            board.context.lineWidth = 1;
+            board.context.stroke();
+            return;
+        }
+
+        board.context.fillStyle = getCurrentPaintColor(board);
         board.context.fill();
     }
 
+    function paintHardSquareStroke(board, left, top, size) {
+        var color = getCurrentPaintColor(board);
+
+        board.context.fillStyle = color;
+        board.context.fillRect(left, top, size, 1);
+        board.context.fillRect(left, top + size - 1, size, 1);
+        board.context.fillRect(left, top, 1, size);
+        board.context.fillRect(left + size - 1, top, 1, size);
+    }
+
+    function paintHardRoundPoint(board, x, y, radius, strokeOnly) {
+        var centerX = Math.round(x);
+        var centerY = Math.round(y);
+        var outerRadius = Math.max(0.5, radius);
+        var innerRadius = Math.max(0, outerRadius - 1);
+        var outerSq = outerRadius * outerRadius;
+        var innerSq = innerRadius * innerRadius;
+        var left = Math.floor(centerX - outerRadius);
+        var top = Math.floor(centerY - outerRadius);
+        var right = Math.ceil(centerX + outerRadius);
+        var bottom = Math.ceil(centerY + outerRadius);
+        var px;
+        var py;
+        var dx;
+        var dy;
+        var distanceSq;
+
+        board.context.fillStyle = getCurrentPaintColor(board);
+
+        for (py = top; py <= bottom; py++) {
+            for (px = left; px <= right; px++) {
+                dx = px - centerX;
+                dy = py - centerY;
+                distanceSq = (dx * dx) + (dy * dy);
+
+                if (distanceSq <= outerSq && (!strokeOnly || distanceSq >= innerSq)) {
+                    board.context.fillRect(px, py, 1, 1);
+                }
+            }
+        }
+    }
+
     function paintSquaredLine(board, fromPoint, toPoint) {
-        paintLine(board, fromPoint, toPoint, "square", "miter");
+        paintStampLine(board, fromPoint, toPoint, paintSquaredPoint);
     }
 
     function paintRoundLine(board, fromPoint, toPoint) {
-        paintLine(board, fromPoint, toPoint, "round", "round");
+        paintStampLine(board, fromPoint, toPoint, paintRoundPoint);
+    }
+
+    function paintStampLine(board, fromPoint, toPoint, paintStamp) {
+        var size = Math.max(1, getCurrentBrushSize(board));
+        var spacing = Math.max(1, Math.floor(size / 2));
+        var dx = toPoint.x - fromPoint.x;
+        var dy = toPoint.y - fromPoint.y;
+        var distance = Math.sqrt((dx * dx) + (dy * dy));
+        var steps = Math.max(1, Math.ceil(distance / spacing));
+        var i;
+        var t;
+
+        for (i = 0; i <= steps; i++) {
+            t = i / steps;
+            paintStamp(board, fromPoint.x + (dx * t), fromPoint.y + (dy * t));
+        }
     }
 
     function paintOldBrushLine(board, fromPoint, toPoint) {
@@ -2281,11 +2386,19 @@
     }
 
     function getCurrentBrushSize(board) {
-        if (global.App && global.App.memory && global.App.memory.currentLineWidth) {
-            return global.App.memory.currentLineWidth;
+        if (global.App && global.App.memory && global.App.memory.currentBrushWidth) {
+            return global.App.memory.currentBrushWidth;
         }
 
         return board.brushSize;
+    }
+
+    function getCurrentBrushStroke() {
+        return !!(global.App && global.App.memory && global.App.memory.currentBrushStroke);
+    }
+
+    function getCurrentBrushAntialiasing() {
+        return !!(global.App && global.App.memory && global.App.memory.currentBrushAntialiasing);
     }
 
     function getCurrentLineDesign() {

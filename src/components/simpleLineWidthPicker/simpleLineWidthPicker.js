@@ -77,7 +77,7 @@
                 return getHeight(config);
             },
             setActiveLineWidth: function(lineWidth) {
-                setActiveLineWidth(picker, lineWidth, config);
+                setActiveLineWidth(picker, lineWidth, config, "api");
             },
             destroy: function() {
                 destroy(picker);
@@ -86,12 +86,12 @@
 
         renderOptions(picker, config);
         valueInput.addEventListener("input", function() {
-            setActiveLineWidth(picker, valueInput.value, config);
+            setActiveLineWidth(picker, valueInput.value, config, "user");
         });
         valueInput.addEventListener("change", function() {
-            setActiveLineWidth(picker, valueInput.value, config);
+            setActiveLineWidth(picker, valueInput.value, config, "user");
         });
-        setActiveLineWidth(picker, picker.activeLineWidth, config);
+        setActiveLineWidth(picker, picker.activeLineWidth, config, "init");
 
         return picker;
     }
@@ -128,7 +128,7 @@
             button.setAttribute("data-line-width", lineWidth);
             button.title = lineWidth + "px";
             button.addEventListener("click", function() {
-                setActiveLineWidth(picker, lineWidth, config);
+                setActiveLineWidth(picker, lineWidth, config, "user");
             });
 
             label.className = "simple-line-width-picker-label";
@@ -143,9 +143,12 @@
         });
     }
 
-    function setActiveLineWidth(picker, lineWidth, config) {
+    function setActiveLineWidth(picker, lineWidth, config, source) {
         var buttons = picker.listElement.querySelectorAll(".simple-line-width-picker-option");
         var normalizedLineWidth = normalizeLineWidth(lineWidth);
+        var eventMeta = {
+            source: source || "api"
+        };
 
         picker.activeLineWidth = normalizedLineWidth;
         picker.valueInput.value = normalizedLineWidth;
@@ -159,11 +162,11 @@
         });
 
         if (typeof config.onChange === "function") {
-            config.onChange(normalizedLineWidth, picker);
+            config.onChange(normalizedLineWidth, picker, eventMeta);
         }
 
         if (typeof config.onLineWidthSelected === "function") {
-            config.onLineWidthSelected(normalizedLineWidth, picker);
+            config.onLineWidthSelected(normalizedLineWidth, picker, eventMeta);
         }
     }
 

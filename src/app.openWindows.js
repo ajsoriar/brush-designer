@@ -7,6 +7,7 @@
     var appBigColorPicker = null;
     var appColorPicker = null;
     var appLineWidthPicker = null;
+    var appBrushWidthPicker = null;
     var appPaintTools = null;
     var appStarGenerator = null;
     var appBrushDesigner2 = null;
@@ -179,8 +180,8 @@
             title: "Paint Board " + windowIndex,
             windowGroupName: "paint-boards",
             maxGroupItems: 5,
-            x: 120,
-            y: 120,
+            x: 225,
+            y: 92,
             width: paintBoardWidth + windowFrameWidth,
             height: paintBoardHeight + windowFrameHeight,
             resizable: true,
@@ -681,7 +682,7 @@
         var outerWidth = outputsWidth + windowFrameWidth;
         var outerHeight = outputsHeight + windowFrameHeight;
         var x = Math.max(0, global.innerWidth - outerWidth - 20);
-        var y = Math.max(0, Math.round((global.innerHeight - outerHeight) / 2));
+        var y = 92;
         var outputsWindow;
 
         if (existingWindow) {
@@ -750,8 +751,8 @@
             windowId: "simple-color-picker",
             title: "Simple Color Picker",
             type: "TOOL",
-            x: 20,
-            y: 40,
+            x: Math.max(0, global.innerWidth - 286),
+            y: 468,
             width: pickerWidth + windowFrameWidth,
             height: pickerHeight + windowFrameHeight,
             minWidth: 120,
@@ -873,8 +874,8 @@
             windowId: "simple-line-width-picker",
             title: "Line Width",
             type: "TOOL",
-            x: 20,
-            y: 300,
+            x: 5,
+            y: 92,
             width: pickerWidth + windowFrameWidth,
             height: pickerHeight + windowFrameHeight,
             minWidth: 90,
@@ -892,9 +893,12 @@
             maxWidth: 27,
             steps: 16,
             activeLineWidth: global.App.memory.currentLineWidth,
-            onLineWidthSelected: function(lineWidth) {
+            onLineWidthSelected: function(lineWidth, picker, eventMeta) {
                 global.App.memory.currentLineWidth = lineWidth;
                 syncLinesDesignerFromLineWidth(lineWidth);
+                if (!eventMeta || eventMeta.source !== "init") {
+                    global.PaintTools.use("STRAIGHT-LINE");
+                }
                 console.log("Selected line width:", lineWidth);
             }
         });
@@ -902,6 +906,76 @@
         pickerWindow.scaleToContent(appLineWidthPicker.getWidth(), appLineWidthPicker.getHeight());
 
         return appLineWidthPicker;
+    }
+
+    function openSimpleBrushWidthPickerWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("simple-brush-width-picker");
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return appBrushWidthPicker;
+        }
+
+        var pickerWidth = 120;
+        var pickerHeight = 404;
+        var windowFrameWidth = 16;
+        var windowFrameHeight = 36;
+        var pickerWindow = WindowsManager.create({
+            id: "simple-brush-width-picker-window",
+            windowId: "simple-brush-width-picker",
+            title: "Brush Width",
+            type: "TOOL",
+            x: 115,
+            y: 92,
+            width: pickerWidth + windowFrameWidth,
+            height: pickerHeight + windowFrameHeight,
+            minWidth: 90,
+            minimizable: false,
+            resizable: false,
+            scrollBarX: false,
+            scrollBarY: false,
+            contentId: "simple-brush-width-picker-window-content"
+        });
+
+        appBrushWidthPicker = SimpleBrushWidthPicker({
+            id: "app-simple-brush-width-picker",
+            containerId: pickerWindow.contentId,
+            minWidth: 1,
+            maxWidth: 27,
+            steps: 16,
+            activeBrushWidth: global.App.memory.currentBrushWidth,
+            brushShape: global.App.memory.currentBrushShape,
+            brushStroke: global.App.memory.currentBrushStroke,
+            brushAntialiasing: global.App.memory.currentBrushAntialiasing,
+            onBrushWidthSelected: function(brushWidth, picker, eventMeta) {
+                global.App.memory.currentBrushWidth = brushWidth;
+                if ((!eventMeta || eventMeta.source !== "init") && !isBrushWidthPaintToolSelected()) {
+                    global.PaintTools.use("ROUND-LINES");
+                }
+                console.log("Selected brush width:", brushWidth);
+            },
+            onBrushStrokeChange: function(brushStroke) {
+                global.App.memory.currentBrushStroke = brushStroke;
+                console.log("Selected brush stroke:", brushStroke);
+            },
+            onBrushAntialiasingChange: function(brushAntialiasing) {
+                global.App.memory.currentBrushAntialiasing = brushAntialiasing;
+                console.log("Selected brush antialiasing:", brushAntialiasing);
+            }
+        });
+
+        pickerWindow.scaleToContent(appBrushWidthPicker.getWidth(), appBrushWidthPicker.getHeight());
+
+        return appBrushWidthPicker;
+    }
+
+    function isBrushWidthPaintToolSelected() {
+        var mode = global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : null;
+
+        return mode === "SQUARED-POINTS" ||
+            mode === "ROUND-POINTS" ||
+            mode === "SQUARED-LINES" ||
+            mode === "ROUND-LINES";
     }
 
     function openLinesDesignerWindow() {
@@ -968,6 +1042,30 @@
         global.App.memory.currentLineWidth = value;
         syncSimpleLineWidthPickerFromLineWidth(value);
         syncLinesDesignerFromLineWidth(value);
+
+        return value;
+    }
+
+    function setSimpleBrushWidthPickerStroke(brushStroke) {
+        var value = !!brushStroke;
+
+        global.App.memory.currentBrushStroke = value;
+
+        if (appBrushWidthPicker && appBrushWidthPicker.setBrushStroke) {
+            appBrushWidthPicker.setBrushStroke(value);
+        }
+
+        return value;
+    }
+
+    function setSimpleBrushWidthPickerAntialiasing(brushAntialiasing) {
+        var value = !!brushAntialiasing;
+
+        global.App.memory.currentBrushAntialiasing = value;
+
+        if (appBrushWidthPicker && appBrushWidthPicker.setBrushAntialiasing) {
+            appBrushWidthPicker.setBrushAntialiasing(value);
+        }
 
         return value;
     }
@@ -1049,6 +1147,55 @@
         };
     }
 
+    function setSimpleBrushWidthPickerWidth(brushWidth) {
+        var value = normalizeConsoleLineWidth(brushWidth);
+
+        global.App.memory.currentBrushWidth = value;
+
+        if (appBrushWidthPicker && appBrushWidthPicker.setActiveBrushWidth) {
+            appBrushWidthPicker.setActiveBrushWidth(value);
+        }
+
+        return value;
+    }
+
+    function setSimpleBrushWidthPickerShape(brushShape) {
+        var value = brushShape === "square" ? "square" : "circle";
+
+        global.App.memory.currentBrushShape = value;
+
+        if (appBrushWidthPicker && appBrushWidthPicker.setBrushShape) {
+            appBrushWidthPicker.setBrushShape(value);
+        }
+
+        return value;
+    }
+
+    function getSimpleBrushWidthPickerApi() {
+        return {
+            open: openSimpleBrushWidthPickerWindow,
+            getInstance: function() {
+                return appBrushWidthPicker;
+            },
+            setBrushWidth: setSimpleBrushWidthPickerWidth,
+            getBrushWidth: function() {
+                return appBrushWidthPicker && appBrushWidthPicker.getActiveBrushWidth ? appBrushWidthPicker.getActiveBrushWidth() : global.App.memory.currentBrushWidth;
+            },
+            setBrushShape: setSimpleBrushWidthPickerShape,
+            getBrushShape: function() {
+                return appBrushWidthPicker && appBrushWidthPicker.getBrushShape ? appBrushWidthPicker.getBrushShape() : global.App.memory.currentBrushShape;
+            },
+            setBrushStroke: setSimpleBrushWidthPickerStroke,
+            getBrushStroke: function() {
+                return appBrushWidthPicker && appBrushWidthPicker.getBrushStroke ? appBrushWidthPicker.getBrushStroke() : global.App.memory.currentBrushStroke;
+            },
+            setBrushAntialiasing: setSimpleBrushWidthPickerAntialiasing,
+            getBrushAntialiasing: function() {
+                return appBrushWidthPicker && appBrushWidthPicker.getBrushAntialiasing ? appBrushWidthPicker.getBrushAntialiasing() : global.App.memory.currentBrushAntialiasing;
+            }
+        };
+    }
+
     function getLinesDesignerApi() {
         return {
             open: openLinesDesignerWindow,
@@ -1080,13 +1227,14 @@
         var toolsHeight = rows * btnSize;
         var windowFrameWidth = 16;
         var windowFrameHeight = 36;
+        var toolsWindowY = Math.max(92, global.innerHeight - toolsHeight - windowFrameHeight - 6);
         var toolsWindow = WindowsManager.create({
             id: "paint-tools-window",
             windowId: "paint-tools",
             title: "Paint Tools",
             type: "TOOL",
-            x: 20,
-            y: 590,
+            x: 6,
+            y: toolsWindowY,
             width: toolsWidth + windowFrameWidth,
             height: toolsHeight + windowFrameHeight,
             resizable: false,
@@ -1208,10 +1356,12 @@
         openSimpleColorPickerWindow: openSimpleColorPickerWindow,
         openBigColorPickerWindow: openBigColorPickerWindow,
         openSimpleLineWidthPickerWindow: openSimpleLineWidthPickerWindow,
+        openSimpleBrushWidthPickerWindow: openSimpleBrushWidthPickerWindow,
         openLinesDesignerWindow: openLinesDesignerWindow,
         setSimpleLineWidthPickerWidth: setSimpleLineWidthPickerWidth,
         setLinesDesignerWidth: setLinesDesignerWidth,
         getSimpleLineWidthPickerApi: getSimpleLineWidthPickerApi,
+        getSimpleBrushWidthPickerApi: getSimpleBrushWidthPickerApi,
         getLinesDesignerApi: getLinesDesignerApi,
         openPaintToolsWindow: openPaintToolsWindow,
         openStarGeneratorWindow: openStarGeneratorWindow,

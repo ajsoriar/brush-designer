@@ -6,6 +6,10 @@
     global.App.memory = global.App.memory || {};
     global.App.memory.currentColor = global.App.memory.currentColor || "#000000";
     global.App.memory.currentLineWidth = global.App.memory.currentLineWidth || 15;
+    global.App.memory.currentBrushWidth = global.App.memory.currentBrushWidth || global.App.memory.currentLineWidth;
+    global.App.memory.currentBrushShape = global.App.memory.currentBrushShape || "square";
+    global.App.memory.currentBrushStroke = global.App.memory.currentBrushStroke || false;
+    global.App.memory.currentBrushAntialiasing = global.App.memory.currentBrushAntialiasing || false;
     global.App.memory.currentLineDesign = global.App.memory.currentLineDesign || {
         weight: global.App.memory.currentLineWidth,
         unit: "px",
@@ -64,7 +68,9 @@
         global.AppOpenWindows.openBrushEditorOutputsWindow();
         global.AppOpenWindows.openSimpleColorPickerWindow();
         global.AppOpenWindows.openSimpleLineWidthPickerWindow();
+        global.AppOpenWindows.openSimpleBrushWidthPickerWindow();
         global.AppOpenWindows.openPaintToolsWindow();
+        syncBrushWidthPickerToPaintTool(global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : null);
         global.AppOpenWindows.createDemoWindow("paintBoard");
     });
 
@@ -99,6 +105,8 @@
     global.addEventListener("paint-tools-change", function(event) {
         var mode = event.detail && event.detail.mode;
 
+        syncBrushWidthPickerToPaintTool(mode);
+
         if (mode === "DESIGNED-BRUSH") {
             global.AppOpenWindows.openBrushEditorOutputsWindow();
         }
@@ -126,6 +134,18 @@
             global.AppOpenWindows.openLinesDesignerWindow();
         }
     });
+
+    function syncBrushWidthPickerToPaintTool(mode) {
+        if (mode === "SQUARED-POINTS" || mode === "SQUARED-LINES") {
+            global.AppOpenWindows.getSimpleBrushWidthPickerApi().setBrushShape("square");
+            global.AppOpenWindows.openSimpleBrushWidthPickerWindow();
+        }
+
+        if (mode === "ROUND-POINTS" || mode === "ROUND-LINES") {
+            global.AppOpenWindows.getSimpleBrushWidthPickerApi().setBrushShape("circle");
+            global.AppOpenWindows.openSimpleBrushWidthPickerWindow();
+        }
+    }
 
     function pasteFromClipboard() {
         var targetBoard = global.AppOpenWindows.getActivePaintBoard();
@@ -264,8 +284,10 @@
     global.openSimpleColorPickerWindow = global.AppOpenWindows.openSimpleColorPickerWindow;
     global.openBigColorPickerWindow = global.AppOpenWindows.openBigColorPickerWindow;
     global.openSimpleLineWidthPickerWindow = global.AppOpenWindows.openSimpleLineWidthPickerWindow;
+    global.openSimpleBrushWidthPickerWindow = global.AppOpenWindows.openSimpleBrushWidthPickerWindow;
     global.openLinesDesignerWindow = global.AppOpenWindows.openLinesDesignerWindow;
     global.SimpleLineWidthPickerApi = global.AppOpenWindows.getSimpleLineWidthPickerApi();
+    global.SimpleBrushWidthPickerApi = global.AppOpenWindows.getSimpleBrushWidthPickerApi();
     global.LinesDesignerApi = global.AppOpenWindows.getLinesDesignerApi();
     global.openPaintToolsWindow = global.AppOpenWindows.openPaintToolsWindow;
     global.openStarGeneratorWindow = global.AppOpenWindows.openStarGeneratorWindow;
