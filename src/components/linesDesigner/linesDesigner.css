@@ -247,3 +247,48 @@
     opacity: .65;
     width: 31px;
 }
+
+.lines-designer-preset-section {
+    display: grid;
+    gap: 4px;
+}
+
+.lines-designer-preset-category {
+    width: 120px;
+}
+
+.lines-designer-preset-grid {
+    align-content: start;
+    background: #efefef;
+    box-sizing: border-box;
+    display: grid;
+}
+
+.lines-designer-preset-item {
+    appearance: none;
+    background: #ffffff;
+    border: 1px solid #000000;
+    box-sizing: border-box;
+    cursor: pointer;
+    display: block;
+    margin: 0;
+    padding: 0;
+}
+
+.lines-designer-preset-item:hover,
+.lines-designer-preset-item:focus {
+    outline: 2px solid #149cff;
+    outline-offset: 1px;
+}
+
+.lines-designer-preset-item-active {
+    outline: 2px solid #000000;
+    outline-offset: 1px;
+}
+
+.lines-designer-preset-preview {
+    display: block;
+    height: 100%;
+    shape-rendering: geometricPrecision;
+    width: 100%;
+}

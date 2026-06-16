@@ -674,7 +674,8 @@
         return appGradientPanel;
     }
 
-    function openBrushEditorOutputsWindow() {
+    function openBrushEditorOutputsWindow(options) {
+        var config = options || {};
         var existingWindow = WindowsManager.getWindowByWindowId("brush-editor-outputs");
         var outputsWidth = 200;
         var outputsHeight = 700;
@@ -688,6 +689,9 @@
 
         if (existingWindow) {
             WindowsManager.bringToFront(existingWindow);
+            if (config.selectFirstIfNone && global.brushEditorOutputs && typeof global.brushEditorOutputs.selectFirstIfNone === "function") {
+                global.brushEditorOutputs.selectFirstIfNone();
+            }
             return existingWindow;
         }
 
@@ -719,6 +723,10 @@
         global.BrushEditorOutputs({
             containerId: outputsWindow.contentId,
             toolbarElement: outputsWindow.toolsRowElement,
+            selectFirstOnReady: !!config.selectFirstIfNone,
+            shouldSelectFirst: function() {
+                return !(global.App && global.App.memory && global.App.memory.currentDesignedBrush);
+            },
             onSizeChange: function(size) {
                 outputsWindow.scaleToContent(outputsWindow.contentElement.clientWidth, size.height);
             },
@@ -982,7 +990,7 @@
     function openLinesDesignerWindow() {
         var existingWindow = WindowsManager.getWindowByWindowId("lines-designer");
         var panelWidth = 310;
-        var panelHeight = 352;
+        var panelHeight = 469;
         var windowFrameWidth = 16;
         var windowFrameHeight = 36;
         var designerWindow;

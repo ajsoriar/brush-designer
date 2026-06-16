@@ -10,6 +10,8 @@ import defaultBrushesUrl from "./default-brushes.json?url";
         containerId: null,
         toolbarElement: null,
         defaultBrushesUrl: defaultBrushesUrl,
+        selectFirstOnReady: false,
+        shouldSelectFirst: null,
         onCreateBrush: null,
         onSelect: null,
         onSizeChange: null
@@ -63,6 +65,9 @@ import defaultBrushesUrl from "./default-brushes.json?url";
                     width: getWidth(outputs),
                     height: getHeight(outputs)
                 };
+            },
+            selectFirstIfNone: function() {
+                return selectFirstIfNone(outputs, config);
             },
             destroy: function() {
                 destroy(outputs);
@@ -154,6 +159,9 @@ import defaultBrushesUrl from "./default-brushes.json?url";
                 getBrushesFromData(data).forEach(function(brush) {
                     addImage(outputs, typeof brush === "string" ? brush : brush.src, outputs.defaultElement, config);
                 });
+                if (config.selectFirstOnReady) {
+                    selectFirstIfNone(outputs, config);
+                }
                 notifySizeChange(outputs, config);
             })
             .catch(function() {
@@ -204,6 +212,34 @@ import defaultBrushesUrl from "./default-brushes.json?url";
         if (typeof config.onSelect === "function") {
             config.onSelect(image, item, outputs);
         }
+    }
+
+    function selectFirstIfNone(outputs, config) {
+        var item;
+        var image;
+
+        if (!outputs || getSelectedItems(outputs).length > 0) {
+            return false;
+        }
+
+        if (typeof config.shouldSelectFirst === "function" && !config.shouldSelectFirst(outputs)) {
+            return false;
+        }
+
+        item = outputs.defaultElement.querySelector("li") || outputs.element.querySelector("li");
+
+        if (!item) {
+            return false;
+        }
+
+        image = item.querySelector("img");
+
+        if (!image) {
+            return false;
+        }
+
+        selectOutput(outputs, config, item, image);
+        return true;
     }
 
     function getSelectedItems(outputs) {

@@ -143,9 +143,13 @@
         var clearPreviewOnPaintToolChange = function(event) {
             var mode = event.detail && event.detail.mode;
 
-            if (mode !== PAINT_TOOL_MODES.OLD_BRUSH) {
-                clearRetroBrushPreview(board);
+            if (!isBrushHoverPreviewToolMode(mode)) {
+                clearBrushHoverPreview(board);
             }
+        };
+        var clearHoverGuideOnBlur = function() {
+            board.hoverGuideControlActive = false;
+            clearHoverGuide(board);
         };
         var stopPainting = function(event) {
             if (isPainting && isStraightLineToolMode() && board.pointerStartPosition) {
@@ -160,8 +164,8 @@
                 paintGradientPointerEvent(board, event);
             }
 
-            if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH && isPointerInsideCanvas(board, event)) {
-                updateRetroBrushPreview(board, event);
+            if (isBrushHoverPreviewToolMode() && isPointerInsideCanvas(board, event)) {
+                updateBrushHoverPreview(board, event);
             } else {
                 clearTempSquare(board);
             }
@@ -187,15 +191,17 @@
             isPainting = true;
             rememberPreviewInput(board, event);
             startTempPreview(board, event);
-            updateRetroBrushPreview(board, event);
+            updateBrushHoverPreview(board, event);
             startPointerAction(board, event);
         };
         var continuePainting = function(event) {
+            updateHoverGuideFromPointer(board, event);
+
             if (!isActivePaintInput(event, activePointerId)) {
                 return;
             }
 
-            updateRetroBrushPreview(board, event);
+            updateBrushHoverPreview(board, event);
 
             if (!isPainting) {
                 return;
@@ -206,6 +212,12 @@
             continuePointerAction(board, event);
         };
         var updatePreviewModifier = function(event) {
+            if (isSpacePanKey(event) && event.type !== "keyup") {
+                clearBrushHoverPreview(board);
+            }
+
+            updateHoverGuideFromKey(board, event);
+
             if (!event || (event.key !== "Shift" && event.key !== "Alt")) {
                 return;
             }
@@ -232,6 +244,10 @@
             activePointerId = null;
         };
         var leaveCanvas = function() {
+            board.hoverGuidePointerPosition = null;
+            board.hoverGuideControlActive = false;
+            clearHoverGuide(board);
+
             if (isShapeToolMode()) {
                 return;
             }
@@ -242,7 +258,7 @@
             activePointerId = null;
             board.previewPointerPosition = null;
             board.previewModifierState = null;
-            clearRetroBrushPreview(board);
+            clearBrushHoverPreview(board);
         };
 
         element.id = boardId;
@@ -301,6 +317,8 @@
             lastPointerPosition: null,
             previewPointerPosition: null,
             previewModifierState: null,
+            hoverGuidePointerPosition: null,
+            hoverGuideControlActive: false,
             designedBrush2Stroke: null,
             pointerStartPosition: null,
             undoSnapshot: null,
@@ -337,7 +355,8 @@
                     continuePainting: continuePainting,
                     endPainting: endPainting,
                     leaveCanvas: leaveCanvas,
-                    updatePreviewModifier: updatePreviewModifier
+                    updatePreviewModifier: updatePreviewModifier,
+                    clearHoverGuideOnBlur: clearHoverGuideOnBlur
                 }, clearPreviewOnPaintToolChange);
             }
         };
@@ -358,6 +377,7 @@
 
             document.addEventListener("keydown", updatePreviewModifier);
             document.addEventListener("keyup", updatePreviewModifier);
+            global.addEventListener("blur", clearHoverGuideOnBlur);
             global.addEventListener("paint-tools-change", clearPreviewOnPaintToolChange);
         }
 
@@ -639,6 +659,52 @@
         };
     }
 
+    function updateHoverGuideFromPointer(board, event) {
+        var point;
+
+        if (!board || !event) {
+            return;
+        }
+
+        point = getCanvasPointerPosition(board, event);
+
+        if (!point) {
+            board.hoverGuidePointerPosition = null;
+            clearHoverGuide(board);
+            return;
+        }
+
+        board.hoverGuidePointerPosition = point;
+        board.hoverGuideControlActive = !!event.ctrlKey;
+        updateHoverGuide(board);
+    }
+
+    function updateHoverGuideFromKey(board, event) {
+        if (!board || !event || event.key !== "Control") {
+            return;
+        }
+
+        board.hoverGuideControlActive = event.type !== "keyup";
+        updateHoverGuide(board);
+    }
+
+    function updateHoverGuide(board) {
+        if (!board || !board.rules || !board.hoverGuideControlActive || !board.hoverGuidePointerPosition) {
+            clearHoverGuide(board);
+            return;
+        }
+
+        if (typeof board.rules.setPointerGuide === "function") {
+            board.rules.setPointerGuide(board.hoverGuidePointerPosition);
+        }
+    }
+
+    function clearHoverGuide(board) {
+        if (board && board.rules && typeof board.rules.clearPointerGuide === "function") {
+            board.rules.clearPointerGuide();
+        }
+    }
+
     function isPointerInsideCanvas(board, event) {
         var rect;
 
@@ -867,11 +933,17 @@
         global.PaintBoardTempLayer.updateLine(board.tempLayerElement, toPoint);
     }
 
-    function updateRetroBrushPreview(board, event) {
+    function updateBrushHoverPreview(board, event) {
         var point;
-        var brush;
+        var radius;
+        var size;
 
-        if (currentPaintToolMode !== PAINT_TOOL_MODES.OLD_BRUSH) {
+        if (isSpacePanModeActive() || isSpacePanKey(event)) {
+            clearBrushHoverPreview(board);
+            return;
+        }
+
+        if (!isBrushHoverPreviewToolMode()) {
             return;
         }
 
@@ -882,16 +954,80 @@
         point = getCanvasPointerPosition(board, event);
 
         if (!point) {
-            clearRetroBrushPreview(board);
+            clearBrushHoverPreview(board);
             return;
         }
 
-        brush = getCurrentRetroBrush();
-        global.PaintBoardTempLayer.showCircle(board.tempLayerElement, point, Math.max(1, brush.size / 2));
+        if (isSquareBrushHoverPreviewToolMode()) {
+            if (!global.PaintBoardTempLayer.showSquare) {
+                return;
+            }
+
+            size = getCurrentHoverBrushSize(board);
+            global.PaintBoardTempLayer.showSquare(board.tempLayerElement, point, size);
+            return;
+        }
+
+        radius = getCurrentHoverBrushSize(board) / 2;
+        global.PaintBoardTempLayer.showCircle(board.tempLayerElement, point, radius);
     }
 
-    function clearRetroBrushPreview(board) {
+    function clearBrushHoverPreview(board) {
         clearTempSquare(board);
+    }
+
+    function isBrushHoverPreviewToolMode(mode) {
+        var toolMode = mode || currentPaintToolMode;
+
+        return toolMode === PAINT_TOOL_MODES.OLD_BRUSH ||
+            toolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH ||
+            toolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2 ||
+            toolMode === PAINT_TOOL_MODES.SQUARED_POINTS ||
+            toolMode === PAINT_TOOL_MODES.ROUND_POINTS ||
+            toolMode === PAINT_TOOL_MODES.SQUARED_LINES ||
+            toolMode === PAINT_TOOL_MODES.ROUND_LINES;
+    }
+
+    function isSquareBrushHoverPreviewToolMode(mode) {
+        var toolMode = mode || currentPaintToolMode;
+
+        return toolMode === PAINT_TOOL_MODES.SQUARED_POINTS ||
+            toolMode === PAINT_TOOL_MODES.SQUARED_LINES;
+    }
+
+    function getCurrentHoverBrushSize(board) {
+        var brush = null;
+        var width;
+        var height;
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH) {
+            return Math.max(2, getCurrentRetroBrush().size);
+        }
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH) {
+            brush = getCurrentDesignedBrush();
+        }
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2) {
+            brush = getCurrentDesignedBrush2();
+        }
+
+        if (!brush) {
+            return Math.max(2, getCurrentBrushSize(board));
+        }
+
+        width = brush.naturalWidth || brush.width || getCurrentBrushSize(board);
+        height = brush.naturalHeight || brush.height || width;
+
+        return Math.max(2, Math.max(width, height));
+    }
+
+    function isSpacePanModeActive() {
+        return !!(document.body && document.body.className.indexOf("paint-board-pan-mode") !== -1);
+    }
+
+    function isSpacePanKey(event) {
+        return !!(event && (event.key === " " || event.key === "Spacebar" || event.code === "Space"));
     }
 
     function startPointerAction(board, event) {
@@ -1305,7 +1441,7 @@
 
         board.context.save();
         board.context.beginPath();
-        board.context.strokeStyle = getCurrentPaintColor(board);
+        board.context.strokeStyle = lineDesign && lineDesign.color ? lineDesign.color : getCurrentPaintColor(board);
         board.context.lineWidth = size;
         board.context.lineCap = lineDesign ? lineDesign.cap : lineCap;
         board.context.lineJoin = lineDesign ? lineDesign.corner : lineJoin;
@@ -1321,7 +1457,7 @@
         var points = getHardLinePoints(fromPoint, toPoint);
         var width = Math.max(1, Math.round(size));
         var half = Math.floor(width / 2);
-        var color = getCurrentPaintColor(board);
+        var color = lineDesign && lineDesign.color ? lineDesign.color : getCurrentPaintColor(board);
         var dashState = createHardLineDashState(lineDesign);
 
         board.context.save();
@@ -2575,6 +2711,10 @@
         if (paintHandlers && paintHandlers.updatePreviewModifier) {
             document.removeEventListener("keydown", paintHandlers.updatePreviewModifier);
             document.removeEventListener("keyup", paintHandlers.updatePreviewModifier);
+        }
+
+        if (paintHandlers && paintHandlers.clearHoverGuideOnBlur) {
+            global.removeEventListener("blur", paintHandlers.clearHoverGuideOnBlur);
         }
 
         global.removeEventListener("paint-tools-change", clearPreviewOnPaintToolChange);

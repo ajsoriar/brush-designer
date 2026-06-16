@@ -61,6 +61,13 @@
     position: absolute;
 }
 
+.paint-board-temp-square {
+    border: 2px solid rgba(255, 0, 0, 0.5);
+    box-sizing: border-box;
+    display: block;
+    position: absolute;
+}
+
 .paint-board-canvas {
     display: block;
     height: 100%;

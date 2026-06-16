@@ -128,6 +128,27 @@
         tempLayer.appendChild(circle);
     }
 
+    function showSquare(tempLayer, point, size) {
+        var square;
+        var squareSize;
+
+        if (!tempLayer || !point) {
+            return;
+        }
+
+        squareSize = Math.max(1, Math.round(size));
+        square = document.createElement("div");
+        square.className = "paint-board-temp-square";
+        square.style.left = Math.round(point.x - (squareSize / 2)) + "px";
+        square.style.top = Math.round(point.y - (squareSize / 2)) + "px";
+        square.style.width = squareSize + "px";
+        square.style.height = squareSize + "px";
+
+        tempLayer.tempShape = null;
+        tempLayer.innerHTML = "";
+        tempLayer.appendChild(square);
+    }
+
     function renderSquare(tempLayer, point) {
         renderShape(tempLayer, point, {
             oval: false
@@ -260,6 +281,7 @@
         startLine: startLine,
         updateLine: updateLine,
         showCircle: showCircle,
+        showSquare: showSquare,
         clear: clear
     };
 

@@ -1,3 +1,5 @@
+import linePresets from "./linePresets.json";
+
 (function(global) {
 
     "use strict";
@@ -6,7 +8,7 @@
         id: null,
         containerId: null,
         width: 310,
-        height: 352,
+        height: 469,
         current: {
             weight: 1,
             unit: "px",
@@ -21,7 +23,8 @@
             arrowEnd: "none",
             startScale: 100,
             endScale: 100,
-            arrowLinked: false
+            arrowLinked: false,
+            color: null
         },
         onChange: null,
         onGenerate: null
@@ -87,12 +90,15 @@
         element.appendChild(createRule());
         element.appendChild(createDashSection(componentId, controls));
         element.appendChild(createArrowSection(componentId, controls));
+        element.appendChild(createRule());
+        element.appendChild(createPresetSection(componentId, controls));
 
         container.appendChild(element);
 
         component = {
             id: componentId,
             element: element,
+            options: config,
             controls: controls,
             current: config.current,
             getWidth: function() {
@@ -113,6 +119,7 @@
         };
 
         bindControls(component, controls, config);
+        renderPresets(component, controls);
         syncControls(component, controls);
         renderPreview(component);
 
@@ -364,6 +371,36 @@
         return section;
     }
 
+    function createPresetSection(componentId, controls) {
+        var section = document.createElement("div");
+        var select = document.createElement("select");
+        var grid = document.createElement("div");
+
+        section.className = "lines-designer-preset-section";
+        select.id = componentId + "-preset-category";
+        select.className = "lines-designer-select lines-designer-preset-category";
+        linePresets.categories.forEach(function(category) {
+            var option = document.createElement("option");
+
+            option.value = category.id;
+            option.textContent = category.label;
+            select.appendChild(option);
+        });
+
+        grid.className = "lines-designer-preset-grid";
+        grid.style.gridTemplateColumns = repeatGridTrack(linePresets.columns, linePresets.cellSize);
+        grid.style.gap = linePresets.gap + "px";
+        grid.style.padding = linePresets.padding + "px";
+
+        controls.presetCategory = select;
+        controls.presetGrid = grid;
+        controls.presetButtons = [];
+
+        section.appendChild(select);
+        section.appendChild(grid);
+        return section;
+    }
+
     function createArrowSelect(id) {
         var select = document.createElement("select");
 
@@ -513,6 +550,11 @@
         controls.arrowLinked.addEventListener("click", function() {
             setCurrent(component, { arrowLinked: !component.current.arrowLinked }, config);
         });
+
+        controls.presetCategory.addEventListener("change", function() {
+            renderPresets(component, controls);
+            syncControls(component, controls);
+        });
     }
 
     function bindButtonGroup(component, controls, config, key) {
@@ -527,6 +569,8 @@
     }
 
     function readControls(component, controls, config) {
+        component.activePresetId = null;
+
         var next = {
             weight: controls.weight.value,
             unit: controls.unit.value,
@@ -540,7 +584,8 @@
             arrowEnd: controls.arrowEnd.value,
             startScale: controls.startScale.value,
             endScale: controls.arrowLinked.classList.contains("lines-designer-link-active") ? controls.startScale.value : controls.endScale.value,
-            arrowLinked: controls.arrowLinked.classList.contains("lines-designer-link-active")
+            arrowLinked: controls.arrowLinked.classList.contains("lines-designer-link-active"),
+            color: component.current.color
         };
 
         setCurrent(component, next, config);
@@ -553,6 +598,10 @@
 
         if (global.App && global.App.memory) {
             global.App.memory.currentLineDesign = component.getLine();
+        }
+
+        if (component.current.color && global.AppOpenWindows && typeof global.AppOpenWindows.setActiveColor === "function") {
+            global.AppOpenWindows.setActiveColor(component.current.color);
         }
 
         if (typeof config.onChange === "function") {
@@ -582,6 +631,7 @@
         syncButtonGroup(controls.cap, current.cap);
         syncButtonGroup(controls.corner, current.corner);
         syncButtonGroup(controls.align, current.align);
+        syncPresetButtons(component, controls);
     }
 
     function syncButtonGroup(buttons, value) {
@@ -598,15 +648,111 @@
         var current = component.current;
         var weight = Math.max(1, current.weight);
         var dash = current.dashed ? current.dashes.join(" ") : "";
+        var color = getPreviewColor(current);
 
         component.controls.preview.path.setAttribute("stroke-width", weight);
         component.controls.preview.path.setAttribute("stroke-linecap", current.cap);
         component.controls.preview.path.setAttribute("stroke-linejoin", current.corner);
         component.controls.preview.path.setAttribute("stroke-miterlimit", current.limit);
         component.controls.preview.path.setAttribute("stroke-dasharray", dash);
+        component.controls.preview.path.setAttribute("stroke", color);
+        component.controls.preview.start.setAttribute("fill", color);
+        component.controls.preview.start.setAttribute("stroke", color);
+        component.controls.preview.end.setAttribute("fill", color);
+        component.controls.preview.end.setAttribute("stroke", color);
         component.controls.preview.svg.style.shapeRendering = current.antialiasing ? "auto" : "crispEdges";
         component.controls.preview.start.setAttribute("d", getArrowPath(current.arrowStart, 38, 32, -1, current.startScale));
         component.controls.preview.end.setAttribute("d", getArrowPath(current.arrowEnd, 242, 32, 1, current.endScale));
+    }
+
+    function renderPresets(component, controls) {
+        var category = getPresetCategory(controls.presetCategory.value) || linePresets.categories[0];
+
+        controls.presetGrid.innerHTML = "";
+        controls.presetButtons = [];
+
+        category.presets.forEach(function(preset) {
+            var button = document.createElement("button");
+
+            button.type = "button";
+            button.className = "lines-designer-preset-item";
+            button.title = preset.label;
+            button.style.width = linePresets.cellSize + "px";
+            button.style.height = linePresets.cellSize + "px";
+            button.setAttribute("data-preset-id", preset.id);
+            button.appendChild(createPresetPreview(preset));
+            button.addEventListener("click", function() {
+                var next = extend({}, preset.line);
+
+                component.activePresetId = preset.id;
+                if (!next.color) {
+                    next.color = null;
+                }
+
+                setCurrent(component, next, component.options);
+            });
+
+            controls.presetButtons.push(button);
+            controls.presetGrid.appendChild(button);
+        });
+    }
+
+    function createPresetPreview(preset) {
+        var current = normalizeCurrent(extend(extend({}, DEFAULTS.current), preset.line || {}));
+        var svg = createSvg("svg");
+        var line = createSvg("path");
+        var start = createSvg("path");
+        var end = createSvg("path");
+        var color = getPreviewColor(current);
+
+        svg.setAttribute("viewBox", "0 0 32 32");
+        svg.classList.add("lines-designer-preset-preview");
+        line.setAttribute("d", "M6 16 L26 16");
+        line.setAttribute("fill", "none");
+        line.setAttribute("stroke", color);
+        line.setAttribute("stroke-width", Math.max(1, Math.min(current.weight, 10)));
+        line.setAttribute("stroke-linecap", current.cap);
+        line.setAttribute("stroke-linejoin", current.corner);
+        line.setAttribute("stroke-dasharray", current.dashed ? current.dashes.join(" ") : "");
+        start.setAttribute("d", getArrowPath(current.arrowStart, 6, 16, -1, Math.min(current.startScale, 140)));
+        start.setAttribute("fill", color);
+        start.setAttribute("stroke", color);
+        start.setAttribute("stroke-width", "1.5");
+        end.setAttribute("d", getArrowPath(current.arrowEnd, 26, 16, 1, Math.min(current.endScale, 140)));
+        end.setAttribute("fill", color);
+        end.setAttribute("stroke", color);
+        end.setAttribute("stroke-width", "1.5");
+
+        svg.appendChild(line);
+        svg.appendChild(start);
+        svg.appendChild(end);
+        return svg;
+    }
+
+    function syncPresetButtons(component, controls) {
+        controls.presetButtons.forEach(function(button) {
+            if (button.getAttribute("data-preset-id") === component.activePresetId) {
+                button.className = "lines-designer-preset-item lines-designer-preset-item-active";
+            } else {
+                button.className = "lines-designer-preset-item";
+            }
+        });
+    }
+
+    function getPresetCategory(categoryId) {
+        var i;
+
+        for (i = 0; i < linePresets.categories.length; i++) {
+            if (linePresets.categories[i].id === categoryId) {
+                return linePresets.categories[i];
+            }
+        }
+
+        return null;
+    }
+
+    function getPreviewColor(current) {
+        return current.color || (global.App && global.App.memory && global.App.memory.currentColor) || "#111111";
     }
 
     function getArrowPath(type, x, y, direction, scale) {
@@ -643,7 +789,8 @@
             arrowEnd: normalizeArrow(current.arrowEnd),
             startScale: Math.round(clamp(parseFloat(current.startScale), 10, 300, DEFAULTS.current.startScale)),
             endScale: Math.round(clamp(parseFloat(current.endScale), 10, 300, DEFAULTS.current.endScale)),
-            arrowLinked: !!current.arrowLinked
+            arrowLinked: !!current.arrowLinked,
+            color: normalizeColor(current.color)
         };
     }
 
@@ -677,6 +824,25 @@
         }
 
         return Math.max(min, Math.min(value, max));
+    }
+
+    function normalizeColor(value) {
+        if (typeof value !== "string") {
+            return null;
+        }
+
+        return /^#[0-9a-f]{6}$/i.test(value) ? value : null;
+    }
+
+    function repeatGridTrack(count, size) {
+        var tracks = [];
+        var i;
+
+        for (i = 0; i < count; i++) {
+            tracks.push(size + "px");
+        }
+
+        return tracks.join(" ");
     }
 
     function destroy(component) {

@@ -108,7 +108,9 @@
         syncBrushWidthPickerToPaintTool(mode);
 
         if (mode === "DESIGNED-BRUSH") {
-            global.AppOpenWindows.openBrushEditorOutputsWindow();
+            global.AppOpenWindows.openBrushEditorOutputsWindow({
+                selectFirstIfNone: true
+            });
         }
 
         if (mode === "DESIGNED-BRUSH-2") {

@@ -50,6 +50,8 @@
         var corner = document.createElement("div");
         var topRule = document.createElement("div");
         var leftRule = document.createElement("div");
+        var guideX = document.createElement("div");
+        var guideY = document.createElement("div");
         var component;
 
         element.id = id;
@@ -59,10 +61,14 @@
         corner.className = "board-rules-corner";
         topRule.className = "board-rules-rule board-rules-rule-horizontal";
         leftRule.className = "board-rules-rule board-rules-rule-vertical";
+        guideX.className = "board-rules-pointer-guide board-rules-pointer-guide-x";
+        guideY.className = "board-rules-pointer-guide board-rules-pointer-guide-y";
 
         element.appendChild(corner);
         element.appendChild(topRule);
         element.appendChild(leftRule);
+        element.appendChild(guideX);
+        element.appendChild(guideY);
         container.appendChild(element);
 
         component = {
@@ -72,6 +78,8 @@
             cornerElement: corner,
             topRuleElement: topRule,
             leftRuleElement: leftRule,
+            guideXElement: guideX,
+            guideYElement: guideY,
             ruleSize: config.ruleSize,
             units: normalizeUnits(config.units),
             zoom: config.zoom,
@@ -79,6 +87,7 @@
             width: config.width,
             height: config.height,
             boardElement: null,
+            pointerGuidePoint: null,
             setBoardElement: function(boardElement) {
                 setBoardElement(component, boardElement);
             },
@@ -93,6 +102,12 @@
             },
             setZoom: function(zoom) {
                 setZoom(component, zoom);
+            },
+            setPointerGuide: function(point) {
+                setPointerGuide(component, point);
+            },
+            clearPointerGuide: function() {
+                clearPointerGuide(component);
             },
             update: function() {
                 update(component);
@@ -191,6 +206,7 @@
 
         renderHorizontalRule(component, boardOffset.x - ruleSize, Math.max(0, viewportWidth - ruleSize));
         renderVerticalRule(component, boardOffset.y - ruleSize, Math.max(0, viewportHeight - ruleSize));
+        updatePointerGuide(component, boardOffset, viewportWidth, viewportHeight);
     }
 
     function getBoardOffset(component) {
@@ -308,6 +324,56 @@
         }
 
         return String(Math.round(value * 10) / 10);
+    }
+
+    function setPointerGuide(component, point) {
+        if (!point) {
+            clearPointerGuide(component);
+            return;
+        }
+
+        component.pointerGuidePoint = {
+            x: point.x,
+            y: point.y
+        };
+        update(component);
+    }
+
+    function clearPointerGuide(component) {
+        component.pointerGuidePoint = null;
+        updatePointerGuide(component);
+    }
+
+    function updatePointerGuide(component, boardOffset, viewportWidth, viewportHeight) {
+        var point = component.pointerGuidePoint;
+        var x;
+        var y;
+
+        if (!component.guideXElement || !component.guideYElement) {
+            return;
+        }
+
+        if (!point) {
+            component.guideXElement.style.display = "none";
+            component.guideYElement.style.display = "none";
+            return;
+        }
+
+        boardOffset = boardOffset || getBoardOffset(component);
+        viewportWidth = viewportWidth || component.container.clientWidth || 0;
+        viewportHeight = viewportHeight || component.container.clientHeight || 0;
+        x = Math.round(boardOffset.x + (point.x * component.zoom));
+        y = Math.round(boardOffset.y + (point.y * component.zoom));
+
+        component.guideXElement.style.display = "block";
+        component.guideXElement.style.left = component.ruleSize + "px";
+        component.guideXElement.style.top = y + "px";
+        component.guideXElement.style.width = Math.max(0, viewportWidth - component.ruleSize) + "px";
+
+        component.guideYElement.style.display = "block";
+        component.guideYElement.style.left = x + "px";
+        component.guideYElement.style.top = component.ruleSize + "px";
+        component.guideYElement.style.height = Math.max(0, viewportHeight - component.ruleSize) + "px";
     }
 
     global.BoardRules = BoardRules;
