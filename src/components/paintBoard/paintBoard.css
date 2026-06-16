@@ -46,6 +46,17 @@
     pointer-events: none;
 }
 
+.paint-board-temp-line-svg {
+    display: block;
+    height: 100%;
+    left: 0;
+    overflow: visible;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    width: 100%;
+}
+
 .paint-board-temp-oval {
     border-radius: 50%;
     box-sizing: border-box;

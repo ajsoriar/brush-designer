@@ -149,6 +149,7 @@
         };
         var clearHoverGuideOnBlur = function() {
             board.hoverGuideControlActive = false;
+            board.axisLockMode = null;
             clearHoverGuide(board);
         };
         var stopPainting = function(event) {
@@ -183,6 +184,8 @@
                 return;
             }
 
+            updateHoverGuideFromPointer(board, event, true);
+
             if (supportsPointerEvents) {
                 activePointerId = event.pointerId;
                 capturePointer(canvas, event.pointerId);
@@ -195,7 +198,7 @@
             startPointerAction(board, event);
         };
         var continuePainting = function(event) {
-            updateHoverGuideFromPointer(board, event);
+            updateHoverGuideFromPointer(board, event, true);
 
             if (!isActivePaintInput(event, activePointerId)) {
                 return;
@@ -211,16 +214,26 @@
             updateTempPreview(board, event);
             continuePointerAction(board, event);
         };
+        var rememberHoverGuidePointer = function(event) {
+            updateHoverGuideFromPointer(board, event, false);
+        };
         var updatePreviewModifier = function(event) {
+            var isPreviewModifier;
+
             if (isSpacePanKey(event) && event.type !== "keyup") {
                 clearBrushHoverPreview(board);
             }
 
             updateHoverGuideFromKey(board, event);
 
-            if (!event || (event.key !== "Shift" && event.key !== "Alt")) {
+            isPreviewModifier = event &&
+                (event.key === "Shift" || event.key === "Alt" || isAxisLockKey(event));
+
+            if (!isPreviewModifier) {
                 return;
             }
+
+            updateAxisLockState(board, event);
 
             if (!isPainting) {
                 return;
@@ -317,6 +330,7 @@
             lastPointerPosition: null,
             previewPointerPosition: null,
             previewModifierState: null,
+            axisLockMode: null,
             hoverGuidePointerPosition: null,
             hoverGuideControlActive: false,
             designedBrush2Stroke: null,
@@ -353,6 +367,7 @@
                     supportsPointerEvents: supportsPointerEvents,
                     startPainting: startPainting,
                     continuePainting: continuePainting,
+                    rememberHoverGuidePointer: rememberHoverGuidePointer,
                     endPainting: endPainting,
                     leaveCanvas: leaveCanvas,
                     updatePreviewModifier: updatePreviewModifier,
@@ -364,12 +379,14 @@
         if (config.paintOnPointer) {
             if (supportsPointerEvents) {
                 canvas.addEventListener("pointerdown", startPainting);
+                canvas.addEventListener("pointerenter", rememberHoverGuidePointer);
                 canvas.addEventListener("pointermove", continuePainting);
                 document.addEventListener("pointerup", endPainting, true);
                 document.addEventListener("pointercancel", endPainting, true);
                 canvas.addEventListener("pointerleave", leaveCanvas);
             } else {
                 canvas.addEventListener("mousedown", startPainting);
+                canvas.addEventListener("mouseenter", rememberHoverGuidePointer);
                 canvas.addEventListener("mousemove", continuePainting);
                 document.addEventListener("mouseup", endPainting, true);
                 canvas.addEventListener("mouseleave", leaveCanvas);
@@ -551,7 +568,7 @@
     }
 
     function getPointerPosition(board, event) {
-        return getClampedPointerPosition(board, event);
+        return applyAxisLock(board, getClampedPointerPosition(board, event));
     }
 
     function getClampedPointerPosition(board, event) {
@@ -599,6 +616,10 @@
         return getPointerPosition(board, event);
     }
 
+    function getPaintPointerPosition(board, event) {
+        return applyAxisLock(board, getCanvasPointerPosition(board, event));
+    }
+
     function rememberPreviewInput(board, event, preserveModifiers) {
         var point;
 
@@ -607,7 +628,7 @@
         }
 
         if (typeof event.clientX === "number" && typeof event.clientY === "number") {
-            point = getCanvasPointerPosition(board, event);
+            point = getPaintPointerPosition(board, event);
 
             if (point) {
                 board.previewPointerPosition = point;
@@ -659,7 +680,66 @@
         };
     }
 
-    function updateHoverGuideFromPointer(board, event) {
+    function applyAxisLock(board, point) {
+        var anchor;
+
+        if (!board || !point || !board.axisLockMode) {
+            return point;
+        }
+
+        anchor = getAxisLockAnchor(board);
+
+        if (!anchor) {
+            return point;
+        }
+
+        if (board.axisLockMode === "x") {
+            return {
+                x: point.x,
+                y: clamp(anchor.y, 0, board.canvas.height)
+            };
+        }
+
+        if (board.axisLockMode === "y") {
+            return {
+                x: clamp(anchor.x, 0, board.canvas.width),
+                y: point.y
+            };
+        }
+
+        return point;
+    }
+
+    function getAxisLockAnchor(board) {
+        return board.pointerStartPosition || board.lastPointerPosition || null;
+    }
+
+    function updateAxisLockState(board, event) {
+        var key;
+
+        if (!board || !event || !isAxisLockKey(event)) {
+            return;
+        }
+
+        key = String(event.key || "").toLowerCase();
+
+        if (event.type === "keyup") {
+            if (board.axisLockMode === key) {
+                board.axisLockMode = null;
+            }
+            return;
+        }
+
+        board.axisLockMode = key;
+    }
+
+    function isAxisLockKey(event) {
+        var key = event && String(event.key || "").toLowerCase();
+
+        return key === "x" || key === "y";
+    }
+
+    function updateHoverGuideFromPointer(board, event, syncControlState) {
         var point;
 
         if (!board || !event) {
@@ -675,7 +755,9 @@
         }
 
         board.hoverGuidePointerPosition = point;
-        board.hoverGuideControlActive = !!event.ctrlKey;
+        if (syncControlState) {
+            board.hoverGuideControlActive = !!event.ctrlKey;
+        }
         updateHoverGuide(board);
     }
 
@@ -910,7 +992,7 @@
             return;
         }
 
-        global.PaintBoardTempLayer.startLine(board.tempLayerElement, getPointerPosition(board, event));
+        global.PaintBoardTempLayer.startLine(board.tempLayerElement, getPointerPosition(board, event), getStraightLinePreviewOptions(board));
     }
 
     function updateStraightLinePreview(board, event) {
@@ -930,7 +1012,22 @@
         }
 
         toPoint = getGradientEndPoint(fromPoint, rawPoint, event);
-        global.PaintBoardTempLayer.updateLine(board.tempLayerElement, toPoint);
+        global.PaintBoardTempLayer.updateLine(board.tempLayerElement, toPoint, getStraightLinePreviewOptions(board));
+    }
+
+    function getStraightLinePreviewOptions(board) {
+        var lineDesign = getCurrentStoredLineDesign();
+        var designWeight = lineDesign ? Number(lineDesign.weight) : NaN;
+
+        return {
+            styled: true,
+            weight: isNaN(designWeight) ? Math.max(1, getCurrentBrushSize(board)) : Math.max(1, designWeight),
+            color: lineDesign && lineDesign.color ? lineDesign.color : getCurrentPreviewPaintColor(board),
+            cap: lineDesign && lineDesign.cap ? lineDesign.cap : "butt",
+            dashes: lineDesign && lineDesign.dashed && Array.isArray(lineDesign.dashes) ? lineDesign.dashes : null,
+            antialiasing: lineDesign ? lineDesign.antialiasing : true,
+            opacity: 0.8
+        };
     }
 
     function updateBrushHoverPreview(board, event) {
@@ -1104,7 +1201,7 @@
     }
 
     function paintPointerEvent(board, event) {
-        var point = getCanvasPointerPosition(board, event);
+        var point = getPaintPointerPosition(board, event);
 
         event.preventDefault();
 
@@ -2556,6 +2653,14 @@
         return board.paintColor;
     }
 
+    function getCurrentPreviewPaintColor(board) {
+        if (global.App && global.App.memory && global.App.memory.currentColor) {
+            return global.App.memory.currentColor;
+        }
+
+        return board.paintColor;
+    }
+
     function getCrazyPaintColor(board) {
         var algorithm;
         var colorPickerApi;
@@ -2769,12 +2874,14 @@
     function destroy(board, paintHandlers, clearPreviewOnPaintToolChange) {
         if (paintHandlers && paintHandlers.supportsPointerEvents) {
             board.canvas.removeEventListener("pointerdown", paintHandlers.startPainting);
+            board.canvas.removeEventListener("pointerenter", paintHandlers.rememberHoverGuidePointer);
             board.canvas.removeEventListener("pointermove", paintHandlers.continuePainting);
             document.removeEventListener("pointerup", paintHandlers.endPainting, true);
             document.removeEventListener("pointercancel", paintHandlers.endPainting, true);
             board.canvas.removeEventListener("pointerleave", paintHandlers.leaveCanvas);
         } else if (paintHandlers) {
             board.canvas.removeEventListener("mousedown", paintHandlers.startPainting);
+            board.canvas.removeEventListener("mouseenter", paintHandlers.rememberHoverGuidePointer);
             board.canvas.removeEventListener("mousemove", paintHandlers.continuePainting);
             document.removeEventListener("mouseup", paintHandlers.endPainting, true);
             board.canvas.removeEventListener("mouseleave", paintHandlers.leaveCanvas);
