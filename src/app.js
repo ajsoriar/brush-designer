@@ -12,6 +12,8 @@
     global.App.memory.currentBrushAntialiasing = global.App.memory.currentBrushAntialiasing || false;
     global.App.memory.rainbowCrazyMode = global.App.memory.rainbowCrazyMode || false;
     global.App.memory.rainbowCrazyAlgorithm = global.App.memory.rainbowCrazyAlgorithm || "random";
+    global.App.memory.rainbowCrazyJump = !!global.App.memory.rainbowCrazyJump;
+    global.App.memory.rainbowCrazyLoop = !!global.App.memory.rainbowCrazyLoop;
     global.App.memory.currentLineDesign = global.App.memory.currentLineDesign || {
         weight: global.App.memory.currentLineWidth,
         unit: "px",
@@ -74,6 +76,8 @@
         global.AppOpenWindows.openPaintToolsWindow();
         updateRainbowCrazyModeButton();
         updateRainbowCrazyAlgorithmRadios();
+        updateRainbowCrazyJumpCheckbox();
+        updateRainbowCrazyLoopCheckbox();
         syncBrushWidthPickerToPaintTool(global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : null);
         global.AppOpenWindows.createDemoWindow("paintBoard");
     });
@@ -236,7 +240,21 @@
 
         global.App.memory.rainbowCrazyAlgorithm = algorithm;
         updateRainbowCrazyAlgorithmRadios();
+        updateRainbowCrazyJumpCheckbox();
+        updateRainbowCrazyLoopCheckbox();
         return global.App.memory.rainbowCrazyAlgorithm;
+    }
+
+    function setRainbowCrazyJump(jump) {
+        global.App.memory.rainbowCrazyJump = !!jump;
+        updateRainbowCrazyJumpCheckbox();
+        return global.App.memory.rainbowCrazyJump;
+    }
+
+    function setRainbowCrazyLoop(loop) {
+        global.App.memory.rainbowCrazyLoop = !!loop;
+        updateRainbowCrazyLoopCheckbox();
+        return global.App.memory.rainbowCrazyLoop;
     }
 
     function isRainbowCrazyAlgorithm(algorithm) {
@@ -271,6 +289,30 @@
         for (i = 0; i < radios.length; i++) {
             radios[i].checked = radios[i].value === algorithm;
         }
+    }
+
+    function updateRainbowCrazyJumpCheckbox() {
+        var checkbox = document.getElementById("rainbow-crazy-jump");
+        var algorithm = (global.App && global.App.memory && global.App.memory.rainbowCrazyAlgorithm) || "random";
+
+        if (!checkbox) {
+            return;
+        }
+
+        checkbox.checked = !!(global.App && global.App.memory && global.App.memory.rainbowCrazyJump);
+        checkbox.disabled = algorithm === "random";
+    }
+
+    function updateRainbowCrazyLoopCheckbox() {
+        var checkbox = document.getElementById("rainbow-crazy-loop");
+        var algorithm = (global.App && global.App.memory && global.App.memory.rainbowCrazyAlgorithm) || "random";
+
+        if (!checkbox) {
+            return;
+        }
+
+        checkbox.checked = !!(global.App && global.App.memory && global.App.memory.rainbowCrazyLoop);
+        checkbox.disabled = algorithm === "random";
     }
 
     function undoLastAction() {
@@ -331,6 +373,8 @@
     global.clearBoard = clearBoard;
     global.toggleRainbowCrazyMode = toggleRainbowCrazyMode;
     global.setRainbowCrazyAlgorithm = setRainbowCrazyAlgorithm;
+    global.setRainbowCrazyJump = setRainbowCrazyJump;
+    global.setRainbowCrazyLoop = setRainbowCrazyLoop;
     global.undoLastAction = undoLastAction;
     global.createDemoWindow = global.AppOpenWindows.createDemoWindow;
     global.openBrushDesignerInWindow = global.AppOpenWindows.openBrushDesignerInWindow;
@@ -344,6 +388,7 @@
     global.openSimpleLineWidthPickerWindow = global.AppOpenWindows.openSimpleLineWidthPickerWindow;
     global.openSimpleBrushWidthPickerWindow = global.AppOpenWindows.openSimpleBrushWidthPickerWindow;
     global.openLinesDesignerWindow = global.AppOpenWindows.openLinesDesignerWindow;
+    global.SimpleColorPickerApi = global.AppOpenWindows.getSimpleColorPickerApi();
     global.SimpleLineWidthPickerApi = global.AppOpenWindows.getSimpleLineWidthPickerApi();
     global.SimpleBrushWidthPickerApi = global.AppOpenWindows.getSimpleBrushWidthPickerApi();
     global.LinesDesignerApi = global.AppOpenWindows.getLinesDesignerApi();

@@ -60,7 +60,8 @@
             font-family: monospace;
             font-size: 11px;
             font-weight: bold;
-            gap: 3px;
+            gap: 2px;
+            line-height: 1;
             white-space: nowrap;
         }
 
@@ -69,10 +70,17 @@
         }
     }
 
-    .tools-bar-radio-stack {
+    .tools-bar-crazy-grid {
+        align-items: center;
+        display: grid;
+        gap: 6px;
+        grid-template-columns: auto auto auto;
+    }
+
+    .tools-bar-option-stack {
         display: flex;
         flex-direction: column;
-        gap: 3px;
+        gap: 2px;
     }
 
     .tools-bar-crazy-frame {

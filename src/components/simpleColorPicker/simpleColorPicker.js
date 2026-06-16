@@ -92,6 +92,12 @@
             getActiveColor: function() {
                 return picker.activeColor;
             },
+            getNextColorRight: function(options) {
+                return getNextColorRight(picker, config, options);
+            },
+            getNextColorDown: function(options) {
+                return getNextColorDown(picker, config, options);
+            },
             getWidth: function() {
                 return getWidth(config);
             },
@@ -119,6 +125,153 @@
         setActiveColor(picker, picker.activeColor, config);
 
         return picker;
+    }
+
+    function getNextColorRight(picker, config, options) {
+        var settings = options || {};
+        var index = getActiveColorIndex(picker);
+        var columns = Math.max(1, config.columns);
+        var rowStart;
+        var rowEnd;
+        var nextRowStart;
+        var direction;
+
+        if (!picker.colors.length) {
+            return null;
+        }
+
+        if (index < 0) {
+            return picker.colors[0];
+        }
+
+        rowStart = Math.floor(index / columns) * columns;
+        rowEnd = Math.min(rowStart + columns - 1, picker.colors.length - 1);
+
+        if (settings.loop) {
+            direction = picker.nextColorRightDirection || 1;
+
+            if (direction > 0) {
+                if (index < rowEnd) {
+                    return picker.colors[index + 1];
+                }
+
+                picker.nextColorRightDirection = -1;
+                return picker.colors[Math.max(rowStart, index - 1)];
+            }
+
+            if (index > rowStart) {
+                return picker.colors[index - 1];
+            }
+
+            picker.nextColorRightDirection = 1;
+
+            if (settings.jump) {
+                nextRowStart = rowStart + columns;
+                return picker.colors[nextRowStart < picker.colors.length ? nextRowStart : 0];
+            }
+
+            return picker.colors[Math.min(rowEnd, index + 1)];
+        }
+
+        if (index < rowEnd) {
+            return picker.colors[index + 1];
+        }
+
+        if (settings.jump === false) {
+            return picker.colors[rowStart];
+        }
+
+        nextRowStart = rowStart + columns;
+
+        if (nextRowStart < picker.colors.length) {
+            return picker.colors[nextRowStart];
+        }
+
+        return picker.colors[0];
+    }
+
+    function getNextColorDown(picker, config, options) {
+        var settings = options || {};
+        var index = getActiveColorIndex(picker);
+        var columns = Math.max(1, config.columns);
+        var column;
+        var columnTop;
+        var columnBottom;
+        var direction;
+        var nextIndex;
+        var nextColumn;
+
+        if (!picker.colors.length) {
+            return null;
+        }
+
+        if (index < 0) {
+            return picker.colors[0];
+        }
+
+        column = index % columns;
+        columnTop = column;
+        columnBottom = getColumnBottomIndex(picker, columns, column);
+        nextIndex = index + columns;
+
+        if (settings.loop) {
+            direction = picker.nextColorDownDirection || 1;
+
+            if (direction > 0) {
+                if (nextIndex <= columnBottom) {
+                    return picker.colors[nextIndex];
+                }
+
+                picker.nextColorDownDirection = -1;
+                return picker.colors[Math.max(columnTop, index - columns)];
+            }
+
+            if (index - columns >= columnTop) {
+                return picker.colors[index - columns];
+            }
+
+            picker.nextColorDownDirection = 1;
+
+            if (settings.jump) {
+                nextColumn = (column + 1) % columns;
+                return picker.colors[nextColumn < picker.colors.length ? nextColumn : 0];
+            }
+
+            return picker.colors[Math.min(columnBottom, index + columns)];
+        }
+
+        if (nextIndex < picker.colors.length) {
+            return picker.colors[nextIndex];
+        }
+
+        if (settings.jump) {
+            nextColumn = (column + 1) % columns;
+            return picker.colors[Math.min(nextColumn, picker.colors.length - 1)];
+        }
+
+        return picker.colors[Math.min(column, picker.colors.length - 1)];
+    }
+
+    function getColumnBottomIndex(picker, columns, column) {
+        var bottom = column;
+
+        while (bottom + columns < picker.colors.length) {
+            bottom += columns;
+        }
+
+        return bottom;
+    }
+
+    function getActiveColorIndex(picker) {
+        var i;
+
+        for (i = 0; i < picker.colors.length; i++) {
+            if (picker.colors[i] === picker.activeColor) {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     function getContainer(containerId) {

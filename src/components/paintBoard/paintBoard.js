@@ -2543,11 +2543,10 @@
     }
 
     function getCurrentPaintColor(board) {
-        if (global.App &&
-                global.App.memory &&
-                global.App.memory.rainbowCrazyMode &&
-                global.App.memory.rainbowCrazyAlgorithm === "random") {
-            return getRandomPaintColor();
+        var crazyColor = getCrazyPaintColor(board);
+
+        if (crazyColor) {
+            return crazyColor;
         }
 
         if (global.App && global.App.memory && global.App.memory.currentColor) {
@@ -2555,6 +2554,62 @@
         }
 
         return board.paintColor;
+    }
+
+    function getCrazyPaintColor(board) {
+        var algorithm;
+        var colorPickerApi;
+        var color = null;
+
+        if (!global.App || !global.App.memory || !global.App.memory.rainbowCrazyMode) {
+            return null;
+        }
+
+        algorithm = global.App.memory.rainbowCrazyAlgorithm || "random";
+
+        if (algorithm === "random") {
+            return getRandomPaintColor();
+        }
+
+        if (board &&
+                board.crazyPickerPaintColor &&
+                board.crazyPickerPaintColorAlgorithm === algorithm) {
+            return board.crazyPickerPaintColor;
+        }
+
+        colorPickerApi = global.SimpleColorPickerApi ||
+            (global.AppOpenWindows && global.AppOpenWindows.getSimpleColorPickerApi && global.AppOpenWindows.getSimpleColorPickerApi());
+
+        if (algorithm === "picker-vertical" && colorPickerApi && colorPickerApi.getNextColorDown) {
+            color = colorPickerApi.getNextColorDown({
+                jump: !!global.App.memory.rainbowCrazyJump,
+                loop: !!global.App.memory.rainbowCrazyLoop
+            });
+        }
+
+        if (algorithm === "picker-horizontal" && colorPickerApi && colorPickerApi.getNextColorRight) {
+            color = colorPickerApi.getNextColorRight({
+                jump: !!global.App.memory.rainbowCrazyJump,
+                loop: !!global.App.memory.rainbowCrazyLoop
+            });
+        }
+
+        if (color && global.AppOpenWindows && typeof global.AppOpenWindows.setActiveColor === "function") {
+            global.AppOpenWindows.setActiveColor(color);
+        }
+
+        if (board && color) {
+            board.crazyPickerPaintColor = color;
+            board.crazyPickerPaintColorAlgorithm = algorithm;
+            global.setTimeout(function() {
+                if (board.crazyPickerPaintColor === color && board.crazyPickerPaintColorAlgorithm === algorithm) {
+                    board.crazyPickerPaintColor = null;
+                    board.crazyPickerPaintColorAlgorithm = null;
+                }
+            }, 0);
+        }
+
+        return color;
     }
 
     function getRandomPaintColor() {

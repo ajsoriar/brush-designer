@@ -1156,6 +1156,24 @@
         };
     }
 
+    function getSimpleColorPickerApi() {
+        return {
+            open: openSimpleColorPickerWindow,
+            getInstance: function() {
+                return appColorPicker;
+            },
+            getActiveColor: function() {
+                return appColorPicker && appColorPicker.getActiveColor ? appColorPicker.getActiveColor() : global.App.memory.currentColor;
+            },
+            getNextColorRight: function(options) {
+                return appColorPicker && appColorPicker.getNextColorRight ? appColorPicker.getNextColorRight(options) : null;
+            },
+            getNextColorDown: function(options) {
+                return appColorPicker && appColorPicker.getNextColorDown ? appColorPicker.getNextColorDown(options) : null;
+            }
+        };
+    }
+
     function setSimpleBrushWidthPickerWidth(brushWidth) {
         var value = normalizeConsoleLineWidth(brushWidth);
 
@@ -1369,6 +1387,7 @@
         openLinesDesignerWindow: openLinesDesignerWindow,
         setSimpleLineWidthPickerWidth: setSimpleLineWidthPickerWidth,
         setLinesDesignerWidth: setLinesDesignerWidth,
+        getSimpleColorPickerApi: getSimpleColorPickerApi,
         getSimpleLineWidthPickerApi: getSimpleLineWidthPickerApi,
         getSimpleBrushWidthPickerApi: getSimpleBrushWidthPickerApi,
         getLinesDesignerApi: getLinesDesignerApi,
