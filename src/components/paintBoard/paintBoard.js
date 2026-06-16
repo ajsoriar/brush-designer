@@ -2543,11 +2543,28 @@
     }
 
     function getCurrentPaintColor(board) {
+        if (global.App &&
+                global.App.memory &&
+                global.App.memory.rainbowCrazyMode &&
+                global.App.memory.rainbowCrazyAlgorithm === "random") {
+            return getRandomPaintColor();
+        }
+
         if (global.App && global.App.memory && global.App.memory.currentColor) {
             return global.App.memory.currentColor;
         }
 
         return board.paintColor;
+    }
+
+    function getRandomPaintColor() {
+        var value = Math.floor(Math.random() * 16777216).toString(16);
+
+        while (value.length < 6) {
+            value = "0" + value;
+        }
+
+        return "#" + value;
     }
 
     function getCurrentBrushSize(board) {

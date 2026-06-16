@@ -10,6 +10,8 @@
     global.App.memory.currentBrushShape = global.App.memory.currentBrushShape || "square";
     global.App.memory.currentBrushStroke = global.App.memory.currentBrushStroke || false;
     global.App.memory.currentBrushAntialiasing = global.App.memory.currentBrushAntialiasing || false;
+    global.App.memory.rainbowCrazyMode = global.App.memory.rainbowCrazyMode || false;
+    global.App.memory.rainbowCrazyAlgorithm = global.App.memory.rainbowCrazyAlgorithm || "random";
     global.App.memory.currentLineDesign = global.App.memory.currentLineDesign || {
         weight: global.App.memory.currentLineWidth,
         unit: "px",
@@ -70,6 +72,8 @@
         global.AppOpenWindows.openSimpleLineWidthPickerWindow();
         global.AppOpenWindows.openSimpleBrushWidthPickerWindow();
         global.AppOpenWindows.openPaintToolsWindow();
+        updateRainbowCrazyModeButton();
+        updateRainbowCrazyAlgorithmRadios();
         syncBrushWidthPickerToPaintTool(global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : null);
         global.AppOpenWindows.createDemoWindow("paintBoard");
     });
@@ -219,6 +223,56 @@
         global.AppOpenWindows.clearBoard();
     }
 
+    function toggleRainbowCrazyMode() {
+        global.App.memory.rainbowCrazyMode = !global.App.memory.rainbowCrazyMode;
+        updateRainbowCrazyModeButton();
+        return global.App.memory.rainbowCrazyMode;
+    }
+
+    function setRainbowCrazyAlgorithm(algorithm) {
+        if (!isRainbowCrazyAlgorithm(algorithm)) {
+            return global.App.memory.rainbowCrazyAlgorithm;
+        }
+
+        global.App.memory.rainbowCrazyAlgorithm = algorithm;
+        updateRainbowCrazyAlgorithmRadios();
+        return global.App.memory.rainbowCrazyAlgorithm;
+    }
+
+    function isRainbowCrazyAlgorithm(algorithm) {
+        return algorithm === "random" ||
+            algorithm === "picker-vertical" ||
+            algorithm === "picker-horizontal";
+    }
+
+    function updateRainbowCrazyModeButton() {
+        var button = document.getElementById("rainbow-crazy-mode-btn");
+        var active = !!(global.App && global.App.memory && global.App.memory.rainbowCrazyMode);
+
+        if (!button) {
+            return;
+        }
+
+        button.className = button.className.replace(/\s?tools-bar-toggle-on/g, "");
+
+        if (active) {
+            button.className += " tools-bar-toggle-on";
+        }
+
+        button.setAttribute("aria-pressed", active ? "true" : "false");
+        button.title = "Rainbow Crazy Mode: " + (active ? "ON" : "OFF");
+    }
+
+    function updateRainbowCrazyAlgorithmRadios() {
+        var algorithm = (global.App && global.App.memory && global.App.memory.rainbowCrazyAlgorithm) || "random";
+        var radios = document.querySelectorAll("input[name=\"rainbow-crazy-algorithm\"]");
+        var i;
+
+        for (i = 0; i < radios.length; i++) {
+            radios[i].checked = radios[i].value === algorithm;
+        }
+    }
+
     function undoLastAction() {
         var targetBoard = global.AppOpenWindows.getActivePaintBoard();
 
@@ -275,6 +329,8 @@
     global.copyToClipboard = copyToClipboard;
     global.saveImage = saveImage;
     global.clearBoard = clearBoard;
+    global.toggleRainbowCrazyMode = toggleRainbowCrazyMode;
+    global.setRainbowCrazyAlgorithm = setRainbowCrazyAlgorithm;
     global.undoLastAction = undoLastAction;
     global.createDemoWindow = global.AppOpenWindows.createDemoWindow;
     global.openBrushDesignerInWindow = global.AppOpenWindows.openBrushDesignerInWindow;

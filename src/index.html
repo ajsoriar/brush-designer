@@ -24,6 +24,24 @@
         <button type="button" onclick="copyToClipboard()">Copy</button>
         <button type="button" onclick="saveImage()">Save</button>
         <button type="button" onclick="clearBoard()">Clear Board</button>
+        <fieldset class="tools-bar-frame tools-bar-crazy-frame">
+            <legend>Crazy</legend>
+            <button id="rainbow-crazy-mode-btn" type="button" onclick="toggleRainbowCrazyMode()">Rainbow Crazy Mode</button>
+            <div class="tools-bar-radio-stack">
+                <label>
+                    <input type="radio" name="rainbow-crazy-algorithm" value="random" checked onchange="setRainbowCrazyAlgorithm(this.value)">
+                    Random
+                </label>
+                <label>
+                    <input type="radio" name="rainbow-crazy-algorithm" value="picker-vertical" onchange="setRainbowCrazyAlgorithm(this.value)">
+                    Picker Vertical
+                </label>
+                <label>
+                    <input type="radio" name="rainbow-crazy-algorithm" value="picker-horizontal" onchange="setRainbowCrazyAlgorithm(this.value)">
+                    Picker Horizontal
+                </label>
+            </div>
+        </fieldset>
     </div>
 
     <script type="module" src="/main.js"></script>
