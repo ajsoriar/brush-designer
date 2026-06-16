@@ -1666,7 +1666,7 @@
         var data = patternData.data;
         var brightness;
 
-        if (useFrontColor) {
+        if (useFrontColor && isPatternMonochrome(patternData)) {
             brightness = (data[index] + data[index + 1] + data[index + 2]) / 3;
 
             if (brightness < 128) {
@@ -1685,6 +1685,35 @@
             b: data[index + 2],
             a: data[index + 3]
         };
+    }
+
+    function isPatternMonochrome(patternData) {
+        var data = patternData.data;
+        var index;
+        var min;
+        var max;
+
+        if (typeof patternData.isMonochrome === "boolean") {
+            return patternData.isMonochrome;
+        }
+
+        patternData.isMonochrome = true;
+
+        for (index = 0; index < data.length; index += 4) {
+            if (data[index + 3] === 0) {
+                continue;
+            }
+
+            min = Math.min(data[index], data[index + 1], data[index + 2]);
+            max = Math.max(data[index], data[index + 1], data[index + 2]);
+
+            if (max - min > 2) {
+                patternData.isMonochrome = false;
+                break;
+            }
+        }
+
+        return patternData.isMonochrome;
     }
 
     function getPixelIndex(width, x, y) {

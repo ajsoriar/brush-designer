@@ -187,6 +187,7 @@
             resizable: true,
             maximizable: true,
             toolsRow: true,
+            toolsFooter: true,
             scrollbars: true,
             contentId: "demo-paint-board-window-content-" + windowIndex,
             onResize: function() {

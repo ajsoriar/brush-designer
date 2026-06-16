@@ -44,6 +44,7 @@
         cornerRadius: 0,
         topBarGradient: null,
         toolsRow: false,
+        toolsFooter: false,
         contentCentered: true,
         parent: null,
         content: null,
@@ -135,6 +136,10 @@
             element.className += " wm-window-tools-row-visible";
         }
 
+        if (config.toolsFooter) {
+            element.className += " wm-window-tools-footer-visible";
+        }
+
         if (!config.contentCentered) {
             element.className += " wm-window-content-not-centered";
         }
@@ -159,6 +164,7 @@
             '<div class="wm-middle-left" data-wm-resize="w"></div>',
             '<div class="wm-center" id="' + contentId + '"></div>',
             '<div class="wm-middle-right" data-wm-resize="e"></div>',
+            '<div class="wm-tools-footer"></div>',
             '<div class="wm-bottom-left" data-wm-resize="sw"></div>',
             '<div class="wm-bottom" data-wm-resize="s"></div>',
             '<div class="wm-bottom-right" data-wm-resize="se"></div>'
@@ -175,6 +181,7 @@
             element: element,
             contentElement: null,
             toolsRowElement: null,
+            toolsFooterElement: null,
             type: type,
             modal: type === WINDOW_TYPES.MODAL,
             modalOverlay: modalOverlay,
@@ -222,6 +229,7 @@
 
         currentWindow.contentElement = element.querySelector(".wm-center");
         currentWindow.toolsRowElement = element.querySelector(".wm-tools-row");
+        currentWindow.toolsFooterElement = element.querySelector(".wm-tools-footer");
         setScrollBars(currentWindow, config.scrollBarX, config.scrollBarY);
         currentWindow.setTitle(config.title);
 
