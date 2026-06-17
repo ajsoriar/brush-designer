@@ -31,12 +31,38 @@
         "DESIGNED-BRUSH-2": new URL("./icons/paint-tools_31.png", import.meta.url).href
     };
 
+    var SELECTION_TOOLS_SPRITE = new URL("./sprites/sprite-selection-tools.png", import.meta.url).href;
+
+    var SELECTION_TOOL_BUTTONS = [
+        {
+            className: "selection-laso-tool",
+            type: "freehand",
+            label: "Lasso Selection"
+        },
+        {
+            className: "selection-poligonal-tool",
+            type: "polygonal",
+            label: "Polygonal Selection"
+        },
+        {
+            className: "selection-oval-tool",
+            type: "oval",
+            label: "Oval Selection"
+        },
+        {
+            className: "selection-rectangle-tool",
+            type: "rectangle",
+            label: "Rectangle Selection"
+        }
+    ];
+
     var TOOL_LABELS = {
         "OLD-BRUSH": "Retro Brush",
         "PATTERN-BUCKET": "Pattern Bucket",
         "GRADIENT": "Gradient",
         "STRAIGHT-LINE": "Line",
-        "LASSO-SELECTION": "Lasso Selection"
+        "LASSO-SELECTION": "Lasso Selection",
+        "MAGIC-WAND": "Magic Wand"
     };
 
     var HIDDEN_TOOLS = {
@@ -118,6 +144,7 @@
             button.style.height = component.btnSize + "px";
             button.title = tool;
             button.innerHTML = getToolButtonHtml(tool, icon);
+            bindSelectionToolButtons(button, tool);
             button.addEventListener("click", function() {
                 if (global.PaintTools) {
                     global.PaintTools.use(tool);
@@ -127,8 +154,48 @@
         });
     }
 
+    function bindSelectionToolButtons(button, tool) {
+        var selectionButtons;
+        var i;
+
+        if (tool !== "LASSO-SELECTION") {
+            return;
+        }
+
+        selectionButtons = button.querySelectorAll("[data-selection-tool]");
+
+        for (i = 0; i < selectionButtons.length; i++) {
+            selectionButtons[i].addEventListener("click", function(event) {
+                event.stopPropagation();
+                setSelectedSelectionTool(button, event.currentTarget);
+
+                if (global.PaintTools) {
+                    if (global.PaintTools.setSelectionTool) {
+                        global.PaintTools.setSelectionTool(event.currentTarget.getAttribute("data-selection-tool"));
+                    }
+                    global.PaintTools.use("LASSO-SELECTION");
+                }
+            });
+        }
+    }
+
+    function setSelectedSelectionTool(button, selectedButton) {
+        var selectionButtons = button.querySelectorAll("[data-selection-tool]");
+        var i;
+
+        for (i = 0; i < selectionButtons.length; i++) {
+            selectionButtons[i].className = selectionButtons[i].className.replace(/\s?paint-tools-selection-button-selected/g, "");
+        }
+
+        selectedButton.className += " paint-tools-selection-button-selected";
+    }
+
     function getToolButtonHtml(tool, icon) {
         var html = '<span class="paint-tools-button-label">' + getToolLabelHtml(tool) + '</span>';
+
+        if (tool === "LASSO-SELECTION") {
+            return getSelectionToolsHtml();
+        }
 
         if (icon) {
             html += '<span class="paint-tools-button-icon-wrap">' +
@@ -137,6 +204,17 @@
         }
 
         return html;
+    }
+
+    function getSelectionToolsHtml() {
+        return '<span class="paint-tools-selection-grid">' +
+            SELECTION_TOOL_BUTTONS.map(function(selectionTool, index) {
+                return '<span class="paint-tools-selection-button ' + escapeHtml(selectionTool.className) + (index === 0 ? " paint-tools-selection-button-selected" : "") + '"' +
+                    ' title="' + escapeHtml(selectionTool.label) + '"' +
+                    ' data-selection-tool="' + escapeHtml(selectionTool.type) + '"' +
+                    ' style="background-image:url(\'' + escapeHtml(SELECTION_TOOLS_SPRITE) + '\')"></span>';
+            }).join("") +
+            '</span>';
     }
 
     function getToolLabelHtml(tool) {

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprite Selection Tools</title>
+    <style>
+        .sprite-div {
+            width: 32px;
+            height: 32px;
+            background-repeat: no-repeat;
+            display: inline-block;
+            margin: 5px;
+            background-color: #f0f0f0;
+            background-image: url('./sprite-selection-tools.png');
+            background-position: 0 0;
+            cursor: pointer;
+
+            &.selected {
+                outline: 2px solid rgb(23, 147, 255);
+                background-color: #ffffff;
+            }
+        }
+
+        .selection-laso-tool {
+            background-position: 0 0;
+            &:hover {
+                background-position: -32px 0;
+                background-color: #8ff8ff;
+            }
+        }
+
+        .selection-poligonal-tool {
+            background-position: 0 -32px;
+            &:hover {
+                background-position: -32px -32px;
+                background-color: #8ff8ff;
+            }
+        }
+
+        .selection-rectangle-tool {
+            background-position: -0px -64px;
+            &:hover {
+                background-position: -32px -64px;
+                background-color: #8ff8ff;
+            }            
+        }
+
+        .selection-oval-tool {
+            background-position: -0px -96px;
+            &:hover {
+                background-position: -32px -96px;
+                background-color: #8ff8ff;
+            }
+        }
+
+        .selection-behavior-normal {
+            background-position: 0 -128px;
+            &:hover {
+                background-position: 0px -160px;
+                background-color: #8ff8ff;
+            }
+        }
+
+        .selection-behavior-add {
+            background-position: -32px -128px;
+            &:hover {
+                background-position: -32px -160px;
+                background-color: #8ff8ff;
+            }
+        }
+
+        .selection-behavior-remove {
+            background-position: -64px -128px;
+            &:hover {
+                background-position: -64px -160px;
+                background-color: #8ff8ff;
+            }
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const spriteDivs = document.querySelectorAll('.sprite-div');
+            spriteDivs.forEach(div => {
+                div.addEventListener('click', () => {
+                    console.log(`Clicked on sprite with class: ${div.className}`);
+
+                    // remove the style 'selected' from all divs
+                    spriteDivs.forEach(d => d.classList.remove('selected'));
+
+                    // apply the style 'selected' to the clicked div
+                    div.classList.add('selected');
+                });
+            });
+        });    
+    </script>
+</head>
+<body>
+    <h1>Sprite Selection Tools</h1>
+
+    <!-- init Tools -->
+    <div class="sprite-div selection-laso-tool"></div>
+    <div class="sprite-div selection-poligonal-tool"></div>
+    <div class="sprite-div selection-oval-tool"></div>
+    <div class="sprite-div selection-rectangle-tool"></div>
+
+    <!-- init Selection Behavior -->
+    <div class="sprite-div selection-behavior-normal"></div>
+    <div class="sprite-div selection-behavior-add"></div>
+    <div class="sprite-div selection-behavior-remove"></div>
+</body>
+</html>

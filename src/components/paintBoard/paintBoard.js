@@ -29,6 +29,7 @@
         STROKED_CIRCLES: "STROKED-CIRCLES",
         STROKED_OVALS: "STROKED-OVALS",
         LASSO_SELECTION: "LASSO-SELECTION",
+        MAGIC_WAND: "MAGIC-WAND",
         PAINT_BUCKET: "PAINT-BUCKET",
         PATTERN_BUCKET: "PATTERN-BUCKET",
         GRADIENT: "GRADIENT",
@@ -38,10 +39,41 @@
         DESIGNED_BRUSH_2: "DESIGNED-BRUSH-2"
     };
 
+    var SELECTION_TOOL_TYPES = {
+        FREEHAND: "freehand",
+        POLYGONAL: "polygonal",
+        RECTANGLE: "rectangle",
+        OVAL: "oval"
+    };
+
+    var SELECTION_BEHAVIORS = {
+        NORMAL: "normal",
+        ADD: "add",
+        REMOVE: "remove"
+    };
+
     var currentPaintToolMode = PAINT_TOOL_MODES.SQUARED_POINTS;
+    var currentSelectionToolType = SELECTION_TOOL_TYPES.FREEHAND;
+    var currentSelectionBehavior = SELECTION_BEHAVIORS.NORMAL;
+    var MAGIC_WAND_MODES = {
+        FAST: "fast",
+        PHOTOSHOP: "photoshop",
+        PERCEPTUAL: "perceptual"
+    };
+    var DEFAULT_MAGIC_WAND_MODE = MAGIC_WAND_MODES.PHOTOSHOP;
+    var currentMagicWandOptions = {
+        tolerance: 32,
+        antiAlias: true,
+        contiguous: true,
+        mode: DEFAULT_MAGIC_WAND_MODE
+    };
+    var MAGIC_WAND_MAX_DISTANCE = Math.sqrt(4 * 255 * 255);
+    var MAGIC_WAND_MAX_LAB_DISTANCE = 100;
 
     var PaintTools = {
         modes: PAINT_TOOL_MODES,
+        selectionTools: SELECTION_TOOL_TYPES,
+        selectionBehaviors: SELECTION_BEHAVIORS,
         use: function(mode) {
             var normalizedMode = String(mode || "").toUpperCase();
 
@@ -55,6 +87,76 @@
         },
         getMode: function() {
             return currentPaintToolMode;
+        },
+        setSelectionTool: function(selectionTool) {
+            var normalizedSelectionTool = String(selectionTool || "").toLowerCase();
+
+            if (!isValidSelectionToolType(normalizedSelectionTool)) {
+                throw new Error("Unknown selection tool: " + selectionTool);
+            }
+
+            currentSelectionToolType = normalizedSelectionTool;
+            notifySelectionToolChange(currentSelectionToolType);
+            return currentSelectionToolType;
+        },
+        getSelectionTool: function() {
+            return currentSelectionToolType;
+        },
+        setSelectionBehavior: function(selectionBehavior) {
+            var normalizedSelectionBehavior = String(selectionBehavior || "").toLowerCase();
+
+            if (!isValidSelectionBehavior(normalizedSelectionBehavior)) {
+                throw new Error("Unknown selection behavior: " + selectionBehavior);
+            }
+
+            currentSelectionBehavior = normalizedSelectionBehavior;
+            notifySelectionBehaviorChange(currentSelectionBehavior);
+            return currentSelectionBehavior;
+        },
+        getSelectionBehavior: function() {
+            return currentSelectionBehavior;
+        },
+        setMagicWandTolerance: function(tolerance) {
+            var normalizedTolerance = normalizeMagicWandTolerance(tolerance);
+
+            currentMagicWandOptions.tolerance = normalizedTolerance;
+            notifyMagicWandOptionsChange(currentMagicWandOptions);
+            return normalizedTolerance;
+        },
+        getMagicWandTolerance: function() {
+            return currentMagicWandOptions.tolerance;
+        },
+        setMagicWandAntiAlias: function(antiAlias) {
+            currentMagicWandOptions.antiAlias = !!antiAlias;
+            notifyMagicWandOptionsChange(currentMagicWandOptions);
+            return currentMagicWandOptions.antiAlias;
+        },
+        getMagicWandAntiAlias: function() {
+            return currentMagicWandOptions.antiAlias;
+        },
+        setMagicWandContiguous: function(contiguous) {
+            currentMagicWandOptions.contiguous = !!contiguous;
+            notifyMagicWandOptionsChange(currentMagicWandOptions);
+            return currentMagicWandOptions.contiguous;
+        },
+        getMagicWandContiguous: function() {
+            return currentMagicWandOptions.contiguous;
+        },
+        setMagicWandMode: function(mode) {
+            currentMagicWandOptions.mode = normalizeMagicWandMode(mode);
+            notifyMagicWandOptionsChange(currentMagicWandOptions);
+            return currentMagicWandOptions.mode;
+        },
+        getMagicWandMode: function() {
+            return currentMagicWandOptions.mode;
+        },
+        setMagicWandOptions: function(options) {
+            currentMagicWandOptions = normalizeMagicWandOptions(options);
+            notifyMagicWandOptionsChange(currentMagicWandOptions);
+            return copyMagicWandOptions(currentMagicWandOptions);
+        },
+        getMagicWandOptions: function() {
+            return copyMagicWandOptions(currentMagicWandOptions);
         }
     };
 
@@ -68,6 +170,72 @@
         }
 
         return false;
+    }
+
+    function isValidSelectionToolType(selectionTool) {
+        var key;
+
+        for (key in SELECTION_TOOL_TYPES) {
+            if (Object.prototype.hasOwnProperty.call(SELECTION_TOOL_TYPES, key) && SELECTION_TOOL_TYPES[key] === selectionTool) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    function isValidSelectionBehavior(selectionBehavior) {
+        var key;
+
+        for (key in SELECTION_BEHAVIORS) {
+            if (Object.prototype.hasOwnProperty.call(SELECTION_BEHAVIORS, key) && SELECTION_BEHAVIORS[key] === selectionBehavior) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    function normalizeMagicWandTolerance(tolerance) {
+        var numericTolerance = parseInt(tolerance, 10);
+
+        if (isNaN(numericTolerance)) {
+            return 0;
+        }
+
+        return Math.max(0, Math.min(100, numericTolerance));
+    }
+
+    function normalizeMagicWandMode(mode) {
+        var key;
+
+        for (key in MAGIC_WAND_MODES) {
+            if (Object.prototype.hasOwnProperty.call(MAGIC_WAND_MODES, key) && MAGIC_WAND_MODES[key] === mode) {
+                return mode;
+            }
+        }
+
+        return DEFAULT_MAGIC_WAND_MODE;
+    }
+
+    function normalizeMagicWandOptions(options) {
+        var source = options || {};
+
+        return {
+            tolerance: normalizeMagicWandTolerance(source.tolerance),
+            antiAlias: !!source.antiAlias,
+            contiguous: !!source.contiguous,
+            mode: normalizeMagicWandMode(source.mode)
+        };
+    }
+
+    function copyMagicWandOptions(options) {
+        return {
+            tolerance: options.tolerance,
+            antiAlias: options.antiAlias,
+            contiguous: options.contiguous,
+            mode: options.mode
+        };
     }
 
     function notifyPaintToolModeChange(mode) {
@@ -84,6 +252,60 @@
             event.initCustomEvent("paint-tools-change", false, false, {
                 mode: mode
             });
+        }
+
+        global.dispatchEvent(event);
+    }
+
+    function notifySelectionToolChange(selectionTool) {
+        var event;
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-selection-tool-change", {
+                detail: {
+                    selectionTool: selectionTool
+                }
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-selection-tool-change", false, false, {
+                selectionTool: selectionTool
+            });
+        }
+
+        global.dispatchEvent(event);
+    }
+
+    function notifySelectionBehaviorChange(selectionBehavior) {
+        var event;
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-selection-behavior-change", {
+                detail: {
+                    selectionBehavior: selectionBehavior
+                }
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-selection-behavior-change", false, false, {
+                selectionBehavior: selectionBehavior
+            });
+        }
+
+        global.dispatchEvent(event);
+    }
+
+    function notifyMagicWandOptionsChange(options) {
+        var event;
+        var detail = copyMagicWandOptions(options);
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-magic-wand-options-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-magic-wand-options-change", false, false, detail);
         }
 
         global.dispatchEvent(event);
@@ -149,20 +371,57 @@
                 clearBrushHoverPreview(board);
             }
         };
+        var clearSelectionDraftOnToolChange = function(event) {
+            var mode = event.detail && event.detail.mode;
+
+            if (mode !== PAINT_TOOL_MODES.LASSO_SELECTION) {
+                clearSelectionDraft(board);
+            }
+        };
+        var clearSelectionDraftOnSelectionToolChange = function() {
+            clearSelectionDraft(board);
+        };
+        var finishPolygonalSelectionFromEvent = function(event) {
+            if (isLassoSelectionToolMode() && isPolygonalSelectionTool()) {
+                event.preventDefault();
+                finishPolygonalSelection(board, event);
+            }
+        };
         var clearHoverGuideOnBlur = function() {
             board.hoverGuideControlActive = false;
             board.axisLockMode = null;
             clearHoverGuide(board);
         };
         var stopPainting = function(event) {
-            if (isPainting && isLassoSelectionToolMode() && board.lassoSelectionStroke) {
-                finishLassoSelection(board, event);
+            if (isPainting && isLassoSelectionToolMode() && isFreehandSelectionTool() && board.lassoSelectionStroke) {
+                finishFreehandSelection(board, event);
                 commitUndoableAction(board);
                 isPainting = false;
                 board.lastPointerPosition = null;
                 board.designedBrush2Stroke = null;
                 board.pointerStartPosition = null;
                 board.previewPointerPosition = null;
+                board.previewModifierState = null;
+                return;
+            }
+
+            if (isPainting && isLassoSelectionToolMode() && isBoxSelectionTool() && board.pointerStartPosition) {
+                finishBoxSelection(board, event);
+                commitUndoableAction(board);
+                isPainting = false;
+                board.lastPointerPosition = null;
+                board.designedBrush2Stroke = null;
+                board.pointerStartPosition = null;
+                board.previewPointerPosition = null;
+                board.previewModifierState = null;
+                return;
+            }
+
+            if (isPainting && isLassoSelectionToolMode() && isPolygonalSelectionTool()) {
+                isPainting = false;
+                board.lastPointerPosition = null;
+                board.designedBrush2Stroke = null;
+                board.pointerStartPosition = null;
                 board.previewModifierState = null;
                 return;
             }
@@ -211,7 +470,32 @@
             updateBrushHoverPreview(board, event);
             startPointerAction(board, event);
         };
+        var startPaintingFromOutside = function(event) {
+            if (!isPrimaryPaintInput(event)) {
+                return;
+            }
+
+            if (isPointerInsideCanvas(board, event)) {
+                return;
+            }
+
+            if (!canStartActionOutsideCanvas()) {
+                return;
+            }
+
+            startPainting(event);
+        };
         var continuePainting = function(event) {
+            var isDocumentMove = event && event.currentTarget === document;
+
+            if (isDocumentMove && !isPainting && !(isLassoSelectionToolMode() && isPolygonalSelectionTool() && board.polygonalSelectionPath)) {
+                return;
+            }
+
+            if (isDocumentMove && isPointerInsideCanvas(board, event)) {
+                return;
+            }
+
             updateHoverGuideFromPointer(board, event, true);
 
             if (!isActivePaintInput(event, activePointerId)) {
@@ -219,6 +503,11 @@
             }
 
             updateBrushHoverPreview(board, event);
+
+            if (!isPainting && isLassoSelectionToolMode() && isPolygonalSelectionTool() && board.polygonalSelectionPath) {
+                updatePolygonalSelectionPreview(board, event);
+                return;
+            }
 
             if (!isPainting) {
                 return;
@@ -233,6 +522,12 @@
         };
         var updatePreviewModifier = function(event) {
             var isPreviewModifier;
+
+            if (isEscapeKey(event) && event.type === "keydown") {
+                event.preventDefault();
+                clearSelection(board);
+                return;
+            }
 
             if (isSpacePanKey(event) && event.type !== "keyup") {
                 clearBrushHoverPreview(board);
@@ -274,6 +569,11 @@
             board.hoverGuidePointerPosition = null;
             board.hoverGuideControlActive = false;
             clearHoverGuide(board);
+
+            if (isPainting) {
+                clearBrushHoverPreview(board);
+                return;
+            }
 
             if (isShapeToolMode() || isLassoSelectionToolMode()) {
                 return;
@@ -351,6 +651,7 @@
             hoverGuideControlActive: false,
             designedBrush2Stroke: null,
             lassoSelectionStroke: null,
+            polygonalSelectionPath: null,
             selection: null,
             pointerStartPosition: null,
             undoSnapshot: null,
@@ -387,28 +688,41 @@
                 destroy(board, {
                     supportsPointerEvents: supportsPointerEvents,
                     startPainting: startPainting,
+                    startPaintingFromOutside: startPaintingFromOutside,
+                    container: container,
                     continuePainting: continuePainting,
                     rememberHoverGuidePointer: rememberHoverGuidePointer,
                     endPainting: endPainting,
                     leaveCanvas: leaveCanvas,
+                    finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent,
                     updatePreviewModifier: updatePreviewModifier,
                     clearHoverGuideOnBlur: clearHoverGuideOnBlur
-                }, clearPreviewOnPaintToolChange);
+                }, {
+                    clearPreviewOnPaintToolChange: clearPreviewOnPaintToolChange,
+                    clearSelectionDraftOnToolChange: clearSelectionDraftOnToolChange,
+                    clearSelectionDraftOnSelectionToolChange: clearSelectionDraftOnSelectionToolChange
+                });
             }
         };
 
         if (config.paintOnPointer) {
             if (supportsPointerEvents) {
                 canvas.addEventListener("pointerdown", startPainting);
+                container.addEventListener("pointerdown", startPaintingFromOutside);
+                canvas.addEventListener("dblclick", finishPolygonalSelectionFromEvent);
                 canvas.addEventListener("pointerenter", rememberHoverGuidePointer);
                 canvas.addEventListener("pointermove", continuePainting);
+                document.addEventListener("pointermove", continuePainting, true);
                 document.addEventListener("pointerup", endPainting, true);
                 document.addEventListener("pointercancel", endPainting, true);
                 canvas.addEventListener("pointerleave", leaveCanvas);
             } else {
                 canvas.addEventListener("mousedown", startPainting);
+                container.addEventListener("mousedown", startPaintingFromOutside);
+                canvas.addEventListener("dblclick", finishPolygonalSelectionFromEvent);
                 canvas.addEventListener("mouseenter", rememberHoverGuidePointer);
                 canvas.addEventListener("mousemove", continuePainting);
+                document.addEventListener("mousemove", continuePainting, true);
                 document.addEventListener("mouseup", endPainting, true);
                 canvas.addEventListener("mouseleave", leaveCanvas);
             }
@@ -417,6 +731,8 @@
             document.addEventListener("keyup", updatePreviewModifier);
             global.addEventListener("blur", clearHoverGuideOnBlur);
             global.addEventListener("paint-tools-change", clearPreviewOnPaintToolChange);
+            global.addEventListener("paint-tools-change", clearSelectionDraftOnToolChange);
+            global.addEventListener("paint-selection-tool-change", clearSelectionDraftOnSelectionToolChange);
         }
 
         return board;
@@ -615,6 +931,32 @@
         return applyAxisLock(board, getClampedPointerPosition(board, event));
     }
 
+    function getPreviewPointerPosition(board, event) {
+        if (isLassoSelectionToolMode() ||
+            isShapeToolMode() ||
+            isStraightLineToolMode() ||
+            currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
+            return getSelectionPointerPosition(board, event);
+        }
+
+        return getPointerPosition(board, event);
+    }
+
+    function getSelectionPointerPosition(board, event) {
+        return applyAxisLock(board, getUnclampedPointerPosition(board, event));
+    }
+
+    function getUnclampedPointerPosition(board, event) {
+        var rect = board.canvas.getBoundingClientRect();
+        var scaleX = board.canvas.width / rect.width;
+        var scaleY = board.canvas.height / rect.height;
+
+        return {
+            x: Math.floor((event.clientX - rect.left) * scaleX),
+            y: Math.floor((event.clientY - rect.top) * scaleY)
+        };
+    }
+
     function getClampedPointerPosition(board, event) {
         var rect = board.canvas.getBoundingClientRect();
         var scaleX = board.canvas.width / rect.width;
@@ -652,6 +994,14 @@
         };
     }
 
+    function getStrokePointerPosition(board, event) {
+        if (!event || typeof event.clientX !== "number" || typeof event.clientY !== "number") {
+            return null;
+        }
+
+        return applyAxisLock(board, getUnclampedPointerPosition(board, event));
+    }
+
     function getEventPointerPosition(board, event) {
         if (!event || typeof event.clientX !== "number" || typeof event.clientY !== "number") {
             return board.previewPointerPosition || board.pointerStartPosition;
@@ -662,6 +1012,22 @@
 
     function getPaintPointerPosition(board, event) {
         return applyAxisLock(board, getCanvasPointerPosition(board, event));
+    }
+
+    function getStrokePaintPointerPosition(board, event) {
+        if (isDragPaintToolMode()) {
+            return getStrokePointerPosition(board, event);
+        }
+
+        return getPaintPointerPosition(board, event);
+    }
+
+    function isPointInsideCanvas(board, point) {
+        return !!(board && point &&
+            point.x >= 0 &&
+            point.y >= 0 &&
+            point.x <= board.canvas.width &&
+            point.y <= board.canvas.height);
     }
 
     function rememberPreviewInput(board, event, preserveModifiers) {
@@ -909,7 +1275,7 @@
     }
 
     function updateTempPreview(board, event) {
-        board.previewPointerPosition = getPointerPosition(board, event);
+        board.previewPointerPosition = getPreviewPointerPosition(board, event);
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
             updateGradientPreview(board, event);
@@ -939,6 +1305,15 @@
             return;
         }
 
+        if (isLassoSelectionToolMode() && isBoxSelectionTool() && board.pointerStartPosition) {
+            renderBoxSelectionPreview(
+                board,
+                board.pointerStartPosition,
+                getBoxSelectionEndPoint(board, board.pointerStartPosition, board.previewPointerPosition, event)
+            );
+            return;
+        }
+
         updateTempSquareToPoint(board, board.previewPointerPosition, event);
     }
 
@@ -948,7 +1323,7 @@
         }
 
         if (global.PaintBoardTempLayer && global.PaintBoardTempLayer.startShape) {
-            global.PaintBoardTempLayer.startShape(board.tempLayerElement, getPointerPosition(board, event), {
+            global.PaintBoardTempLayer.startShape(board.tempLayerElement, getPreviewPointerPosition(board, event), {
                 oval: isOvalToolMode()
             });
             return;
@@ -958,11 +1333,11 @@
             return;
         }
 
-        global.PaintBoardTempLayer.startSquare(board.tempLayerElement, getPointerPosition(board, event));
+        global.PaintBoardTempLayer.startSquare(board.tempLayerElement, getPreviewPointerPosition(board, event));
     }
 
     function updateTempSquare(board, event) {
-        updateTempSquareToPoint(board, getPointerPosition(board, event), event);
+        updateTempSquareToPoint(board, getPreviewPointerPosition(board, event), event);
     }
 
     function updateTempSquareToPoint(board, rawPoint, event) {
@@ -1008,11 +1383,11 @@
             return;
         }
 
-        global.PaintBoardTempLayer.startLine(board.tempLayerElement, getPointerPosition(board, event));
+        global.PaintBoardTempLayer.startLine(board.tempLayerElement, getSelectionPointerPosition(board, event));
     }
 
     function updateGradientPreview(board, event) {
-        updateGradientPreviewToPoint(board, getPointerPosition(board, event), event);
+        updateGradientPreviewToPoint(board, getSelectionPointerPosition(board, event), event);
     }
 
     function updateGradientPreviewToPoint(board, rawPoint, event) {
@@ -1036,11 +1411,11 @@
             return;
         }
 
-        global.PaintBoardTempLayer.startLine(board.tempLayerElement, getPointerPosition(board, event), getStraightLinePreviewOptions(board));
+        global.PaintBoardTempLayer.startLine(board.tempLayerElement, getSelectionPointerPosition(board, event), getStraightLinePreviewOptions(board));
     }
 
     function updateStraightLinePreview(board, event) {
-        updateStraightLinePreviewToPoint(board, getPointerPosition(board, event), event);
+        updateStraightLinePreviewToPoint(board, getSelectionPointerPosition(board, event), event);
     }
 
     function updateStraightLinePreviewToPoint(board, rawPoint, event) {
@@ -1171,14 +1546,69 @@
         return !!(event && (event.key === " " || event.key === "Spacebar" || event.code === "Space"));
     }
 
+    function isEscapeKey(event) {
+        return !!(event && (event.key === "Escape" || event.key === "Esc" || event.code === "Escape"));
+    }
+
     function isLassoSelectionToolMode() {
         return currentPaintToolMode === PAINT_TOOL_MODES.LASSO_SELECTION;
     }
 
-    function startLassoSelection(board, event) {
-        var point = getPointerPosition(board, event);
+    function isFreehandSelectionTool() {
+        return currentSelectionToolType === SELECTION_TOOL_TYPES.FREEHAND;
+    }
 
-        clearSelection(board);
+    function isPolygonalSelectionTool() {
+        return currentSelectionToolType === SELECTION_TOOL_TYPES.POLYGONAL;
+    }
+
+    function isRectangleSelectionTool() {
+        return currentSelectionToolType === SELECTION_TOOL_TYPES.RECTANGLE;
+    }
+
+    function isOvalSelectionTool() {
+        return currentSelectionToolType === SELECTION_TOOL_TYPES.OVAL;
+    }
+
+    function isBoxSelectionTool() {
+        return isRectangleSelectionTool() || isOvalSelectionTool();
+    }
+
+    function startLassoSelection(board, event) {
+        if (isPolygonalSelectionTool()) {
+            addPolygonalSelectionPoint(board, event);
+            return;
+        }
+
+        if (isBoxSelectionTool()) {
+            startBoxSelection(board, event);
+            return;
+        }
+
+        startFreehandSelection(board, event);
+    }
+
+    function updateLassoSelection(board, event) {
+        if (isPolygonalSelectionTool()) {
+            updatePolygonalSelectionPreview(board, event);
+            return;
+        }
+
+        if (isBoxSelectionTool()) {
+            updateBoxSelectionPreview(board, event);
+            return;
+        }
+
+        updateFreehandSelection(board, event);
+    }
+
+    function startFreehandSelection(board, event) {
+        var point = getSelectionPointerPosition(board, event);
+
+        clearSelectionDraft(board);
+        if (currentSelectionBehavior === SELECTION_BEHAVIORS.NORMAL) {
+            clearSelection(board);
+        }
         board.lassoSelectionStroke = {
             points: [point],
             lastPoint: point
@@ -1188,7 +1618,7 @@
         renderLassoSelectionPreview(board, board.lassoSelectionStroke.points);
     }
 
-    function updateLassoSelection(board, event) {
+    function updateFreehandSelection(board, event) {
         var stroke = board.lassoSelectionStroke;
         var point;
 
@@ -1196,7 +1626,7 @@
             return;
         }
 
-        point = getPointerPosition(board, event);
+        point = getSelectionPointerPosition(board, event);
 
         if (getPointDistance(stroke.lastPoint, point) >= 2) {
             stroke.points.push(point);
@@ -1207,7 +1637,7 @@
         renderLassoSelectionPreview(board, stroke.points);
     }
 
-    function finishLassoSelection(board, event) {
+    function finishFreehandSelection(board, event) {
         var stroke = board.lassoSelectionStroke;
         var point;
         var points;
@@ -1216,7 +1646,7 @@
             return;
         }
 
-        point = getPointerPosition(board, event);
+        point = getSelectionPointerPosition(board, event);
 
         if (getPointDistance(stroke.lastPoint, point) >= 2) {
             stroke.points.push(point);
@@ -1231,13 +1661,233 @@
             return;
         }
 
-        board.selection = {
-            type: "lasso",
+        setPolygonSelection(board, "freehand", points);
+        renderLassoSelection(board);
+    }
+
+    function addPolygonalSelectionPoint(board, event) {
+        var point = getSelectionPointerPosition(board, event);
+        var path = board.polygonalSelectionPath;
+
+        if (!path) {
+            clearSelectionDraft(board);
+            if (currentSelectionBehavior === SELECTION_BEHAVIORS.NORMAL) {
+                clearSelection(board);
+            }
+            board.polygonalSelectionPath = {
+                points: [point],
+                previewPoint: point
+            };
+            renderPolygonalSelectionPreview(board);
+            return;
+        }
+
+        if (path.points.length >= 3 && getPointDistance(path.points[0], point) <= 8) {
+            finishPolygonalSelection(board, event);
+            return;
+        }
+
+        path.points.push(point);
+        path.previewPoint = point;
+        renderPolygonalSelectionPreview(board);
+    }
+
+    function updatePolygonalSelectionPreview(board, event) {
+        var path = board.polygonalSelectionPath;
+
+        if (!path) {
+            return;
+        }
+
+        path.previewPoint = getSelectionPointerPosition(board, event);
+        renderPolygonalSelectionPreview(board);
+    }
+
+    function finishPolygonalSelection(board, event) {
+        var path = board.polygonalSelectionPath;
+        var points;
+
+        if (!path) {
+            return;
+        }
+
+        if (event && event.detail < 2 && path.points.length >= 3) {
+            path.previewPoint = getSelectionPointerPosition(board, event);
+        }
+
+        points = simplifyLassoPoints(path.points);
+        board.polygonalSelectionPath = null;
+        clearTempSquare(board);
+
+        if (points.length < 3) {
+            clearSelection(board);
+            return;
+        }
+
+        setPolygonSelection(board, "polygonal", points);
+        renderLassoSelection(board);
+    }
+
+    function renderPolygonalSelectionPreview(board) {
+        var path = board.polygonalSelectionPath;
+        var points;
+
+        if (!path || !path.points.length) {
+            return;
+        }
+
+        points = path.points.slice();
+
+        if (path.previewPoint && getPointDistance(points[points.length - 1], path.previewPoint) > 0) {
+            points.push(path.previewPoint);
+        }
+
+        renderLassoSelectionPreview(board, points);
+    }
+
+    function startBoxSelection(board, event) {
+        var point = getSelectionPointerPosition(board, event);
+
+        clearSelectionDraft(board);
+        if (currentSelectionBehavior === SELECTION_BEHAVIORS.NORMAL) {
+            clearSelection(board);
+        }
+        board.pointerStartPosition = point;
+        board.previewPointerPosition = point;
+        renderBoxSelectionPreview(board, point, point);
+    }
+
+    function updateBoxSelectionPreview(board, event) {
+        var fromPoint = board.pointerStartPosition;
+        var toPoint;
+
+        if (!fromPoint) {
+            return;
+        }
+
+        toPoint = getSelectionPointerPosition(board, event);
+        board.previewPointerPosition = toPoint;
+        renderBoxSelectionPreview(board, fromPoint, getBoxSelectionEndPoint(board, fromPoint, toPoint, event));
+    }
+
+    function getBoxSelectionEndPoint(board, fromPoint, toPoint, event) {
+        var modifierEvent = getPreviewModifierEvent(board, event);
+
+        if (fromPoint && toPoint && modifierEvent.shiftKey) {
+            return getSquareEndPoint(fromPoint, toPoint);
+        }
+
+        return toPoint;
+    }
+
+    function finishBoxSelection(board, event) {
+        var fromPoint = board.pointerStartPosition;
+        var toPoint;
+        var bounds;
+
+        if (!fromPoint) {
+            return;
+        }
+
+        toPoint = getBoxSelectionEndPoint(board, fromPoint, getSelectionPointerPosition(board, event), event);
+        bounds = getSelectionBoundsFromPoints(fromPoint, toPoint);
+        clearTempSquare(board);
+
+        if (bounds.width < 1 || bounds.height < 1) {
+            clearSelection(board);
+            return;
+        }
+
+        if (isOvalSelectionTool()) {
+            setOvalSelection(board, bounds);
+            return;
+        }
+
+        setRectangleSelection(board, bounds);
+    }
+
+    function renderBoxSelectionPreview(board, fromPoint, toPoint) {
+        var bounds = getSelectionBoundsFromPoints(fromPoint, toPoint);
+
+        if (!board || !board.tempLayerElement) {
+            return;
+        }
+
+        board.tempLayerElement.innerHTML = getBoxSelectionSvgString(bounds, isOvalSelectionTool());
+    }
+
+    function setPolygonSelection(board, type, points) {
+        var maskCanvas = createPolygonSelectionMask(board, points);
+
+        if (isSelectionMaskEmpty(maskCanvas)) {
+            clearSelection(board);
+            return;
+        }
+
+        applySelectionBehavior(board, {
+            type: type,
             points: points,
             bounds: getLassoBounds(points),
-            maskCanvas: createLassoSelectionMask(board, points)
-        };
+            maskCanvas: maskCanvas
+        });
+    }
+
+    function setRectangleSelection(board, bounds) {
+        var maskCanvas = createRectangleSelectionMask(board, bounds);
+
+        if (isSelectionMaskEmpty(maskCanvas)) {
+            clearSelection(board);
+            return;
+        }
+
+        applySelectionBehavior(board, {
+            type: "rectangle",
+            bounds: bounds,
+            maskCanvas: maskCanvas
+        });
         renderLassoSelection(board);
+    }
+
+    function setOvalSelection(board, bounds) {
+        var maskCanvas = createOvalSelectionMask(board, bounds);
+
+        if (isSelectionMaskEmpty(maskCanvas)) {
+            clearSelection(board);
+            return;
+        }
+
+        applySelectionBehavior(board, {
+            type: "oval",
+            bounds: bounds,
+            maskCanvas: maskCanvas
+        });
+        renderLassoSelection(board);
+    }
+
+    function applySelectionBehavior(board, nextSelection) {
+        var combinedMask;
+
+        if (!board.selection || currentSelectionBehavior === SELECTION_BEHAVIORS.NORMAL) {
+            board.selection = nextSelection;
+            return;
+        }
+
+        if (currentSelectionBehavior === SELECTION_BEHAVIORS.ADD) {
+            combinedMask = combineSelectionMasks(board, board.selection.maskCanvas, nextSelection.maskCanvas, "source-over");
+        } else if (currentSelectionBehavior === SELECTION_BEHAVIORS.REMOVE) {
+            combinedMask = combineSelectionMasks(board, board.selection.maskCanvas, nextSelection.maskCanvas, "destination-out");
+        }
+
+        if (!combinedMask || isSelectionMaskEmpty(combinedMask)) {
+            clearSelection(board);
+            return;
+        }
+
+        board.selection = {
+            type: "mask",
+            bounds: getSelectionMaskBounds(combinedMask),
+            maskCanvas: combinedMask
+        };
     }
 
     function clearSelection(board) {
@@ -1247,11 +1897,24 @@
 
         board.selection = null;
         board.lassoSelectionStroke = null;
+        board.polygonalSelectionPath = null;
 
         if (board.selectionLayerElement) {
             board.selectionLayerElement.innerHTML = "";
         }
 
+        clearTempSquare(board);
+    }
+
+    function clearSelectionDraft(board) {
+        if (!board) {
+            return;
+        }
+
+        board.lassoSelectionStroke = null;
+        board.polygonalSelectionPath = null;
+        board.pointerStartPosition = null;
+        board.previewPointerPosition = null;
         clearTempSquare(board);
     }
 
@@ -1264,11 +1927,23 @@
     }
 
     function renderLassoSelection(board) {
-        if (!board || !board.selectionLayerElement || !board.selection || !board.selection.points) {
+        if (!board || !board.selectionLayerElement || !board.selection) {
             return;
         }
 
-        board.selectionLayerElement.innerHTML = getLassoSvgString(board.selection.points, true);
+        if (board.selection.type === "mask") {
+            board.selectionLayerElement.innerHTML = getMaskSelectionHtml(board.selection.maskCanvas);
+            return;
+        }
+
+        if (board.selection.points) {
+            board.selectionLayerElement.innerHTML = getLassoSvgString(board.selection.points, true);
+            return;
+        }
+
+        if (board.selection.bounds) {
+            board.selectionLayerElement.innerHTML = getBoxSelectionSvgString(board.selection.bounds, board.selection.type === "oval");
+        }
     }
 
     function getLassoSvgString(points, closed) {
@@ -1289,6 +1964,45 @@
             (closed ? "<polygon class=\"paint-board-lasso-fill\" points=\"" + pointString + "\"></polygon>" : "") +
             "<" + shapeTag + " class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" points=\"" + pointString + "\"></" + shapeTag + ">" +
             "<" + shapeTag + " class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" points=\"" + pointString + "\"></" + shapeTag + ">" +
+            "</svg>";
+    }
+
+    function getBoxSelectionSvgString(bounds, oval) {
+        var shape;
+
+        if (!bounds) {
+            return "";
+        }
+
+        if (oval) {
+            shape = "<ellipse class=\"paint-board-lasso-fill\" cx=\"" + escapeHtml(bounds.left + (bounds.width / 2)) + "\" cy=\"" + escapeHtml(bounds.top + (bounds.height / 2)) + "\" rx=\"" + escapeHtml(bounds.width / 2) + "\" ry=\"" + escapeHtml(bounds.height / 2) + "\"></ellipse>" +
+                "<ellipse class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" cx=\"" + escapeHtml(bounds.left + (bounds.width / 2)) + "\" cy=\"" + escapeHtml(bounds.top + (bounds.height / 2)) + "\" rx=\"" + escapeHtml(bounds.width / 2) + "\" ry=\"" + escapeHtml(bounds.height / 2) + "\"></ellipse>" +
+                "<ellipse class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" cx=\"" + escapeHtml(bounds.left + (bounds.width / 2)) + "\" cy=\"" + escapeHtml(bounds.top + (bounds.height / 2)) + "\" rx=\"" + escapeHtml(bounds.width / 2) + "\" ry=\"" + escapeHtml(bounds.height / 2) + "\"></ellipse>";
+        } else {
+            shape = "<rect class=\"paint-board-lasso-fill\" x=\"" + escapeHtml(bounds.left) + "\" y=\"" + escapeHtml(bounds.top) + "\" width=\"" + escapeHtml(bounds.width) + "\" height=\"" + escapeHtml(bounds.height) + "\"></rect>" +
+                "<rect class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" x=\"" + escapeHtml(bounds.left) + "\" y=\"" + escapeHtml(bounds.top) + "\" width=\"" + escapeHtml(bounds.width) + "\" height=\"" + escapeHtml(bounds.height) + "\"></rect>" +
+                "<rect class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" x=\"" + escapeHtml(bounds.left) + "\" y=\"" + escapeHtml(bounds.top) + "\" width=\"" + escapeHtml(bounds.width) + "\" height=\"" + escapeHtml(bounds.height) + "\"></rect>";
+        }
+
+        return "<svg class=\"paint-board-lasso-svg\" xmlns=\"http://www.w3.org/2000/svg\">" + shape + "</svg>";
+    }
+
+    function getMaskSelectionHtml(maskCanvas) {
+        var pathData;
+
+        if (!maskCanvas) {
+            return "";
+        }
+
+        pathData = getSelectionMaskPathData(maskCanvas);
+
+        if (!pathData) {
+            return "";
+        }
+
+        return "<svg class=\"paint-board-lasso-svg\" xmlns=\"http://www.w3.org/2000/svg\">" +
+            "<path class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" d=\"" + escapeHtml(pathData) + "\"></path>" +
+            "<path class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" d=\"" + escapeHtml(pathData) + "\"></path>" +
             "</svg>";
     }
 
@@ -1346,14 +2060,35 @@
         };
     }
 
-    function createLassoSelectionMask(board, points) {
+    function getSelectionBoundsFromPoints(fromPoint, toPoint) {
+        var left = Math.min(fromPoint.x, toPoint.x);
+        var top = Math.min(fromPoint.y, toPoint.y);
+        var right = Math.max(fromPoint.x, toPoint.x);
+        var bottom = Math.max(fromPoint.y, toPoint.y);
+
+        return {
+            left: left,
+            top: top,
+            right: right,
+            bottom: bottom,
+            width: right - left,
+            height: bottom - top
+        };
+    }
+
+    function createSelectionMaskCanvas(board) {
         var maskCanvas = document.createElement("canvas");
-        var maskContext;
-        var i;
 
         maskCanvas.width = board.canvas.width;
         maskCanvas.height = board.canvas.height;
-        maskContext = maskCanvas.getContext("2d");
+
+        return maskCanvas;
+    }
+
+    function createPolygonSelectionMask(board, points) {
+        var maskCanvas = createSelectionMaskCanvas(board);
+        var maskContext = maskCanvas.getContext("2d");
+        var i;
 
         maskContext.fillStyle = "#ffffff";
         maskContext.beginPath();
@@ -1367,6 +2102,287 @@
         maskContext.fill();
 
         return maskCanvas;
+    }
+
+    function createRectangleSelectionMask(board, bounds) {
+        var maskCanvas = createSelectionMaskCanvas(board);
+        var maskContext = maskCanvas.getContext("2d");
+
+        maskContext.fillStyle = "#ffffff";
+        maskContext.fillRect(bounds.left, bounds.top, bounds.width, bounds.height);
+
+        return maskCanvas;
+    }
+
+    function createOvalSelectionMask(board, bounds) {
+        var maskCanvas = createSelectionMaskCanvas(board);
+        var maskContext = maskCanvas.getContext("2d");
+
+        maskContext.fillStyle = "#ffffff";
+        maskContext.beginPath();
+        maskContext.ellipse(
+            bounds.left + (bounds.width / 2),
+            bounds.top + (bounds.height / 2),
+            bounds.width / 2,
+            bounds.height / 2,
+            0,
+            0,
+            Math.PI * 2
+        );
+        maskContext.fill();
+
+        return maskCanvas;
+    }
+
+    function combineSelectionMasks(board, baseMaskCanvas, nextMaskCanvas, operation) {
+        var combinedMask = createSelectionMaskCanvas(board);
+        var combinedContext = combinedMask.getContext("2d");
+
+        combinedContext.drawImage(baseMaskCanvas, 0, 0);
+        combinedContext.globalCompositeOperation = operation;
+        combinedContext.drawImage(nextMaskCanvas, 0, 0);
+        combinedContext.globalCompositeOperation = "source-over";
+
+        return combinedMask;
+    }
+
+    function isSelectionMaskEmpty(maskCanvas) {
+        return !getSelectionMaskBounds(maskCanvas);
+    }
+
+    function getSelectionMaskBounds(maskCanvas) {
+        var maskContext = maskCanvas.getContext("2d");
+        var imageData = maskContext.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+        var data = imageData.data;
+        var left = maskCanvas.width;
+        var top = maskCanvas.height;
+        var right = -1;
+        var bottom = -1;
+        var x;
+        var y;
+        var index;
+
+        for (y = 0; y < maskCanvas.height; y++) {
+            for (x = 0; x < maskCanvas.width; x++) {
+                index = ((y * maskCanvas.width) + x) * 4;
+
+                if (data[index + 3] === 0) {
+                    continue;
+                }
+
+                left = Math.min(left, x);
+                top = Math.min(top, y);
+                right = Math.max(right, x);
+                bottom = Math.max(bottom, y);
+            }
+        }
+
+        if (right < left || bottom < top) {
+            return null;
+        }
+
+        return {
+            left: left,
+            top: top,
+            right: right + 1,
+            bottom: bottom + 1,
+            width: (right - left) + 1,
+            height: (bottom - top) + 1
+        };
+    }
+
+    function getSelectionMaskPathData(maskCanvas) {
+        var loops = getSelectionMaskBoundaryLoops(maskCanvas);
+        var pathParts = [];
+        var i;
+
+        for (i = 0; i < loops.length; i++) {
+            if (loops[i].length < 2) {
+                continue;
+            }
+
+            pathParts.push(getSelectionBoundaryLoopPathData(loops[i]));
+        }
+
+        return pathParts.join(" ");
+    }
+
+    function getSelectionBoundaryLoopPathData(loop) {
+        var commands = ["M " + loop[0].x + " " + loop[0].y];
+        var i;
+
+        for (i = 1; i < loop.length; i++) {
+            commands.push("L " + loop[i].x + " " + loop[i].y);
+        }
+
+        commands.push("Z");
+
+        return commands.join(" ");
+    }
+
+    function getSelectionMaskBoundaryLoops(maskCanvas) {
+        var maskContext = maskCanvas.getContext("2d");
+        var maskImageData = maskContext.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+        var maskData = maskImageData.data;
+        var edgesByStart = {};
+        var loops = [];
+        var x;
+        var y;
+
+        for (y = 0; y < maskCanvas.height; y++) {
+            for (x = 0; x < maskCanvas.width; x++) {
+                if (!isSelectionMaskPixelFilled(maskData, maskCanvas.width, maskCanvas.height, x, y)) {
+                    continue;
+                }
+
+                if (!isSelectionMaskPixelFilled(maskData, maskCanvas.width, maskCanvas.height, x, y - 1)) {
+                    addSelectionBoundaryEdge(edgesByStart, x, y, x + 1, y);
+                }
+
+                if (!isSelectionMaskPixelFilled(maskData, maskCanvas.width, maskCanvas.height, x + 1, y)) {
+                    addSelectionBoundaryEdge(edgesByStart, x + 1, y, x + 1, y + 1);
+                }
+
+                if (!isSelectionMaskPixelFilled(maskData, maskCanvas.width, maskCanvas.height, x, y + 1)) {
+                    addSelectionBoundaryEdge(edgesByStart, x + 1, y + 1, x, y + 1);
+                }
+
+                if (!isSelectionMaskPixelFilled(maskData, maskCanvas.width, maskCanvas.height, x - 1, y)) {
+                    addSelectionBoundaryEdge(edgesByStart, x, y + 1, x, y);
+                }
+            }
+        }
+
+        while (true) {
+            var startKey = getFirstSelectionBoundaryEdgeKey(edgesByStart);
+
+            if (!startKey) {
+                break;
+            }
+
+            loops.push(traceSelectionBoundaryLoop(edgesByStart, startKey));
+        }
+
+        return loops;
+    }
+
+    function addSelectionBoundaryEdge(edgesByStart, startX, startY, endX, endY) {
+        var key = getSelectionPointKey(startX, startY);
+
+        if (!edgesByStart[key]) {
+            edgesByStart[key] = [];
+        }
+
+        edgesByStart[key].push({
+            start: {
+                x: startX,
+                y: startY
+            },
+            end: {
+                x: endX,
+                y: endY
+            }
+        });
+    }
+
+    function getFirstSelectionBoundaryEdgeKey(edgesByStart) {
+        var key;
+
+        for (key in edgesByStart) {
+            if (Object.prototype.hasOwnProperty.call(edgesByStart, key) && edgesByStart[key].length) {
+                return key;
+            }
+        }
+
+        return null;
+    }
+
+    function traceSelectionBoundaryLoop(edgesByStart, startKey) {
+        var edge = removeSelectionBoundaryEdge(edgesByStart, startKey);
+        var firstPoint = edge.start;
+        var loop = [firstPoint, edge.end];
+        var currentPoint = edge.end;
+        var currentKey;
+        var guard = 0;
+
+        while ((currentPoint.x !== firstPoint.x || currentPoint.y !== firstPoint.y) && guard < 100000) {
+            currentKey = getSelectionPointKey(currentPoint.x, currentPoint.y);
+            edge = removeSelectionBoundaryEdge(edgesByStart, currentKey);
+
+            if (!edge) {
+                break;
+            }
+
+            currentPoint = edge.end;
+            loop.push(currentPoint);
+            guard++;
+        }
+
+        return simplifySelectionBoundaryLoop(loop);
+    }
+
+    function removeSelectionBoundaryEdge(edgesByStart, key) {
+        var edges = edgesByStart[key];
+        var edge;
+
+        if (!edges || !edges.length) {
+            return null;
+        }
+
+        edge = edges.shift();
+
+        if (!edges.length) {
+            delete edgesByStart[key];
+        }
+
+        return edge;
+    }
+
+    function simplifySelectionBoundaryLoop(loop) {
+        var simplified = [];
+        var i;
+        var previous;
+        var current;
+        var next;
+
+        if (!loop.length) {
+            return simplified;
+        }
+
+        simplified.push(loop[0]);
+
+        for (i = 1; i < loop.length - 1; i++) {
+            previous = simplified[simplified.length - 1];
+            current = loop[i];
+            next = loop[i + 1];
+
+            if ((previous.x === current.x && current.x === next.x) ||
+                (previous.y === current.y && current.y === next.y)) {
+                continue;
+            }
+
+            simplified.push(current);
+        }
+
+        simplified.push(loop[loop.length - 1]);
+
+        return simplified;
+    }
+
+    function getSelectionPointKey(x, y) {
+        return x + "," + y;
+    }
+
+    function isSelectionMaskPixelFilled(maskData, width, height, x, y) {
+        var index;
+
+        if (x < 0 || y < 0 || x >= width || y >= height) {
+            return false;
+        }
+
+        index = ((y * width) + x) * 4;
+
+        return maskData[index + 3] > 0;
     }
 
     function hasActiveSelection(board) {
@@ -1453,6 +2469,12 @@
             return;
         }
 
+        if (currentPaintToolMode === PAINT_TOOL_MODES.MAGIC_WAND) {
+            event.preventDefault();
+            magicWandPointerEvent(board, event);
+            return;
+        }
+
         beginUndoableAction(board);
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.PAINT_BUCKET) {
@@ -1469,21 +2491,21 @@
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
             event.preventDefault();
-            board.pointerStartPosition = getPointerPosition(board, event);
+            board.pointerStartPosition = getSelectionPointerPosition(board, event);
             board.previewPointerPosition = board.pointerStartPosition;
             return;
         }
 
         if (isStraightLineToolMode()) {
             event.preventDefault();
-            board.pointerStartPosition = getPointerPosition(board, event);
+            board.pointerStartPosition = getSelectionPointerPosition(board, event);
             board.previewPointerPosition = board.pointerStartPosition;
             return;
         }
 
         if (isShapeToolMode()) {
             event.preventDefault();
-            board.pointerStartPosition = getPointerPosition(board, event);
+            board.pointerStartPosition = getSelectionPointerPosition(board, event);
             board.previewPointerPosition = board.pointerStartPosition;
             return;
         }
@@ -1509,6 +2531,10 @@
             return;
         }
 
+        if (currentPaintToolMode === PAINT_TOOL_MODES.MAGIC_WAND) {
+            return;
+        }
+
         if (currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
             return;
         }
@@ -1525,17 +2551,11 @@
     }
 
     function paintPointerEvent(board, event) {
-        var point = getPaintPointerPosition(board, event);
+        var point = getStrokePaintPointerPosition(board, event);
 
         event.preventDefault();
 
         if (!point) {
-            board.lastPointerPosition = null;
-            board.designedBrush2Stroke = null;
-            return;
-        }
-
-        if (!isPointInSelection(board, point)) {
             board.lastPointerPosition = null;
             board.designedBrush2Stroke = null;
             return;
@@ -1564,11 +2584,17 @@
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2) {
                 paintDesignedBrush2(board, point.x, point.y);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS) {
-                paintRoundPoint(board, point.x, point.y);
+                if (isPointInsideCanvas(board, point)) {
+                    paintRoundPoint(board, point.x, point.y);
+                }
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH) {
-                paintOldBrushStamp(board, point.x, point.y);
+                if (isPointInsideCanvas(board, point)) {
+                    paintOldBrushStamp(board, point.x, point.y);
+                }
             } else {
-                paintSquaredPoint(board, point.x, point.y);
+                if (isPointInsideCanvas(board, point)) {
+                    paintSquaredPoint(board, point.x, point.y);
+                }
             }
         });
 
@@ -1579,6 +2605,16 @@
         return currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES ||
             currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES ||
             currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH;
+    }
+
+    function isDragPaintToolMode() {
+        return currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_POINTS ||
+            currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS ||
+            currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH ||
+            currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH ||
+            currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2;
     }
 
     function paintContinuousLineStart(board, point) {
@@ -1604,7 +2640,7 @@
             return;
         }
 
-        rawPoint = getEventPointerPosition(board, event);
+        rawPoint = getSelectionPointerPosition(board, event);
         points = getShapeDrawPoints(fromPoint, rawPoint, getPreviewModifierEvent(board, event));
         if (event && typeof event.preventDefault === "function") {
             event.preventDefault();
@@ -1617,7 +2653,7 @@
 
     function paintGradientPointerEvent(board, event) {
         var fromPoint = board.pointerStartPosition;
-        var toPoint = getGradientEndPoint(fromPoint, getPointerPosition(board, event), event);
+        var toPoint = getGradientEndPoint(fromPoint, getSelectionPointerPosition(board, event), event);
 
         if (!fromPoint) {
             return;
@@ -1640,7 +2676,7 @@
             return;
         }
 
-        rawPoint = getEventPointerPosition(board, event);
+        rawPoint = getSelectionPointerPosition(board, event);
         toPoint = getGradientEndPoint(fromPoint, rawPoint, event);
         lineDesign = getCurrentStoredLineDesign();
         if (event && typeof event.preventDefault === "function") {
@@ -1711,6 +2747,308 @@
         var color = pixelDataToHex(imageData.data);
 
         notifyInkDropperColorSelected(color, board, point);
+    }
+
+    function magicWandPointerEvent(board, event) {
+        var point = getPointerPosition(board, event);
+        var sampleX = clamp(Math.floor(point.x), 0, board.canvas.width - 1);
+        var sampleY = clamp(Math.floor(point.y), 0, board.canvas.height - 1);
+        var maskCanvas = createMagicWandMask(board, sampleX, sampleY, currentMagicWandOptions);
+
+        if (!maskCanvas || isSelectionMaskEmpty(maskCanvas)) {
+            if (currentSelectionBehavior === SELECTION_BEHAVIORS.NORMAL) {
+                clearSelection(board);
+            }
+
+            return;
+        }
+
+        applySelectionBehavior(board, {
+            type: "mask",
+            bounds: getSelectionMaskBounds(maskCanvas),
+            maskCanvas: maskCanvas
+        });
+
+        renderLassoSelection(board);
+    }
+
+    function createMagicWandMask(board, startX, startY, options) {
+        var width = board.canvas.width;
+        var height = board.canvas.height;
+        var sourceData;
+        var reference;
+        var matcher;
+        var matched;
+        var maskCanvas;
+        var maskContext;
+        var maskImageData;
+
+        if (width <= 0 || height <= 0) {
+            return null;
+        }
+
+        sourceData = board.context.getImageData(0, 0, width, height).data;
+        reference = getMagicWandReferenceColor(sourceData, width, startX, startY);
+        matcher = createMagicWandMatcher(options, reference);
+
+        if (options && options.contiguous) {
+            matched = magicWandFloodFill(sourceData, width, height, startX, startY, matcher);
+        } else {
+            matched = magicWandGlobalMatch(sourceData, width, height, matcher);
+        }
+
+        maskCanvas = createSelectionMaskCanvas(board);
+        maskContext = maskCanvas.getContext("2d");
+        maskImageData = maskContext.createImageData(width, height);
+
+        fillMagicWandMask(maskImageData.data, matched, width, height);
+
+        if (options && options.antiAlias) {
+            applyMagicWandAntiAlias(maskImageData.data, matched, width, height);
+        }
+
+        maskContext.putImageData(maskImageData, 0, 0);
+
+        return maskCanvas;
+    }
+
+    function getMagicWandReferenceColor(data, width, x, y) {
+        var index = ((y * width) + x) * 4;
+        var reference = {
+            r: data[index],
+            g: data[index + 1],
+            b: data[index + 2],
+            a: data[index + 3]
+        };
+
+        reference.lab = rgbToLab(reference.r, reference.g, reference.b);
+
+        return reference;
+    }
+
+    function createMagicWandMatcher(options, reference) {
+        var tolerance = normalizeMagicWandTolerance(options ? options.tolerance : 0);
+        var mode = normalizeMagicWandMode(options ? options.mode : DEFAULT_MAGIC_WAND_MODE);
+
+        if (mode === MAGIC_WAND_MODES.PHOTOSHOP) {
+            return createMagicWandPhotoshopMatcher(tolerance, reference);
+        }
+
+        if (mode === MAGIC_WAND_MODES.PERCEPTUAL) {
+            return createMagicWandPerceptualMatcher(tolerance, reference);
+        }
+
+        return createMagicWandFastMatcher(tolerance, reference);
+    }
+
+    function createMagicWandFastMatcher(tolerance, reference) {
+        var maxDistance = (tolerance / 100) * MAGIC_WAND_MAX_DISTANCE;
+        var thresholdSquared = maxDistance * maxDistance;
+
+        return function(data, index) {
+            var dr = data[index] - reference.r;
+            var dg = data[index + 1] - reference.g;
+            var db = data[index + 2] - reference.b;
+            var da = data[index + 3] - reference.a;
+
+            return ((dr * dr) + (dg * dg) + (db * db) + (da * da)) <= thresholdSquared;
+        };
+    }
+
+    function createMagicWandPhotoshopMatcher(tolerance, reference) {
+        var channelTolerance = (tolerance / 100) * 255;
+
+        return function(data, index) {
+            return Math.abs(data[index] - reference.r) <= channelTolerance &&
+                Math.abs(data[index + 1] - reference.g) <= channelTolerance &&
+                Math.abs(data[index + 2] - reference.b) <= channelTolerance &&
+                Math.abs(data[index + 3] - reference.a) <= channelTolerance;
+        };
+    }
+
+    function createMagicWandPerceptualMatcher(tolerance, reference) {
+        var threshold = (tolerance / 100) * MAGIC_WAND_MAX_LAB_DISTANCE;
+        var referenceLab = reference.lab;
+
+        return function(data, index) {
+            var lab = rgbToLab(data[index], data[index + 1], data[index + 2]);
+            var dl = lab.l - referenceLab.l;
+            var da = lab.a - referenceLab.a;
+            var db = lab.b - referenceLab.b;
+            var alphaDiff = Math.abs(data[index + 3] - reference.a);
+
+            if (alphaDiff > (tolerance / 100) * 255) {
+                return false;
+            }
+
+            return Math.sqrt((dl * dl) + (da * da) + (db * db)) <= threshold;
+        };
+    }
+
+    function rgbToLab(r, g, b) {
+        var sr = magicWandSrgbToLinear(r / 255);
+        var sg = magicWandSrgbToLinear(g / 255);
+        var sb = magicWandSrgbToLinear(b / 255);
+        var x = ((sr * 0.4124) + (sg * 0.3576) + (sb * 0.1805)) / 0.95047;
+        var y = ((sr * 0.2126) + (sg * 0.7152) + (sb * 0.0722)) / 1;
+        var z = ((sr * 0.0193) + (sg * 0.1192) + (sb * 0.9505)) / 1.08883;
+        var fx = magicWandLabPivot(x);
+        var fy = magicWandLabPivot(y);
+        var fz = magicWandLabPivot(z);
+
+        return {
+            l: (116 * fy) - 16,
+            a: 500 * (fx - fy),
+            b: 200 * (fy - fz)
+        };
+    }
+
+    function magicWandSrgbToLinear(channel) {
+        if (channel <= 0.04045) {
+            return channel / 12.92;
+        }
+
+        return Math.pow((channel + 0.055) / 1.055, 2.4);
+    }
+
+    function magicWandLabPivot(value) {
+        if (value > 0.008856) {
+            return Math.pow(value, 1 / 3);
+        }
+
+        return (7.787 * value) + (16 / 116);
+    }
+
+    function magicWandFloodFill(data, width, height, startX, startY, matcher) {
+        var matched = new Uint8Array(width * height);
+        var stack = [(startY * width) + startX];
+        var pixel;
+        var x;
+        var y;
+
+        while (stack.length) {
+            pixel = stack.pop();
+
+            if (matched[pixel]) {
+                continue;
+            }
+
+            if (!matcher(data, pixel * 4)) {
+                continue;
+            }
+
+            matched[pixel] = 1;
+            x = pixel % width;
+            y = (pixel - x) / width;
+
+            if (x > 0) {
+                stack.push(pixel - 1);
+            }
+
+            if (x < width - 1) {
+                stack.push(pixel + 1);
+            }
+
+            if (y > 0) {
+                stack.push(pixel - width);
+            }
+
+            if (y < height - 1) {
+                stack.push(pixel + width);
+            }
+        }
+
+        return matched;
+    }
+
+    function magicWandGlobalMatch(data, width, height, matcher) {
+        var matched = new Uint8Array(width * height);
+        var total = width * height;
+        var pixel;
+
+        for (pixel = 0; pixel < total; pixel++) {
+            if (matcher(data, pixel * 4)) {
+                matched[pixel] = 1;
+            }
+        }
+
+        return matched;
+    }
+
+    function fillMagicWandMask(maskData, matched, width, height) {
+        var total = width * height;
+        var pixel;
+        var index;
+
+        for (pixel = 0; pixel < total; pixel++) {
+            if (!matched[pixel]) {
+                continue;
+            }
+
+            index = pixel * 4;
+            maskData[index] = 255;
+            maskData[index + 1] = 255;
+            maskData[index + 2] = 255;
+            maskData[index + 3] = 255;
+        }
+    }
+
+    function applyMagicWandAntiAlias(maskData, matched, width, height) {
+        var total = width * height;
+        var pixel;
+        var index;
+        var x;
+        var y;
+        var neighbors;
+
+        for (pixel = 0; pixel < total; pixel++) {
+            if (matched[pixel]) {
+                continue;
+            }
+
+            x = pixel % width;
+            y = (pixel - x) / width;
+            neighbors = countMagicWandMatchedNeighbors(matched, width, height, x, y);
+
+            if (neighbors === 0) {
+                continue;
+            }
+
+            index = pixel * 4;
+            maskData[index] = 255;
+            maskData[index + 1] = 255;
+            maskData[index + 2] = 255;
+            maskData[index + 3] = Math.round((neighbors / 8) * 160);
+        }
+    }
+
+    function countMagicWandMatchedNeighbors(matched, width, height, x, y) {
+        var count = 0;
+        var offsetX;
+        var offsetY;
+        var neighborX;
+        var neighborY;
+
+        for (offsetY = -1; offsetY <= 1; offsetY++) {
+            for (offsetX = -1; offsetX <= 1; offsetX++) {
+                if (offsetX === 0 && offsetY === 0) {
+                    continue;
+                }
+
+                neighborX = x + offsetX;
+                neighborY = y + offsetY;
+
+                if (neighborX < 0 || neighborY < 0 || neighborX >= width || neighborY >= height) {
+                    continue;
+                }
+
+                if (matched[(neighborY * width) + neighborX]) {
+                    count++;
+                }
+            }
+        }
+
+        return count;
     }
 
     function paintAt(board, x, y) {
@@ -2855,7 +4193,7 @@
 
         board.context.fillStyle = getCurrentPaintColor(board);
         board.context.strokeStyle = getCurrentPaintColor(board);
-        board.context.lineWidth = Math.max(1, getCurrentBrushSize(board));
+        board.context.lineWidth = fill ? Math.max(1, getCurrentBrushSize(board)) : getCurrentShapeStrokeWidth(board);
 
         if (fill) {
             board.context.fillRect(rect.x, rect.y, rect.width, rect.height);
@@ -2870,7 +4208,7 @@
         board.context.beginPath();
         board.context.fillStyle = getCurrentPaintColor(board);
         board.context.strokeStyle = getCurrentPaintColor(board);
-        board.context.lineWidth = Math.max(1, getCurrentBrushSize(board));
+        board.context.lineWidth = fill ? Math.max(1, getCurrentBrushSize(board)) : getCurrentShapeStrokeWidth(board);
         board.context.ellipse(
             rect.x + rect.width / 2,
             rect.y + rect.height / 2,
@@ -2975,6 +4313,14 @@
 
     function isStraightLineToolMode() {
         return currentPaintToolMode === PAINT_TOOL_MODES.STRAIGHT_LINE;
+    }
+
+    function canStartActionOutsideCanvas() {
+        return isLassoSelectionToolMode() ||
+            isDragPaintToolMode() ||
+            isStraightLineToolMode() ||
+            isShapeToolMode() ||
+            currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT;
     }
 
     function isOvalToolMode() {
@@ -3098,6 +4444,22 @@
         }
 
         return board.brushSize;
+    }
+
+    function getCurrentShapeStrokeWidth(board) {
+        var lineDesign = getCurrentStoredLineDesign();
+        var designWeight = lineDesign ? Number(lineDesign.weight) : NaN;
+        var lineWidth = global.App && global.App.memory ? Number(global.App.memory.currentLineWidth) : NaN;
+
+        if (!isNaN(designWeight)) {
+            return Math.max(1, designWeight);
+        }
+
+        if (!isNaN(lineWidth)) {
+            return Math.max(1, lineWidth);
+        }
+
+        return Math.max(1, getCurrentBrushSize(board));
     }
 
     function getCurrentBrushStroke() {
@@ -3236,18 +4598,28 @@
         return data;
     }
 
-    function destroy(board, paintHandlers, clearPreviewOnPaintToolChange) {
+    function destroy(board, paintHandlers, paintToolChangeHandlers) {
         if (paintHandlers && paintHandlers.supportsPointerEvents) {
             board.canvas.removeEventListener("pointerdown", paintHandlers.startPainting);
+            if (paintHandlers.container) {
+                paintHandlers.container.removeEventListener("pointerdown", paintHandlers.startPaintingFromOutside);
+            }
+            board.canvas.removeEventListener("dblclick", paintHandlers.finishPolygonalSelectionFromEvent);
             board.canvas.removeEventListener("pointerenter", paintHandlers.rememberHoverGuidePointer);
             board.canvas.removeEventListener("pointermove", paintHandlers.continuePainting);
+            document.removeEventListener("pointermove", paintHandlers.continuePainting, true);
             document.removeEventListener("pointerup", paintHandlers.endPainting, true);
             document.removeEventListener("pointercancel", paintHandlers.endPainting, true);
             board.canvas.removeEventListener("pointerleave", paintHandlers.leaveCanvas);
         } else if (paintHandlers) {
             board.canvas.removeEventListener("mousedown", paintHandlers.startPainting);
+            if (paintHandlers.container) {
+                paintHandlers.container.removeEventListener("mousedown", paintHandlers.startPaintingFromOutside);
+            }
+            board.canvas.removeEventListener("dblclick", paintHandlers.finishPolygonalSelectionFromEvent);
             board.canvas.removeEventListener("mouseenter", paintHandlers.rememberHoverGuidePointer);
             board.canvas.removeEventListener("mousemove", paintHandlers.continuePainting);
+            document.removeEventListener("mousemove", paintHandlers.continuePainting, true);
             document.removeEventListener("mouseup", paintHandlers.endPainting, true);
             board.canvas.removeEventListener("mouseleave", paintHandlers.leaveCanvas);
         }
@@ -3261,7 +4633,11 @@
             global.removeEventListener("blur", paintHandlers.clearHoverGuideOnBlur);
         }
 
-        global.removeEventListener("paint-tools-change", clearPreviewOnPaintToolChange);
+        if (paintToolChangeHandlers) {
+            global.removeEventListener("paint-tools-change", paintToolChangeHandlers.clearPreviewOnPaintToolChange);
+            global.removeEventListener("paint-tools-change", paintToolChangeHandlers.clearSelectionDraftOnToolChange);
+            global.removeEventListener("paint-selection-tool-change", paintToolChangeHandlers.clearSelectionDraftOnSelectionToolChange);
+        }
 
         if (board.rules && board.rules.element && board.rules.element.parentNode) {
             board.rules.element.parentNode.removeChild(board.rules.element);

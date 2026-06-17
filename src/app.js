@@ -67,6 +67,9 @@
         innerRadius: 44
     };
 
+    var selectionBehabiourComponent = null;
+    var magicWandOptionsComponent = null;
+
     $(document).ready(function() {
         console.log("jQuery document ready!");
         global.AppOpenWindows.openBrushEditorOutputsWindow();
@@ -78,6 +81,8 @@
         updateRainbowCrazyAlgorithmRadios();
         updateRainbowCrazyJumpCheckbox();
         updateRainbowCrazyLoopCheckbox();
+        initSelectionBehabiourComponent();
+        initMagicWandOptionsComponent();
         syncBrushWidthPickerToPaintTool(global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : null);
         global.AppOpenWindows.createDemoWindow("paintBoard");
     });
@@ -113,6 +118,8 @@
     global.addEventListener("paint-tools-change", function(event) {
         var mode = event.detail && event.detail.mode;
 
+        syncSelectionBehabiourVisibility(mode);
+        syncMagicWandOptionsVisibility(mode);
         syncBrushWidthPickerToPaintTool(mode);
 
         if (mode === "DESIGNED-BRUSH") {
@@ -144,6 +151,60 @@
             global.AppOpenWindows.openLinesDesignerWindow();
         }
     });
+
+    function initSelectionBehabiourComponent() {
+        if (!global.SelectionBehabiourComponent) {
+            return;
+        }
+
+        selectionBehabiourComponent = global.SelectionBehabiourComponent({
+            id: "selection-behabiour-toolbar",
+            containerId: "selection-behabiour-container",
+            visible: false
+        });
+
+        syncSelectionBehabiourVisibility(global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : "");
+    }
+
+    function syncSelectionBehabiourVisibility(mode) {
+        if (!selectionBehabiourComponent) {
+            return;
+        }
+
+        if (mode === "LASSO-SELECTION") {
+            selectionBehabiourComponent.show();
+            return;
+        }
+
+        selectionBehabiourComponent.hide();
+    }
+
+    function initMagicWandOptionsComponent() {
+        if (!global.MagicWandOptionsComponent) {
+            return;
+        }
+
+        magicWandOptionsComponent = global.MagicWandOptionsComponent({
+            id: "magic-wand-options-toolbar",
+            containerId: "magic-wand-options-container",
+            visible: false
+        });
+
+        syncMagicWandOptionsVisibility(global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : "");
+    }
+
+    function syncMagicWandOptionsVisibility(mode) {
+        if (!magicWandOptionsComponent) {
+            return;
+        }
+
+        if (mode === "MAGIC-WAND") {
+            magicWandOptionsComponent.show();
+            return;
+        }
+
+        magicWandOptionsComponent.hide();
+    }
 
     function syncBrushWidthPickerToPaintTool(mode) {
         if (mode === "SQUARED-POINTS" || mode === "SQUARED-LINES") {

@@ -29,6 +29,7 @@
         "STROKED-RECTANGLES",
         "STROKED-OVALS",
         "LASSO-SELECTION",
+        "MAGIC-WAND",
         "PAINT-BUCKET",
         "PATTERN-BUCKET",
         "INK-DROPPER",
