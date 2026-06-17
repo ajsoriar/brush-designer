@@ -28,6 +28,7 @@
         STROKED_RECTANGLES: "STROKED-RECTANGLES",
         STROKED_CIRCLES: "STROKED-CIRCLES",
         STROKED_OVALS: "STROKED-OVALS",
+        LASSO_SELECTION: "LASSO-SELECTION",
         PAINT_BUCKET: "PAINT-BUCKET",
         PATTERN_BUCKET: "PATTERN-BUCKET",
         GRADIENT: "GRADIENT",
@@ -136,6 +137,7 @@
         var baseLayer = document.createElement("li");
         var canvas = document.createElement("canvas");
         var tempLayer = createTempLayer(config.width, config.height);
+        var selectionLayer = createSelectionLayer(config.width, config.height);
         var context;
         var isPainting = false;
         var activePointerId = null;
@@ -153,6 +155,18 @@
             clearHoverGuide(board);
         };
         var stopPainting = function(event) {
+            if (isPainting && isLassoSelectionToolMode() && board.lassoSelectionStroke) {
+                finishLassoSelection(board, event);
+                commitUndoableAction(board);
+                isPainting = false;
+                board.lastPointerPosition = null;
+                board.designedBrush2Stroke = null;
+                board.pointerStartPosition = null;
+                board.previewPointerPosition = null;
+                board.previewModifierState = null;
+                return;
+            }
+
             if (isPainting && isStraightLineToolMode() && board.pointerStartPosition) {
                 paintStraightLinePointerEvent(board, event);
             }
@@ -261,7 +275,7 @@
             board.hoverGuideControlActive = false;
             clearHoverGuide(board);
 
-            if (isShapeToolMode()) {
+            if (isShapeToolMode() || isLassoSelectionToolMode()) {
                 return;
             }
 
@@ -306,6 +320,7 @@
         baseLayer.appendChild(canvas);
         layers.appendChild(baseLayer);
         element.appendChild(layers);
+        element.appendChild(selectionLayer);
         element.appendChild(tempLayer);
         container.appendChild(element);
 
@@ -317,6 +332,7 @@
             id: boardId,
             element: element,
             layersElement: layers,
+            selectionLayerElement: selectionLayer,
             tempLayerElement: tempLayer,
             activeLayerElement: baseLayer,
             activeLayerId: baseLayerId,
@@ -334,12 +350,17 @@
             hoverGuidePointerPosition: null,
             hoverGuideControlActive: false,
             designedBrush2Stroke: null,
+            lassoSelectionStroke: null,
+            selection: null,
             pointerStartPosition: null,
             undoSnapshot: null,
             pendingUndoSnapshot: null,
             actionHasChanges: false,
             clear: function() {
                 clear(board);
+            },
+            clearSelection: function() {
+                clearSelection(board);
             },
             paintAt: function(x, y) {
                 paintAt(board, x, y);
@@ -440,6 +461,16 @@
         return document.createElement("div");
     }
 
+    function createSelectionLayer(width, height) {
+        var selectionLayer = document.createElement("div");
+
+        selectionLayer.className = "paint-board-selection-layer";
+        selectionLayer.style.width = width + "px";
+        selectionLayer.style.height = height + "px";
+
+        return selectionLayer;
+    }
+
     function setSize(board, width, height) {
         board.width = width;
         board.height = height;
@@ -447,6 +478,7 @@
         board.element.style.height = height + "px";
         board.layersElement.style.width = width + "px";
         board.layersElement.style.height = height + "px";
+        setSelectionLayerSize(board.selectionLayerElement, width, height);
         setTempLayerSize(board.tempLayerElement, width, height);
         board.activeLayerElement.style.width = width + "px";
         board.activeLayerElement.style.height = height + "px";
@@ -455,6 +487,7 @@
         board.canvas.style.width = width + "px";
         board.canvas.style.height = height + "px";
         updateBoardRulesSize(board, width, height);
+        clearSelection(board);
         clear(board);
     }
 
@@ -470,6 +503,15 @@
 
         tempLayer.style.width = width + "px";
         tempLayer.style.height = height + "px";
+    }
+
+    function setSelectionLayerSize(selectionLayer, width, height) {
+        if (!selectionLayer) {
+            return;
+        }
+
+        selectionLayer.style.width = width + "px";
+        selectionLayer.style.height = height + "px";
     }
 
     function setBackgroundColor(board, backgroundColor) {
@@ -505,6 +547,7 @@
         board.element.style.backgroundColor = snapshot.backgroundColor;
         board.layersElement.style.width = snapshot.width + "px";
         board.layersElement.style.height = snapshot.height + "px";
+        setSelectionLayerSize(board.selectionLayerElement, snapshot.width, snapshot.height);
         setTempLayerSize(board.tempLayerElement, snapshot.width, snapshot.height);
         board.activeLayerElement.style.width = snapshot.width + "px";
         board.activeLayerElement.style.height = snapshot.height + "px";
@@ -513,6 +556,7 @@
         board.canvas.style.width = snapshot.width + "px";
         board.canvas.style.height = snapshot.height + "px";
         updateBoardRulesSize(board, snapshot.width, snapshot.height);
+        clearSelection(board);
         board.context.putImageData(snapshot.imageData, 0, 0);
         return true;
     }
@@ -1127,10 +1171,285 @@
         return !!(event && (event.key === " " || event.key === "Spacebar" || event.code === "Space"));
     }
 
+    function isLassoSelectionToolMode() {
+        return currentPaintToolMode === PAINT_TOOL_MODES.LASSO_SELECTION;
+    }
+
+    function startLassoSelection(board, event) {
+        var point = getPointerPosition(board, event);
+
+        clearSelection(board);
+        board.lassoSelectionStroke = {
+            points: [point],
+            lastPoint: point
+        };
+        board.pointerStartPosition = point;
+        board.previewPointerPosition = point;
+        renderLassoSelectionPreview(board, board.lassoSelectionStroke.points);
+    }
+
+    function updateLassoSelection(board, event) {
+        var stroke = board.lassoSelectionStroke;
+        var point;
+
+        if (!stroke) {
+            return;
+        }
+
+        point = getPointerPosition(board, event);
+
+        if (getPointDistance(stroke.lastPoint, point) >= 2) {
+            stroke.points.push(point);
+            stroke.lastPoint = point;
+        }
+
+        board.previewPointerPosition = point;
+        renderLassoSelectionPreview(board, stroke.points);
+    }
+
+    function finishLassoSelection(board, event) {
+        var stroke = board.lassoSelectionStroke;
+        var point;
+        var points;
+
+        if (!stroke) {
+            return;
+        }
+
+        point = getPointerPosition(board, event);
+
+        if (getPointDistance(stroke.lastPoint, point) >= 2) {
+            stroke.points.push(point);
+        }
+
+        points = simplifyLassoPoints(stroke.points);
+        board.lassoSelectionStroke = null;
+        clearTempSquare(board);
+
+        if (points.length < 3) {
+            clearSelection(board);
+            return;
+        }
+
+        board.selection = {
+            type: "lasso",
+            points: points,
+            bounds: getLassoBounds(points),
+            maskCanvas: createLassoSelectionMask(board, points)
+        };
+        renderLassoSelection(board);
+    }
+
+    function clearSelection(board) {
+        if (!board) {
+            return;
+        }
+
+        board.selection = null;
+        board.lassoSelectionStroke = null;
+
+        if (board.selectionLayerElement) {
+            board.selectionLayerElement.innerHTML = "";
+        }
+
+        clearTempSquare(board);
+    }
+
+    function renderLassoSelectionPreview(board, points) {
+        if (!board || !board.tempLayerElement) {
+            return;
+        }
+
+        board.tempLayerElement.innerHTML = getLassoSvgString(points, false);
+    }
+
+    function renderLassoSelection(board) {
+        if (!board || !board.selectionLayerElement || !board.selection || !board.selection.points) {
+            return;
+        }
+
+        board.selectionLayerElement.innerHTML = getLassoSvgString(board.selection.points, true);
+    }
+
+    function getLassoSvgString(points, closed) {
+        var pointString;
+        var shapeTag;
+
+        if (!points || !points.length) {
+            return "";
+        }
+
+        pointString = points.map(function(point) {
+            return escapeHtml(point.x) + "," + escapeHtml(point.y);
+        }).join(" ");
+
+        shapeTag = closed ? "polygon" : "polyline";
+
+        return "<svg class=\"paint-board-lasso-svg\" xmlns=\"http://www.w3.org/2000/svg\">" +
+            (closed ? "<polygon class=\"paint-board-lasso-fill\" points=\"" + pointString + "\"></polygon>" : "") +
+            "<" + shapeTag + " class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" points=\"" + pointString + "\"></" + shapeTag + ">" +
+            "<" + shapeTag + " class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" points=\"" + pointString + "\"></" + shapeTag + ">" +
+            "</svg>";
+    }
+
+    function simplifyLassoPoints(points) {
+        var simplified = [];
+        var i;
+
+        for (i = 0; i < points.length; i++) {
+            if (!simplified.length || getPointDistance(simplified[simplified.length - 1], points[i]) >= 1) {
+                simplified.push({
+                    x: points[i].x,
+                    y: points[i].y
+                });
+            }
+        }
+
+        return simplified;
+    }
+
+    function getPointDistance(a, b) {
+        var dx;
+        var dy;
+
+        if (!a || !b) {
+            return 0;
+        }
+
+        dx = b.x - a.x;
+        dy = b.y - a.y;
+
+        return Math.sqrt((dx * dx) + (dy * dy));
+    }
+
+    function getLassoBounds(points) {
+        var left = points[0].x;
+        var top = points[0].y;
+        var right = points[0].x;
+        var bottom = points[0].y;
+        var i;
+
+        for (i = 1; i < points.length; i++) {
+            left = Math.min(left, points[i].x);
+            top = Math.min(top, points[i].y);
+            right = Math.max(right, points[i].x);
+            bottom = Math.max(bottom, points[i].y);
+        }
+
+        return {
+            left: left,
+            top: top,
+            right: right,
+            bottom: bottom,
+            width: right - left,
+            height: bottom - top
+        };
+    }
+
+    function createLassoSelectionMask(board, points) {
+        var maskCanvas = document.createElement("canvas");
+        var maskContext;
+        var i;
+
+        maskCanvas.width = board.canvas.width;
+        maskCanvas.height = board.canvas.height;
+        maskContext = maskCanvas.getContext("2d");
+
+        maskContext.fillStyle = "#ffffff";
+        maskContext.beginPath();
+        maskContext.moveTo(points[0].x, points[0].y);
+
+        for (i = 1; i < points.length; i++) {
+            maskContext.lineTo(points[i].x, points[i].y);
+        }
+
+        maskContext.closePath();
+        maskContext.fill();
+
+        return maskCanvas;
+    }
+
+    function hasActiveSelection(board) {
+        return !!(board && board.selection && board.selection.maskCanvas);
+    }
+
+    function isPointInSelection(board, point) {
+        var maskContext;
+        var pixel;
+
+        if (!hasActiveSelection(board) || !point) {
+            return true;
+        }
+
+        if (point.x < 0 || point.y < 0 || point.x >= board.canvas.width || point.y >= board.canvas.height) {
+            return false;
+        }
+
+        maskContext = board.selection.maskCanvas.getContext("2d");
+        pixel = maskContext.getImageData(Math.floor(point.x), Math.floor(point.y), 1, 1).data;
+
+        return pixel[3] > 0;
+    }
+
+    function paintWithSelection(board, paintCallback) {
+        var beforeCanvas;
+
+        if (!hasActiveSelection(board)) {
+            paintCallback();
+            return;
+        }
+
+        beforeCanvas = copyBoardCanvas(board);
+        paintCallback();
+        applySelectionMaskToPaint(board, beforeCanvas);
+    }
+
+    function copyBoardCanvas(board) {
+        var copyCanvas = document.createElement("canvas");
+        var copyContext;
+
+        copyCanvas.width = board.canvas.width;
+        copyCanvas.height = board.canvas.height;
+        copyContext = copyCanvas.getContext("2d");
+        copyContext.drawImage(board.canvas, 0, 0);
+
+        return copyCanvas;
+    }
+
+    function applySelectionMaskToPaint(board, beforeCanvas) {
+        var selectedCanvas = document.createElement("canvas");
+        var selectedContext;
+
+        selectedCanvas.width = board.canvas.width;
+        selectedCanvas.height = board.canvas.height;
+        selectedContext = selectedCanvas.getContext("2d");
+        selectedContext.drawImage(board.canvas, 0, 0);
+        selectedContext.globalCompositeOperation = "destination-in";
+        selectedContext.drawImage(board.selection.maskCanvas, 0, 0);
+
+        board.context.clearRect(0, 0, board.canvas.width, board.canvas.height);
+        board.context.drawImage(beforeCanvas, 0, 0);
+        board.context.drawImage(selectedCanvas, 0, 0);
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
     function startPointerAction(board, event) {
         if (currentPaintToolMode === PAINT_TOOL_MODES.INK_DROPPER) {
             event.preventDefault();
             inkDropperPointerEvent(board, event);
+            return;
+        }
+
+        if (isLassoSelectionToolMode()) {
+            event.preventDefault();
+            startLassoSelection(board, event);
             return;
         }
 
@@ -1185,6 +1504,11 @@
             return;
         }
 
+        if (isLassoSelectionToolMode()) {
+            updateLassoSelection(board, event);
+            return;
+        }
+
         if (currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
             return;
         }
@@ -1211,32 +1535,42 @@
             return;
         }
 
+        if (!isPointInSelection(board, point)) {
+            board.lastPointerPosition = null;
+            board.designedBrush2Stroke = null;
+            return;
+        }
+
         if (isContinuousLineToolMode() && !board.lastPointerPosition) {
             markUndoableChange(board);
-            paintContinuousLineStart(board, point);
+            paintWithSelection(board, function() {
+                paintContinuousLineStart(board, point);
+            });
             board.lastPointerPosition = point;
             return;
         }
 
         markUndoableChange(board);
 
-        if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH && board.lastPointerPosition) {
-            paintOldBrushLine(board, board.lastPointerPosition, point);
-        } else if (currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES && board.lastPointerPosition) {
-            paintSquaredLine(board, board.lastPointerPosition, point);
-        } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES && board.lastPointerPosition) {
-            paintRoundLine(board, board.lastPointerPosition, point);
-        } else if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH) {
-            paintDesignedBrush(board, point.x, point.y);
-        } else if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2) {
-            paintDesignedBrush2(board, point.x, point.y);
-        } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS) {
-            paintRoundPoint(board, point.x, point.y);
-        } else if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH) {
-            paintOldBrushStamp(board, point.x, point.y);
-        } else {
-            paintSquaredPoint(board, point.x, point.y);
-        }
+        paintWithSelection(board, function() {
+            if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH && board.lastPointerPosition) {
+                paintOldBrushLine(board, board.lastPointerPosition, point);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES && board.lastPointerPosition) {
+                paintSquaredLine(board, board.lastPointerPosition, point);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES && board.lastPointerPosition) {
+                paintRoundLine(board, board.lastPointerPosition, point);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH) {
+                paintDesignedBrush(board, point.x, point.y);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2) {
+                paintDesignedBrush2(board, point.x, point.y);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS) {
+                paintRoundPoint(board, point.x, point.y);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH) {
+                paintOldBrushStamp(board, point.x, point.y);
+            } else {
+                paintSquaredPoint(board, point.x, point.y);
+            }
+        });
 
         board.lastPointerPosition = point;
     }
@@ -1276,7 +1610,9 @@
             event.preventDefault();
         }
         markUndoableChange(board);
-        paintShape(board, points.from, points.to);
+        paintWithSelection(board, function() {
+            paintShape(board, points.from, points.to);
+        });
     }
 
     function paintGradientPointerEvent(board, event) {
@@ -1289,7 +1625,9 @@
 
         event.preventDefault();
         markUndoableChange(board);
-        paintGradient(board, fromPoint, toPoint);
+        paintWithSelection(board, function() {
+            paintGradient(board, fromPoint, toPoint);
+        });
     }
 
     function paintStraightLinePointerEvent(board, event) {
@@ -1309,7 +1647,9 @@
             event.preventDefault();
         }
         markUndoableChange(board);
-        paintLine(board, fromPoint, toPoint, "butt", "miter", lineDesign);
+        paintWithSelection(board, function() {
+            paintLine(board, fromPoint, toPoint, "butt", "miter", lineDesign);
+        });
     }
 
     function getGradientEndPoint(fromPoint, toPoint, event) {
@@ -1344,13 +1684,25 @@
     function paintBucketPointerEvent(board, event) {
         var point = getPointerPosition(board, event);
 
-        paintBucket(board, point.x, point.y);
+        if (!isPointInSelection(board, point)) {
+            return;
+        }
+
+        paintWithSelection(board, function() {
+            paintBucket(board, point.x, point.y);
+        });
     }
 
     function patternBucketPointerEvent(board, event) {
         var point = getPointerPosition(board, event);
 
-        paintPatternBucket(board, point.x, point.y);
+        if (!isPointInSelection(board, point)) {
+            return;
+        }
+
+        paintWithSelection(board, function() {
+            paintPatternBucket(board, point.x, point.y);
+        });
     }
 
     function inkDropperPointerEvent(board, event) {
@@ -1362,9 +1714,20 @@
     }
 
     function paintAt(board, x, y) {
+        var point = {
+            x: x,
+            y: y
+        };
+
+        if (!isPointInSelection(board, point)) {
+            return;
+        }
+
         beginUndoableAction(board);
         markUndoableChange(board);
-        paintSquaredPoint(board, x, y);
+        paintWithSelection(board, function() {
+            paintSquaredPoint(board, x, y);
+        });
         commitUndoableAction(board);
     }
 
@@ -2635,7 +2998,9 @@
     function drawImage(board, image, x, y) {
         beginUndoableAction(board);
         markUndoableChange(board);
-        board.context.drawImage(image, x || 0, y || 0);
+        paintWithSelection(board, function() {
+            board.context.drawImage(image, x || 0, y || 0);
+        });
         commitUndoableAction(board);
     }
 

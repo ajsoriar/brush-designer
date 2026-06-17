@@ -35,7 +35,8 @@
         "OLD-BRUSH": "Retro Brush",
         "PATTERN-BUCKET": "Pattern Bucket",
         "GRADIENT": "Gradient",
-        "STRAIGHT-LINE": "Line"
+        "STRAIGHT-LINE": "Line",
+        "LASSO-SELECTION": "Lasso Selection"
     };
 
     var HIDDEN_TOOLS = {

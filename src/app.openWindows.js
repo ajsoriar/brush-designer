@@ -28,6 +28,7 @@
         "FILLED-OVALS",
         "STROKED-RECTANGLES",
         "STROKED-OVALS",
+        "LASSO-SELECTION",
         "PAINT-BUCKET",
         "PATTERN-BUCKET",
         "INK-DROPPER",

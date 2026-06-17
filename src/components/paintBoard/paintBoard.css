@@ -38,6 +38,71 @@
     z-index: 2;
 }
 
+.paint-board-selection-layer {
+    display: block;
+    height: 100%;
+    left: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    z-index: 3;
+}
+
+.paint-board-lasso-svg {
+    display: block;
+    height: 100%;
+    left: 0;
+    overflow: visible;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    width: 100%;
+}
+
+.paint-board-lasso-fill {
+    fill: transparent;
+    stroke: none;
+}
+
+.paint-board-lasso-outline {
+    fill: none;
+    shape-rendering: crispEdges;
+    stroke-dasharray: var(--paint-board-lasso-dash, 4px) var(--paint-board-lasso-dash, 4px);
+    stroke-linejoin: round;
+    stroke-width: var(--paint-board-screen-pixel, 1px);
+}
+
+.paint-board-lasso-outline-dark {
+    animation: paint-board-lasso-march 0.45s linear infinite;
+    stroke: #000;
+}
+
+.paint-board-lasso-outline-light {
+    animation: paint-board-lasso-march-light 0.45s linear infinite;
+    stroke: #fff;
+}
+
+@keyframes paint-board-lasso-march {
+    from {
+        stroke-dashoffset: 0;
+    }
+
+    to {
+        stroke-dashoffset: var(--paint-board-lasso-dash-cycle, 8px);
+    }
+}
+
+@keyframes paint-board-lasso-march-light {
+    from {
+        stroke-dashoffset: var(--paint-board-lasso-dash-light-start, 4px);
+    }
+
+    to {
+        stroke-dashoffset: var(--paint-board-lasso-dash-light-end, 12px);
+    }
+}
+
 .paint-board-temp-layer .line {
     display: block;
     list-style: none;

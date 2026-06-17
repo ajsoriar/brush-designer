@@ -307,6 +307,7 @@
 
         setupZoomLayout(board, viewport);
         board.setAttribute("data-zoom", normalizedZoom);
+        updateBoardOverlayScale(board, nextZoom);
         board.style.transformOrigin = "0 0";
         board.style.transform = "scale(" + normalizedZoom + ")";
         updateZoomLayout(board, viewport, nextZoom);
@@ -316,6 +317,21 @@
             restoreVisibleCenter(viewport, visibleCenter, nextZoom);
         }
         notifyZoomChange(board, nextZoom);
+    }
+
+    function updateBoardOverlayScale(board, zoom) {
+        var screenPixel;
+
+        if (!board) {
+            return;
+        }
+
+        screenPixel = 1 / (parseFloat(zoom) || 1);
+        board.style.setProperty("--paint-board-screen-pixel", screenPixel + "px");
+        board.style.setProperty("--paint-board-lasso-dash", (4 * screenPixel) + "px");
+        board.style.setProperty("--paint-board-lasso-dash-cycle", (8 * screenPixel) + "px");
+        board.style.setProperty("--paint-board-lasso-dash-light-start", (4 * screenPixel) + "px");
+        board.style.setProperty("--paint-board-lasso-dash-light-end", (12 * screenPixel) + "px");
     }
 
     function setupZoomLayout(board, viewport) {
