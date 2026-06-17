@@ -27,6 +27,20 @@
     width: 100%;
 }
 
+.paint-board-layer[data-type="TEMP"] {
+    cursor: move;
+    z-index: 1;
+}
+
+.paint-board-floating-paste-canvas {
+    display: block;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    touch-action: none;
+    width: 100%;
+}
+
 .paint-board-temp-layer {
     display: block;
     height: 100%;

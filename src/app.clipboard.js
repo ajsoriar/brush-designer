@@ -136,7 +136,7 @@
         return imageBlobPromise.then(function(blob) {
             if (global.createImageBitmap) {
                 return global.createImageBitmap(blob).then(function(imageBitmap) {
-                    board.drawImage(imageBitmap, 0, 0);
+                    pasteImageOnBoard(board, imageBitmap);
                 });
             }
 
@@ -150,13 +150,22 @@
             var objectUrl = global.URL.createObjectURL(blob);
 
             image.onload = function() {
-                board.drawImage(image, 0, 0);
+                pasteImageOnBoard(board, image);
                 global.URL.revokeObjectURL(objectUrl);
                 resolve();
             };
 
             image.src = objectUrl;
         });
+    }
+
+    function pasteImageOnBoard(board, image) {
+        if (board && typeof board.startFloatingPaste === "function") {
+            board.startFloatingPaste(image);
+            return;
+        }
+
+        board.drawImage(image, 0, 0);
     }
 
     function getBoardBlob(board) {

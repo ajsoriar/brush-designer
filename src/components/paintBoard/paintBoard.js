@@ -607,6 +607,7 @@
         baseLayer.id = baseLayerId;
         baseLayer.className = "paint-board-layer";
         baseLayer.setAttribute("data-layer", baseLayerId);
+        baseLayer.setAttribute("data-type", "CANVAS");
         baseLayer.style.width = config.width + "px";
         baseLayer.style.height = config.height + "px";
 
@@ -636,6 +637,7 @@
             tempLayerElement: tempLayer,
             activeLayerElement: baseLayer,
             activeLayerId: baseLayerId,
+            floatingPaste: null,
             canvas: canvas,
             context: context,
             width: config.width,
@@ -668,6 +670,15 @@
             },
             drawImage: function(image, x, y) {
                 drawImage(board, image, x, y);
+            },
+            startFloatingPaste: function(image) {
+                startFloatingPaste(board, image);
+            },
+            commitFloatingPaste: function() {
+                return commitFloatingPaste(board);
+            },
+            cancelFloatingPaste: function() {
+                cancelFloatingPaste(board);
             },
             setSize: function(width, height) {
                 setSize(board, width, height);
@@ -758,6 +769,7 @@
     }
 
     function clear(board) {
+        cancelFloatingPaste(board);
         beginUndoableAction(board);
         markUndoableChange(board);
         board.context.clearRect(0, 0, board.canvas.width, board.canvas.height);
@@ -788,6 +800,7 @@
     }
 
     function setSize(board, width, height) {
+        cancelFloatingPaste(board);
         board.width = width;
         board.height = height;
         board.element.style.width = width + "px";
@@ -854,6 +867,7 @@
             return false;
         }
 
+        cancelFloatingPaste(board);
         board.width = snapshot.width;
         board.height = snapshot.height;
         board.backgroundColor = snapshot.backgroundColor;
@@ -4350,6 +4364,464 @@
         commitUndoableAction(board);
     }
 
+    function startFloatingPaste(board, image) {
+        var size;
+        var layer;
+        var canvas;
+        var context;
+        var floatingPaste;
+
+        if (!board || !image) {
+            return;
+        }
+
+        cancelFloatingPaste(board);
+        size = getImageDrawSize(image);
+        layer = document.createElement("li");
+        canvas = document.createElement("canvas");
+        context = canvas.getContext("2d");
+
+        layer.id = board.id + "-floating-paste-layer";
+        layer.className = "paint-board-layer paint-board-layer-temp-paste";
+        layer.setAttribute("data-layer", layer.id);
+        layer.setAttribute("data-type", "TEMP");
+        layer.style.width = board.canvas.width + "px";
+        layer.style.height = board.canvas.height + "px";
+
+        canvas.className = "paint-board-floating-paste-canvas";
+        canvas.width = board.canvas.width;
+        canvas.height = board.canvas.height;
+        canvas.style.width = board.canvas.width + "px";
+        canvas.style.height = board.canvas.height + "px";
+
+        layer.appendChild(canvas);
+        board.layersElement.appendChild(layer);
+
+        floatingPaste = {
+            image: image,
+            layer: layer,
+            canvas: canvas,
+            context: context,
+            x: 0,
+            y: 0,
+            width: size.width,
+            height: size.height,
+            isDragging: false,
+            dragAction: null,
+            resizeHandle: null,
+            pointerId: null,
+            dragOffsetX: 0,
+            dragOffsetY: 0,
+            startX: 0,
+            startY: 0,
+            startWidth: 0,
+            startHeight: 0,
+            startPointerX: 0,
+            startPointerY: 0,
+            aspectRatio: size.height ? size.width / size.height : 1,
+            pointerDown: null,
+            pointerMove: null,
+            pointerUp: null,
+            pointerHover: null,
+            doubleClick: null,
+            keyDown: null
+        };
+
+        floatingPaste.pointerDown = function(event) {
+            startFloatingPasteDrag(board, event);
+        };
+        floatingPaste.pointerMove = function(event) {
+            moveFloatingPaste(board, event);
+        };
+        floatingPaste.pointerUp = function(event) {
+            stopFloatingPasteDrag(board, event);
+        };
+        floatingPaste.pointerHover = function(event) {
+            updateFloatingPasteCursor(board, event);
+        };
+        floatingPaste.doubleClick = function(event) {
+            event.preventDefault();
+            commitFloatingPaste(board);
+        };
+        floatingPaste.keyDown = function(event) {
+            handleFloatingPasteKeyDown(board, event);
+        };
+
+        board.floatingPaste = floatingPaste;
+        layer.addEventListener("pointerdown", floatingPaste.pointerDown);
+        layer.addEventListener("pointermove", floatingPaste.pointerHover);
+        layer.addEventListener("dblclick", floatingPaste.doubleClick);
+        document.addEventListener("pointermove", floatingPaste.pointerMove, true);
+        document.addEventListener("pointerup", floatingPaste.pointerUp, true);
+        document.addEventListener("pointercancel", floatingPaste.pointerUp, true);
+        document.addEventListener("keydown", floatingPaste.keyDown);
+        renderFloatingPaste(board);
+    }
+
+    function getImageDrawSize(image) {
+        return {
+            width: image.naturalWidth || image.videoWidth || image.width || 0,
+            height: image.naturalHeight || image.videoHeight || image.height || 0
+        };
+    }
+
+    function renderFloatingPaste(board) {
+        var paste = board && board.floatingPaste;
+        var handles;
+        var i;
+
+        if (!paste) {
+            return;
+        }
+
+        paste.context.clearRect(0, 0, paste.canvas.width, paste.canvas.height);
+        paste.context.drawImage(paste.image, paste.x, paste.y, paste.width, paste.height);
+        paste.context.save();
+        paste.context.strokeStyle = "#000";
+        paste.context.setLineDash([4, 4]);
+        paste.context.lineWidth = 1;
+        paste.context.strokeRect(Math.round(paste.x) + 0.5, Math.round(paste.y) + 0.5, Math.max(1, paste.width - 1), Math.max(1, paste.height - 1));
+        paste.context.strokeStyle = "#fff";
+        paste.context.lineDashOffset = 4;
+        paste.context.strokeRect(Math.round(paste.x) + 0.5, Math.round(paste.y) + 0.5, Math.max(1, paste.width - 1), Math.max(1, paste.height - 1));
+        paste.context.restore();
+        handles = getFloatingPasteHandles(paste);
+        paste.context.save();
+        paste.context.fillStyle = "#fff";
+        paste.context.strokeStyle = "#000";
+        paste.context.lineWidth = 1;
+        paste.context.setLineDash([]);
+        for (i = 0; i < handles.length; i++) {
+            paste.context.fillRect(handles[i].left, handles[i].top, handles[i].size, handles[i].size);
+            paste.context.strokeRect(handles[i].left + 0.5, handles[i].top + 0.5, handles[i].size - 1, handles[i].size - 1);
+        }
+        paste.context.restore();
+    }
+
+    function startFloatingPasteDrag(board, event) {
+        var paste = board && board.floatingPaste;
+        var point;
+        var handle;
+
+        if (!paste || !isPrimaryPaintInput(event)) {
+            return;
+        }
+
+        point = getSelectionPointerPosition(board, event);
+        handle = getFloatingPasteHandleAtPoint(paste, point);
+
+        if (!handle && !isPointInsideBounds(point, paste)) {
+            commitFloatingPaste(board);
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        paste.isDragging = true;
+        paste.dragAction = handle ? "resize" : "move";
+        paste.resizeHandle = handle;
+        paste.pointerId = typeof event.pointerId === "number" ? event.pointerId : null;
+        paste.dragOffsetX = point.x - paste.x;
+        paste.dragOffsetY = point.y - paste.y;
+        paste.startX = paste.x;
+        paste.startY = paste.y;
+        paste.startWidth = paste.width;
+        paste.startHeight = paste.height;
+        paste.startPointerX = point.x;
+        paste.startPointerY = point.y;
+        paste.aspectRatio = paste.height ? paste.width / paste.height : 1;
+        paste.layer.style.cursor = getFloatingPasteCursor(handle);
+        capturePointer(paste.layer, event.pointerId);
+    }
+
+    function moveFloatingPaste(board, event) {
+        var paste = board && board.floatingPaste;
+        var point;
+
+        if (!paste || !paste.isDragging) {
+            return;
+        }
+
+        if (paste.pointerId !== null && typeof event.pointerId === "number" && event.pointerId !== paste.pointerId) {
+            return;
+        }
+
+        event.preventDefault();
+        point = getSelectionPointerPosition(board, event);
+        if (paste.dragAction === "resize") {
+            resizeFloatingPaste(board, point, event);
+        } else {
+            paste.x = Math.round(point.x - paste.dragOffsetX);
+            paste.y = Math.round(point.y - paste.dragOffsetY);
+        }
+        renderFloatingPaste(board);
+    }
+
+    function resizeFloatingPaste(board, point, event) {
+        var paste = board && board.floatingPaste;
+        var handle;
+        var left;
+        var top;
+        var right;
+        var bottom;
+        var width;
+        var height;
+        var aspectWidth;
+        var aspectHeight;
+
+        if (!paste || !paste.resizeHandle) {
+            return;
+        }
+
+        handle = paste.resizeHandle;
+        left = paste.startX;
+        top = paste.startY;
+        right = paste.startX + paste.startWidth;
+        bottom = paste.startY + paste.startHeight;
+
+        if (handle.indexOf("w") !== -1) {
+            left = point.x;
+        }
+
+        if (handle.indexOf("e") !== -1) {
+            right = point.x;
+        }
+
+        if (handle.indexOf("n") !== -1) {
+            top = point.y;
+        }
+
+        if (handle.indexOf("s") !== -1) {
+            bottom = point.y;
+        }
+
+        width = Math.max(1, right - left);
+        height = Math.max(1, bottom - top);
+
+        if (event && event.shiftKey && paste.aspectRatio > 0 && handle.length === 2) {
+            if (width / height > paste.aspectRatio) {
+                aspectWidth = height * paste.aspectRatio;
+                if (handle.indexOf("w") !== -1) {
+                    left = right - aspectWidth;
+                } else {
+                    right = left + aspectWidth;
+                }
+            } else {
+                aspectHeight = width / paste.aspectRatio;
+                if (handle.indexOf("n") !== -1) {
+                    top = bottom - aspectHeight;
+                } else {
+                    bottom = top + aspectHeight;
+                }
+            }
+        }
+
+        if (right < left) {
+            aspectWidth = left;
+            left = right;
+            right = aspectWidth;
+        }
+
+        if (bottom < top) {
+            aspectHeight = top;
+            top = bottom;
+            bottom = aspectHeight;
+        }
+
+        paste.x = Math.round(left);
+        paste.y = Math.round(top);
+        paste.width = Math.max(1, Math.round(right - left));
+        paste.height = Math.max(1, Math.round(bottom - top));
+    }
+
+    function stopFloatingPasteDrag(board, event) {
+        var paste = board && board.floatingPaste;
+
+        if (!paste || !paste.isDragging) {
+            return;
+        }
+
+        if (paste.pointerId !== null && event && typeof event.pointerId === "number" && event.pointerId !== paste.pointerId) {
+            return;
+        }
+
+        paste.isDragging = false;
+        paste.dragAction = null;
+        paste.resizeHandle = null;
+        paste.pointerId = null;
+        if (event) {
+            updateFloatingPasteCursor(board, event);
+        }
+    }
+
+    function updateFloatingPasteCursor(board, event) {
+        var paste = board && board.floatingPaste;
+        var point;
+        var handle;
+
+        if (!paste || paste.isDragging) {
+            return;
+        }
+
+        point = getSelectionPointerPosition(board, event);
+        handle = getFloatingPasteHandleAtPoint(paste, point);
+        paste.layer.style.cursor = getFloatingPasteCursor(handle || (isPointInsideBounds(point, paste) ? "move" : null));
+    }
+
+    function handleFloatingPasteKeyDown(board, event) {
+        if (!board || !board.floatingPaste) {
+            return;
+        }
+
+        if (event.key === "Enter") {
+            event.preventDefault();
+            commitFloatingPaste(board);
+            return;
+        }
+
+        if (event.key === "Escape") {
+            event.preventDefault();
+            cancelFloatingPaste(board);
+        }
+    }
+
+    function isPointInsideBounds(point, bounds) {
+        return !!(point && bounds &&
+            point.x >= bounds.x &&
+            point.y >= bounds.y &&
+            point.x <= bounds.x + bounds.width &&
+            point.y <= bounds.y + bounds.height);
+    }
+
+    function getFloatingPasteHandles(paste) {
+        var size = 8;
+        var half = size / 2;
+        var left = paste.x;
+        var top = paste.y;
+        var centerX = paste.x + (paste.width / 2);
+        var centerY = paste.y + (paste.height / 2);
+        var right = paste.x + paste.width;
+        var bottom = paste.y + paste.height;
+
+        return [
+            createFloatingPasteHandle("nw", left, top, size, half),
+            createFloatingPasteHandle("n", centerX, top, size, half),
+            createFloatingPasteHandle("ne", right, top, size, half),
+            createFloatingPasteHandle("e", right, centerY, size, half),
+            createFloatingPasteHandle("se", right, bottom, size, half),
+            createFloatingPasteHandle("s", centerX, bottom, size, half),
+            createFloatingPasteHandle("sw", left, bottom, size, half),
+            createFloatingPasteHandle("w", left, centerY, size, half)
+        ];
+    }
+
+    function createFloatingPasteHandle(name, x, y, size, half) {
+        return {
+            name: name,
+            left: Math.round(x - half),
+            top: Math.round(y - half),
+            size: size
+        };
+    }
+
+    function getFloatingPasteHandleAtPoint(paste, point) {
+        var handles;
+        var i;
+        var handle;
+
+        if (!paste || !point) {
+            return null;
+        }
+
+        handles = getFloatingPasteHandles(paste);
+        for (i = 0; i < handles.length; i++) {
+            handle = handles[i];
+            if (point.x >= handle.left &&
+                point.x <= handle.left + handle.size &&
+                point.y >= handle.top &&
+                point.y <= handle.top + handle.size) {
+                return handle.name;
+            }
+        }
+
+        return null;
+    }
+
+    function getFloatingPasteCursor(handle) {
+        if (handle === "nw" || handle === "se") {
+            return "nwse-resize";
+        }
+
+        if (handle === "ne" || handle === "sw") {
+            return "nesw-resize";
+        }
+
+        if (handle === "n" || handle === "s") {
+            return "ns-resize";
+        }
+
+        if (handle === "e" || handle === "w") {
+            return "ew-resize";
+        }
+
+        if (handle === "move") {
+            return "move";
+        }
+
+        return "default";
+    }
+
+    function commitFloatingPaste(board) {
+        var paste = board && board.floatingPaste;
+
+        if (!paste) {
+            return false;
+        }
+
+        beginUndoableAction(board);
+        markUndoableChange(board);
+        paintWithSelection(board, function() {
+            board.context.drawImage(paste.image, paste.x, paste.y, paste.width, paste.height);
+        });
+        removeFloatingPaste(board);
+        commitUndoableAction(board);
+        return true;
+    }
+
+    function cancelFloatingPaste(board) {
+        if (!board || !board.floatingPaste) {
+            return;
+        }
+
+        removeFloatingPaste(board);
+    }
+
+    function removeFloatingPaste(board) {
+        var paste = board && board.floatingPaste;
+
+        if (!paste) {
+            return;
+        }
+
+        paste.layer.removeEventListener("pointerdown", paste.pointerDown);
+        paste.layer.removeEventListener("pointermove", paste.pointerHover);
+        paste.layer.removeEventListener("dblclick", paste.doubleClick);
+        document.removeEventListener("pointermove", paste.pointerMove, true);
+        document.removeEventListener("pointerup", paste.pointerUp, true);
+        document.removeEventListener("pointercancel", paste.pointerUp, true);
+        document.removeEventListener("keydown", paste.keyDown);
+
+        if (paste.layer.parentNode) {
+            paste.layer.parentNode.removeChild(paste.layer);
+        }
+
+        if (paste.image && typeof paste.image.close === "function") {
+            paste.image.close();
+        }
+
+        board.floatingPaste = null;
+    }
+
     function getCurrentPaintColor(board) {
         var crazyColor = getCrazyPaintColor(board);
 
@@ -4599,6 +5071,8 @@
     }
 
     function destroy(board, paintHandlers, paintToolChangeHandlers) {
+        cancelFloatingPaste(board);
+
         if (paintHandlers && paintHandlers.supportsPointerEvents) {
             board.canvas.removeEventListener("pointerdown", paintHandlers.startPainting);
             if (paintHandlers.container) {
