@@ -226,14 +226,14 @@
         rules.setBoardElement(paintBoard.element);
         paintBoard.window = paintBoardWindow;
         paintBoardWindow.baseTitle = paintBoardWindow.title;
-        activePaintBoard = paintBoard;
+        setActivePaintBoard(paintBoard);
         initPaintBoardToolbar(paintBoard);
         paintBoardWindow.scaleToContent(paintBoardWidth + rules.ruleSize, paintBoardHeight + rules.ruleSize);
         setActiveZoomBoard(paintBoard);
         updatePaintBoardWindowTitle(paintBoard);
 
         paintBoardWindow.element.addEventListener("mousedown", function() {
-            activePaintBoard = paintBoard;
+            setActivePaintBoard(paintBoard);
             setActiveZoomBoard(paintBoard);
             updatePaintBoardWindowTitle(paintBoard);
         });
@@ -273,7 +273,7 @@
         undoButton.title = "Undo";
         undoButton.disabled = !paintBoard.canUndo || !paintBoard.canUndo();
         undoButton.addEventListener("click", function() {
-            activePaintBoard = paintBoard;
+            setActivePaintBoard(paintBoard);
             setActiveZoomBoard(paintBoard);
 
             if (paintBoard.undo && paintBoard.undo()) {
@@ -290,7 +290,7 @@
             button.textContent = option.label;
             button.title = option.title || option.label;
             button.addEventListener("click", function() {
-                activePaintBoard = paintBoard;
+                setActivePaintBoard(paintBoard);
                 setActiveZoomBoard(paintBoard);
 
                 if (global.Zoom && global.Zoom.setBoardZoom) {
@@ -308,17 +308,47 @@
     }
 
     function updatePaintBoardToolbarState(paintBoard) {
-        if (!paintBoard || !paintBoard.undoButton) {
+        if (!paintBoard) {
             return;
         }
 
-        paintBoard.undoButton.disabled = !paintBoard.canUndo || !paintBoard.canUndo();
+        if (paintBoard.undoButton) {
+            paintBoard.undoButton.disabled = !paintBoard.canUndo || !paintBoard.canUndo();
+        }
+
     }
 
     function setActiveZoomBoard(paintBoard) {
         if (global.Zoom && global.Zoom.setActiveBoard) {
             global.Zoom.setActiveBoard(paintBoard.element);
         }
+    }
+
+    function setActivePaintBoard(paintBoard) {
+        if (activePaintBoard === paintBoard) {
+            return;
+        }
+
+        activePaintBoard = paintBoard;
+        notifyActivePaintBoardChange(paintBoard);
+    }
+
+    function notifyActivePaintBoardChange(paintBoard) {
+        var event;
+        var detail = {
+            paintBoard: paintBoard
+        };
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-board-active-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-board-active-change", false, false, detail);
+        }
+
+        global.dispatchEvent(event);
     }
 
     function updatePaintBoardWindowTitle(paintBoard) {
@@ -391,7 +421,7 @@
 
     function clearActivePaintBoard(paintBoard) {
         if (activePaintBoard === paintBoard) {
-            activePaintBoard = null;
+            setActivePaintBoard(null);
         }
     }
 

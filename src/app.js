@@ -85,6 +85,7 @@
         initMagicWandOptionsComponent();
         syncBrushWidthPickerToPaintTool(global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : null);
         global.AppOpenWindows.createDemoWindow("paintBoard");
+        updateFillSelectionButton();
     });
 
     global.addEventListener("paint-board-zoom-change", function(event) {
@@ -113,6 +114,24 @@
         if (global.AppOpenWindows.updatePaintBoardToolbarState) {
             global.AppOpenWindows.updatePaintBoardToolbarState(event.detail.paintBoard);
         }
+
+        updateFillSelectionButton();
+    });
+
+    global.addEventListener("paint-board-selection-change", function(event) {
+        if (!event.detail || !event.detail.paintBoard) {
+            return;
+        }
+
+        if (global.AppOpenWindows.updatePaintBoardToolbarState) {
+            global.AppOpenWindows.updatePaintBoardToolbarState(event.detail.paintBoard);
+        }
+
+        updateFillSelectionButton();
+    });
+
+    global.addEventListener("paint-board-active-change", function() {
+        updateFillSelectionButton();
     });
 
     global.addEventListener("paint-tools-change", function(event) {
@@ -288,6 +307,25 @@
         global.AppOpenWindows.clearBoard();
     }
 
+    function fillSelectionWithFrontColor() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (!targetBoard || typeof targetBoard.fillSelectionWithFrontColor !== "function") {
+            return false;
+        }
+
+        if (!targetBoard.hasSelection || !targetBoard.hasSelection()) {
+            return false;
+        }
+
+        if (targetBoard.fillSelectionWithFrontColor()) {
+            updateFillSelectionButton();
+            return true;
+        }
+
+        return false;
+    }
+
     function toggleRainbowCrazyMode() {
         global.App.memory.rainbowCrazyMode = !global.App.memory.rainbowCrazyMode;
         updateRainbowCrazyModeButton();
@@ -340,6 +378,20 @@
 
         button.setAttribute("aria-pressed", active ? "true" : "false");
         button.title = "Rainbow Crazy Mode: " + (active ? "ON" : "OFF");
+    }
+
+    function updateFillSelectionButton() {
+        var button = document.getElementById("fill-selection-front-color-btn");
+        var targetBoard = global.AppOpenWindows && global.AppOpenWindows.getActivePaintBoard ?
+            global.AppOpenWindows.getActivePaintBoard() :
+            null;
+        var hasSelection = !!(targetBoard && targetBoard.hasSelection && targetBoard.hasSelection());
+
+        if (!button) {
+            return;
+        }
+
+        button.disabled = !hasSelection;
     }
 
     function updateRainbowCrazyAlgorithmRadios() {
@@ -432,6 +484,7 @@
     global.copyToClipboard = copyToClipboard;
     global.saveImage = saveImage;
     global.clearBoard = clearBoard;
+    global.fillSelectionWithFrontColor = fillSelectionWithFrontColor;
     global.toggleRainbowCrazyMode = toggleRainbowCrazyMode;
     global.setRainbowCrazyAlgorithm = setRainbowCrazyAlgorithm;
     global.setRainbowCrazyJump = setRainbowCrazyJump;

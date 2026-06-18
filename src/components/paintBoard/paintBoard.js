@@ -337,6 +337,32 @@
         global.dispatchEvent(event);
     }
 
+    function notifySelectionStateChange(board) {
+        var event;
+        var detail;
+
+        if (!board) {
+            return;
+        }
+
+        detail = {
+            board: board.element,
+            paintBoard: board,
+            hasSelection: hasActiveSelection(board)
+        };
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-board-selection-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-board-selection-change", false, false, detail);
+        }
+
+        global.dispatchEvent(event);
+    }
+
     function extend(target, source) {
         var key;
 
@@ -664,6 +690,12 @@
             },
             clearSelection: function() {
                 clearSelection(board);
+            },
+            hasSelection: function() {
+                return hasActiveSelection(board);
+            },
+            fillSelectionWithFrontColor: function() {
+                return fillSelectionWithFrontColor(board);
             },
             paintAt: function(x, y) {
                 paintAt(board, x, y);
@@ -1883,6 +1915,7 @@
 
         if (!board.selection || currentSelectionBehavior === SELECTION_BEHAVIORS.NORMAL) {
             board.selection = nextSelection;
+            notifySelectionStateChange(board);
             return;
         }
 
@@ -1902,6 +1935,7 @@
             bounds: getSelectionMaskBounds(combinedMask),
             maskCanvas: combinedMask
         };
+        notifySelectionStateChange(board);
     }
 
     function clearSelection(board) {
@@ -1918,6 +1952,7 @@
         }
 
         clearTempSquare(board);
+        notifySelectionStateChange(board);
     }
 
     function clearSelectionDraft(board) {
@@ -2460,6 +2495,22 @@
         board.context.clearRect(0, 0, board.canvas.width, board.canvas.height);
         board.context.drawImage(beforeCanvas, 0, 0);
         board.context.drawImage(selectedCanvas, 0, 0);
+    }
+
+    function fillSelectionWithFrontColor(board) {
+        if (!hasActiveSelection(board)) {
+            return false;
+        }
+
+        beginUndoableAction(board);
+        markUndoableChange(board);
+        paintWithSelection(board, function() {
+            board.context.fillStyle = getCurrentPaintColor(board);
+            board.context.fillRect(0, 0, board.canvas.width, board.canvas.height);
+        });
+        commitUndoableAction(board);
+
+        return true;
     }
 
     function escapeHtml(value) {
