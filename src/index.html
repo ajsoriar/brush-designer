@@ -8,55 +8,13 @@
 
 <body style="background-color: #444;">
 
+    <div id="app-menu-container"></div>
     <div id="tools-bar" class="tools-bar">
-        <button type="button" onclick="openBrushDesignerInWindow()">Open Brush Designer</button>
-        <button type="button" onclick="openBrushDesigner2InWindow()">Open Brush Designer2</button>
-        <button type="button" onclick="newDocument()">New Document</button>
-        <button type="button" onclick="createDemoWindow('paintBoard')">Create paint board window</button>
-        <button type="button" onclick="openBigColorPickerWindow()">Open big color picker</button>
-        <button type="button" onclick="openSimpleColorPickerWindow()">Open color picker</button>
-        <button type="button" onclick="openSimpleLineWidthPickerWindow()">Open line width picker</button>
-        <button type="button" onclick="openSimpleBrushWidthPickerWindow()">Open brush width picker</button>
-        <button type="button" onclick="openLinesDesignerWindow()">Open lines designer</button>
-        <button type="button" onclick="openPaintToolsWindow()">Open paint tools</button>
-        <button type="button" onclick="openStarGeneratorWindow()">Open star generator</button>
-        <button type="button" onclick="pasteFromClipboard()">Paste</button>
-        <button type="button" onclick="copyToClipboard()">Copy</button>
-        <button type="button" onclick="saveImage()">Save</button>
-        <button type="button" onclick="clearBoard()">Clear Board</button>
-        <button id="fill-selection-front-color-btn" type="button" onclick="fillSelectionWithFrontColor()" disabled>Fill Selection</button>
+        <div id="foreground-background-colors-container"></div>
         <div id="selection-behabiour-container"></div>
-        <div id="magic-wand-options-container"></div>
-        <fieldset class="tools-bar-frame tools-bar-crazy-frame">
-            <legend>Crazy</legend>
-            <div class="tools-bar-crazy-grid">
-                <button id="rainbow-crazy-mode-btn" type="button" onclick="toggleRainbowCrazyMode()">Rainbow Crazy Mode</button>
-                <div class="tools-bar-option-stack">
-                    <label>
-                        <input type="radio" name="rainbow-crazy-algorithm" value="random" checked onchange="setRainbowCrazyAlgorithm(this.value)">
-                        Random
-                    </label>
-                    <label>
-                        <input type="radio" name="rainbow-crazy-algorithm" value="picker-vertical" onchange="setRainbowCrazyAlgorithm(this.value)">
-                        Vertical
-                    </label>
-                    <label>
-                        <input type="radio" name="rainbow-crazy-algorithm" value="picker-horizontal" onchange="setRainbowCrazyAlgorithm(this.value)">
-                        Horizontal
-                    </label>
-                </div>
-                <div class="tools-bar-option-stack">
-                    <label>
-                        <input id="rainbow-crazy-jump" type="checkbox" onchange="setRainbowCrazyJump(this.checked)">
-                        Jump
-                    </label>
-                    <label>
-                        <input id="rainbow-crazy-loop" type="checkbox" onchange="setRainbowCrazyLoop(this.checked)">
-                        Loop
-                    </label>
-                </div>
-            </div>
-        </fieldset>
+        <div id="tools-magic-wand-options-container"></div>
+        <div id="tools-transform-options-container"></div>
+        <div id="tools-crazy-options-container"></div>
     </div>
 
     <script type="module" src="/main.js"></script>

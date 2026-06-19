@@ -68,21 +68,25 @@
     };
 
     var selectionBehabiourComponent = null;
-    var magicWandOptionsComponent = null;
+    var toolsMagicWandOptionsComponent = null;
+    var toolsTransformOptionsComponent = null;
+    var toolsCrazyOptionsComponent = null;
+    var foregroundBackgroundColorsComponent = null;
+    var appMenuComponent = null;
 
     $(document).ready(function() {
         console.log("jQuery document ready!");
+        initAppMenuComponent();
+        initForegroundBackgroundColorsComponent();
         global.AppOpenWindows.openBrushEditorOutputsWindow();
         global.AppOpenWindows.openSimpleColorPickerWindow();
         global.AppOpenWindows.openSimpleLineWidthPickerWindow();
         global.AppOpenWindows.openSimpleBrushWidthPickerWindow();
         global.AppOpenWindows.openPaintToolsWindow();
-        updateRainbowCrazyModeButton();
-        updateRainbowCrazyAlgorithmRadios();
-        updateRainbowCrazyJumpCheckbox();
-        updateRainbowCrazyLoopCheckbox();
         initSelectionBehabiourComponent();
-        initMagicWandOptionsComponent();
+        initToolsMagicWandOptionsComponent();
+        initToolsTransformOptionsComponent();
+        initToolsCrazyOptionsComponent();
         syncBrushWidthPickerToPaintTool(global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : null);
         global.AppOpenWindows.createDemoWindow("paintBoard");
         updateFillSelectionButton();
@@ -132,13 +136,42 @@
 
     global.addEventListener("paint-board-active-change", function() {
         updateFillSelectionButton();
+        syncToolsTransformOptionsVisibility();
+    });
+
+    global.addEventListener("paint-board-floating-paste-change", function(event) {
+        var activePaintBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (!event.detail || event.detail.paintBoard !== activePaintBoard) {
+            return;
+        }
+
+        syncToolsTransformOptionsVisibility();
+    });
+
+    global.addEventListener("paint-board-floating-paste-transform-change", function(event) {
+        var activePaintBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (!toolsTransformOptionsComponent ||
+            !event.detail ||
+            event.detail.paintBoard !== activePaintBoard) {
+            return;
+        }
+
+        toolsTransformOptionsComponent.setOperation(event.detail.operation);
+        toolsTransformOptionsComponent.setAlgorithm(
+            activePaintBoard.floatingPaste.transformAlgorithms[event.detail.operation]
+        );
+        toolsTransformOptionsComponent.setRoundBehavior(
+            activePaintBoard.floatingPaste.warpRoundBehavior
+        );
     });
 
     global.addEventListener("paint-tools-change", function(event) {
         var mode = event.detail && event.detail.mode;
 
         syncSelectionBehabiourVisibility(mode);
-        syncMagicWandOptionsVisibility(mode);
+        syncToolsMagicWandOptionsVisibility(mode);
         syncBrushWidthPickerToPaintTool(mode);
 
         if (mode === "DESIGNED-BRUSH") {
@@ -198,31 +231,132 @@
         selectionBehabiourComponent.hide();
     }
 
-    function initMagicWandOptionsComponent() {
-        if (!global.MagicWandOptionsComponent) {
+    function initToolsMagicWandOptionsComponent() {
+        if (!global.ToolsMagicWandOptionsComponent) {
             return;
         }
 
-        magicWandOptionsComponent = global.MagicWandOptionsComponent({
-            id: "magic-wand-options-toolbar",
-            containerId: "magic-wand-options-container",
+        toolsMagicWandOptionsComponent = global.ToolsMagicWandOptionsComponent({
+            id: "tools-magic-wand-options-toolbar",
+            containerId: "tools-magic-wand-options-container",
             visible: false
         });
 
-        syncMagicWandOptionsVisibility(global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : "");
+        syncToolsMagicWandOptionsVisibility(global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : "");
     }
 
-    function syncMagicWandOptionsVisibility(mode) {
-        if (!magicWandOptionsComponent) {
+    function syncToolsMagicWandOptionsVisibility(mode) {
+        if (!toolsMagicWandOptionsComponent) {
             return;
         }
 
         if (mode === "MAGIC-WAND") {
-            magicWandOptionsComponent.show();
+            toolsMagicWandOptionsComponent.show();
             return;
         }
 
-        magicWandOptionsComponent.hide();
+        toolsMagicWandOptionsComponent.hide();
+    }
+
+    function initToolsTransformOptionsComponent() {
+        if (!global.ToolsTransformOptionsComponent) {
+            return;
+        }
+
+        toolsTransformOptionsComponent = global.ToolsTransformOptionsComponent({
+            id: "tools-transform-options-toolbar",
+            containerId: "tools-transform-options-container",
+            visible: false,
+            onChange: function(operation) {
+                var activePaintBoard = global.AppOpenWindows.getActivePaintBoard();
+
+                if (!activePaintBoard || !activePaintBoard.setFloatingPasteTransformOperation) {
+                    return;
+                }
+
+                activePaintBoard.setFloatingPasteTransformOperation(operation);
+            },
+            onAlgorithmChange: function(algorithm) {
+                var activePaintBoard = global.AppOpenWindows.getActivePaintBoard();
+
+                if (activePaintBoard && activePaintBoard.setFloatingPasteTransformAlgorithm) {
+                    activePaintBoard.setFloatingPasteTransformAlgorithm(algorithm);
+                }
+            },
+            onRoundBehaviorChange: function(active) {
+                var activePaintBoard = global.AppOpenWindows.getActivePaintBoard();
+
+                if (activePaintBoard && activePaintBoard.setFloatingPasteWarpRoundBehavior) {
+                    activePaintBoard.setFloatingPasteWarpRoundBehavior(active);
+                }
+            },
+            onCancel: function() {
+                var activePaintBoard = global.AppOpenWindows.getActivePaintBoard();
+
+                if (activePaintBoard && activePaintBoard.cancelFloatingPasteDistortion) {
+                    activePaintBoard.cancelFloatingPasteDistortion();
+                }
+            },
+            onAccept: function() {
+                var activePaintBoard = global.AppOpenWindows.getActivePaintBoard();
+
+                if (activePaintBoard && activePaintBoard.commitFloatingPaste) {
+                    activePaintBoard.commitFloatingPaste();
+                }
+            }
+        });
+        global.ToolsTransformOptionsApi = toolsTransformOptionsComponent;
+        syncToolsTransformOptionsVisibility();
+    }
+
+    function syncToolsTransformOptionsVisibility() {
+        var activePaintBoard;
+
+        if (!toolsTransformOptionsComponent) {
+            return;
+        }
+
+        activePaintBoard = global.AppOpenWindows && global.AppOpenWindows.getActivePaintBoard ?
+            global.AppOpenWindows.getActivePaintBoard() :
+            null;
+
+        toolsTransformOptionsComponent.setVisible(!!(activePaintBoard && activePaintBoard.floatingPaste));
+        if (activePaintBoard && activePaintBoard.floatingPaste) {
+            toolsTransformOptionsComponent.setOperation(
+                activePaintBoard.floatingPaste.transformOperation || "scale"
+            );
+            toolsTransformOptionsComponent.setAlgorithm(
+                activePaintBoard.floatingPaste.transformAlgorithms[
+                    activePaintBoard.floatingPaste.transformOperation || "scale"
+                ]
+            );
+            toolsTransformOptionsComponent.setRoundBehavior(
+                activePaintBoard.floatingPaste.warpRoundBehavior
+            );
+        }
+    }
+
+    function initToolsCrazyOptionsComponent() {
+        if (!global.ToolsCrazyOptionsComponent) {
+            return;
+        }
+
+        toolsCrazyOptionsComponent = global.ToolsCrazyOptionsComponent({
+            id: "tools-crazy-options-toolbar",
+            containerId: "tools-crazy-options-container",
+            visible: true,
+            active: global.App.memory.rainbowCrazyMode,
+            algorithm: global.App.memory.rainbowCrazyAlgorithm,
+            jump: global.App.memory.rainbowCrazyJump,
+            loop: global.App.memory.rainbowCrazyLoop,
+            onChange: function(options) {
+                global.App.memory.rainbowCrazyMode = options.active;
+                global.App.memory.rainbowCrazyAlgorithm = options.algorithm;
+                global.App.memory.rainbowCrazyJump = options.jump;
+                global.App.memory.rainbowCrazyLoop = options.loop;
+            }
+        });
+        global.ToolsCrazyOptionsApi = toolsCrazyOptionsComponent;
     }
 
     function syncBrushWidthPickerToPaintTool(mode) {
@@ -235,6 +369,61 @@
             global.AppOpenWindows.getSimpleBrushWidthPickerApi().setBrushShape("circle");
             global.AppOpenWindows.openSimpleBrushWidthPickerWindow();
         }
+    }
+
+    function initForegroundBackgroundColorsComponent() {
+        if (!global.ForegroundBackgroundColors) {
+            return;
+        }
+
+        foregroundBackgroundColorsComponent = global.ForegroundBackgroundColors({
+            id: "foreground-background-colors-toolbar",
+            containerId: "foreground-background-colors-container",
+            frontColor: global.App.memory.currentColor,
+            onFrontClick: function(color) {
+                global.AppOpenWindows.openBigColorPickerWindow(color, "front");
+            },
+            onBackgroundClick: function(color) {
+                global.AppOpenWindows.openBigColorPickerWindow(color, "background");
+            },
+            onChange: function(colors) {
+                global.AppOpenWindows.setActiveColor(colors.frontColor);
+            }
+        });
+        global.ForegroundBackgroundColorsApi = foregroundBackgroundColorsComponent;
+    }
+
+    function initAppMenuComponent() {
+        if (!global.AppMenu) {
+            return;
+        }
+
+        appMenuComponent = global.AppMenu({
+            id: "application-menu",
+            containerId: "app-menu-container",
+            actions: {
+                newDocument: global.AppOpenWindows.newDocument,
+                createPaintBoard: function() {
+                    global.AppOpenWindows.openPaintBoardWindow();
+                },
+                saveImage: saveImage,
+                copyToClipboard: copyToClipboard,
+                pasteFromClipboard: pasteFromClipboard,
+                openMultiPaste: global.AppOpenWindows.openMultiPaste,
+                clearBoard: clearBoard,
+                fillSelectionWithFrontColor: fillSelectionWithFrontColor,
+                openBrushDesigner: global.AppOpenWindows.openBrushDesignerInWindow,
+                openBrushDesigner2: global.AppOpenWindows.openBrushDesigner2InWindow,
+                openLinesDesigner: global.AppOpenWindows.openLinesDesignerWindow,
+                openStarGenerator: global.AppOpenWindows.openStarGeneratorWindow,
+                openPaintTools: global.AppOpenWindows.openPaintToolsWindow,
+                openColorPicker: global.AppOpenWindows.openSimpleColorPickerWindow,
+                openBigColorPicker: global.AppOpenWindows.openBigColorPickerWindow,
+                openLineWidthPicker: global.AppOpenWindows.openSimpleLineWidthPickerWindow,
+                openBrushWidthPicker: global.AppOpenWindows.openSimpleBrushWidthPickerWindow
+            }
+        });
+        global.AppMenuApi = appMenuComponent;
     }
 
     function pasteFromClipboard() {
@@ -326,60 +515,6 @@
         return false;
     }
 
-    function toggleRainbowCrazyMode() {
-        global.App.memory.rainbowCrazyMode = !global.App.memory.rainbowCrazyMode;
-        updateRainbowCrazyModeButton();
-        return global.App.memory.rainbowCrazyMode;
-    }
-
-    function setRainbowCrazyAlgorithm(algorithm) {
-        if (!isRainbowCrazyAlgorithm(algorithm)) {
-            return global.App.memory.rainbowCrazyAlgorithm;
-        }
-
-        global.App.memory.rainbowCrazyAlgorithm = algorithm;
-        updateRainbowCrazyAlgorithmRadios();
-        updateRainbowCrazyJumpCheckbox();
-        updateRainbowCrazyLoopCheckbox();
-        return global.App.memory.rainbowCrazyAlgorithm;
-    }
-
-    function setRainbowCrazyJump(jump) {
-        global.App.memory.rainbowCrazyJump = !!jump;
-        updateRainbowCrazyJumpCheckbox();
-        return global.App.memory.rainbowCrazyJump;
-    }
-
-    function setRainbowCrazyLoop(loop) {
-        global.App.memory.rainbowCrazyLoop = !!loop;
-        updateRainbowCrazyLoopCheckbox();
-        return global.App.memory.rainbowCrazyLoop;
-    }
-
-    function isRainbowCrazyAlgorithm(algorithm) {
-        return algorithm === "random" ||
-            algorithm === "picker-vertical" ||
-            algorithm === "picker-horizontal";
-    }
-
-    function updateRainbowCrazyModeButton() {
-        var button = document.getElementById("rainbow-crazy-mode-btn");
-        var active = !!(global.App && global.App.memory && global.App.memory.rainbowCrazyMode);
-
-        if (!button) {
-            return;
-        }
-
-        button.className = button.className.replace(/\s?tools-bar-toggle-on/g, "");
-
-        if (active) {
-            button.className += " tools-bar-toggle-on";
-        }
-
-        button.setAttribute("aria-pressed", active ? "true" : "false");
-        button.title = "Rainbow Crazy Mode: " + (active ? "ON" : "OFF");
-    }
-
     function updateFillSelectionButton() {
         var button = document.getElementById("fill-selection-front-color-btn");
         var targetBoard = global.AppOpenWindows && global.AppOpenWindows.getActivePaintBoard ?
@@ -387,45 +522,13 @@
             null;
         var hasSelection = !!(targetBoard && targetBoard.hasSelection && targetBoard.hasSelection());
 
-        if (!button) {
-            return;
+        if (button) {
+            button.disabled = !hasSelection;
         }
 
-        button.disabled = !hasSelection;
-    }
-
-    function updateRainbowCrazyAlgorithmRadios() {
-        var algorithm = (global.App && global.App.memory && global.App.memory.rainbowCrazyAlgorithm) || "random";
-        var radios = document.querySelectorAll("input[name=\"rainbow-crazy-algorithm\"]");
-        var i;
-
-        for (i = 0; i < radios.length; i++) {
-            radios[i].checked = radios[i].value === algorithm;
+        if (appMenuComponent && appMenuComponent.setItemEnabled) {
+            appMenuComponent.setItemEnabled("fillSelectionWithFrontColor", hasSelection);
         }
-    }
-
-    function updateRainbowCrazyJumpCheckbox() {
-        var checkbox = document.getElementById("rainbow-crazy-jump");
-        var algorithm = (global.App && global.App.memory && global.App.memory.rainbowCrazyAlgorithm) || "random";
-
-        if (!checkbox) {
-            return;
-        }
-
-        checkbox.checked = !!(global.App && global.App.memory && global.App.memory.rainbowCrazyJump);
-        checkbox.disabled = algorithm === "random";
-    }
-
-    function updateRainbowCrazyLoopCheckbox() {
-        var checkbox = document.getElementById("rainbow-crazy-loop");
-        var algorithm = (global.App && global.App.memory && global.App.memory.rainbowCrazyAlgorithm) || "random";
-
-        if (!checkbox) {
-            return;
-        }
-
-        checkbox.checked = !!(global.App && global.App.memory && global.App.memory.rainbowCrazyLoop);
-        checkbox.disabled = algorithm === "random";
     }
 
     function undoLastAction() {
@@ -480,15 +583,12 @@
 
     global.openEditor = global.AppOpenWindows.openEditor;
     global.newDocument = global.AppOpenWindows.newDocument;
+    global.openMultiPaste = global.AppOpenWindows.openMultiPaste;
     global.pasteFromClipboard = pasteFromClipboard;
     global.copyToClipboard = copyToClipboard;
     global.saveImage = saveImage;
     global.clearBoard = clearBoard;
     global.fillSelectionWithFrontColor = fillSelectionWithFrontColor;
-    global.toggleRainbowCrazyMode = toggleRainbowCrazyMode;
-    global.setRainbowCrazyAlgorithm = setRainbowCrazyAlgorithm;
-    global.setRainbowCrazyJump = setRainbowCrazyJump;
-    global.setRainbowCrazyLoop = setRainbowCrazyLoop;
     global.undoLastAction = undoLastAction;
     global.createDemoWindow = global.AppOpenWindows.createDemoWindow;
     global.openBrushDesignerInWindow = global.AppOpenWindows.openBrushDesignerInWindow;

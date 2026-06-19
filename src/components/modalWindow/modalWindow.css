@@ -1,0 +1,29 @@
+.modal-window .wm-top,
+.modal-window .wm-top-left,
+.modal-window .wm-top-right {
+    background: #12b8c5;
+    border-bottom-color: #0e9ea9;
+}
+
+.modal-window .wm-title {
+    font-size: 16px;
+    font-weight: 400;
+    padding-left: 0;
+}
+
+.modal-window .wm-btn {
+    background: transparent;
+    border: 0;
+    font-size: 18px;
+    height: 22px;
+    width: 28px;
+}
+
+.modal-window .wm-btn-minimize,
+.modal-window .wm-btn-maximize {
+    display: none;
+}
+
+.modal-window .wm-center {
+    background: #eeeeee;
+}

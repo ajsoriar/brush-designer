@@ -1,0 +1,59 @@
+.tools-crazy-options-container {
+    margin-left: auto;
+}
+
+.tools-crazy-options {
+    align-items: center;
+    border: 1px solid #a0a0a0;
+    display: flex;
+    gap: 6px;
+    margin: 0;
+    padding: 2px 7px 7px;
+}
+
+.tools-crazy-options legend,
+.tools-crazy-options label {
+    color: #111;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.tools-crazy-options legend {
+    padding: 0 4px;
+}
+
+.tools-crazy-options-grid {
+    align-items: center;
+    display: grid;
+    gap: 6px;
+    grid-template-columns: auto auto auto;
+}
+
+.tools-crazy-options-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.tools-crazy-options label {
+    align-items: center;
+    display: flex;
+    gap: 2px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.tools-crazy-options input {
+    margin: 0;
+}
+
+.tools-bar .tools-crazy-options-toggle {
+    height: auto;
+}
+
+.tools-bar .tools-crazy-options-toggle-on {
+    background-color: #111827;
+    border-color: #00ff00;
+    color: #00ff00;
+}

@@ -58,7 +58,7 @@
         return DEFAULT_MODE;
     }
 
-    function MagicWandOptionsComponent(options) {
+    function ToolsMagicWandOptionsComponent(options) {
         var config = extend(extend({}, DEFAULTS), options || {});
         var container = getContainer(config.containerId);
         var element = document.createElement("fieldset");
@@ -73,44 +73,44 @@
         var contiguousInput = document.createElement("input");
         var modeGroup = document.createElement("span");
         var modeInputs = {};
-        var componentId = config.id || ("magic-wand-options-" + Date.now());
+        var componentId = config.id || ("tools-magic-wand-options-" + Date.now());
         var component;
 
         element.id = componentId;
-        element.className = "magic-wand-options";
+        element.className = "tools-magic-wand-options";
         legend.textContent = "Magic Wand";
 
-        grid.className = "magic-wand-options-grid";
+        grid.className = "tools-magic-wand-options-grid";
 
-        toleranceLabel.className = "magic-wand-options-label";
+        toleranceLabel.className = "tools-magic-wand-options-label";
         toleranceLabel.textContent = "Tolerance";
 
-        toleranceRange.className = "magic-wand-options-range";
+        toleranceRange.className = "tools-magic-wand-options-range";
         toleranceRange.type = "range";
         toleranceRange.min = "0";
         toleranceRange.max = "100";
         toleranceRange.step = "1";
 
-        toleranceNumber.className = "magic-wand-options-number";
+        toleranceNumber.className = "tools-magic-wand-options-number";
         toleranceNumber.type = "number";
         toleranceNumber.min = "0";
         toleranceNumber.max = "100";
         toleranceNumber.step = "1";
         toleranceNumber.title = "Tolerance";
 
-        antiAliasLabel.className = "magic-wand-options-check";
+        antiAliasLabel.className = "tools-magic-wand-options-check";
         antiAliasInput.type = "checkbox";
         antiAliasInput.title = "Anti-alias";
         antiAliasLabel.appendChild(antiAliasInput);
         antiAliasLabel.appendChild(document.createTextNode("Anti-alias"));
 
-        contiguousLabel.className = "magic-wand-options-check";
+        contiguousLabel.className = "tools-magic-wand-options-check";
         contiguousInput.type = "checkbox";
         contiguousInput.title = "Contiguous";
         contiguousLabel.appendChild(contiguousInput);
         contiguousLabel.appendChild(document.createTextNode("Contiguous"));
 
-        modeGroup.className = "magic-wand-options-modes";
+        modeGroup.className = "tools-magic-wand-options-modes";
         buildModeRadios(modeGroup, modeInputs, componentId);
 
         grid.appendChild(toleranceLabel);
@@ -226,7 +226,7 @@
 
         for (i = 0; i < MODES.length; i++) {
             label = document.createElement("label");
-            label.className = "magic-wand-options-mode";
+            label.className = "tools-magic-wand-options-mode";
             input = document.createElement("input");
             input.type = "radio";
             input.name = groupName;
@@ -299,13 +299,13 @@
         var container = document.getElementById(containerId);
 
         if (!container) {
-            throw new Error("MagicWandOptions container not found: " + containerId);
+            throw new Error("ToolsMagicWandOptions container not found: " + containerId);
         }
 
         return container;
     }
 
-    global.MagicWandOptionsComponent = MagicWandOptionsComponent;
-    global.magicWandOptions = MagicWandOptionsComponent;
+    global.ToolsMagicWandOptionsComponent = ToolsMagicWandOptionsComponent;
+    global.toolsMagicWandOptions = ToolsMagicWandOptionsComponent;
 
 }(window));

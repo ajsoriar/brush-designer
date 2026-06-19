@@ -1,0 +1,139 @@
+.multi-paste {
+    align-items: center;
+    background: #eeeeee;
+    color: #111111;
+    display: grid;
+    font-family: Arial, sans-serif;
+    gap: 14px;
+    grid-template-columns: 1fr 92px;
+    height: 100%;
+    padding: 10px 12px 12px;
+    width: 100%;
+}
+
+.multi-paste-presets {
+    border: 2px groove #ffffff;
+    margin: 0;
+    min-width: 0;
+    padding: 8px 10px 10px;
+}
+
+.multi-paste-presets legend {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 0 5px;
+}
+
+.multi-paste-grid {
+    align-content: center;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(4, 112px);
+    grid-template-rows: repeat(2, 112px);
+    justify-content: center;
+}
+
+.multi-paste-item {
+    aspect-ratio: 1;
+    align-items: center;
+    background-color: #ffffff;
+    background-image: url("../../images/transparency-checkerboard.png");
+    background-repeat: repeat;
+    border: 1px solid #555555;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 0;
+    min-width: 0;
+    padding: 5px;
+    width: 111px;
+    height: 111px;
+    overflow: hidden;
+}
+
+.multi-paste-item img {
+    flex: 1 1 auto;
+    height: 0;
+    max-width: 100%;
+    min-height: 0;
+    object-fit: contain;
+    width: 100%;
+}
+
+.multi-paste-item span {
+    color: #000000;
+    flex: 0 0 auto;
+    font: 12px monospace;
+    font-weight: bold;
+    padding-top: 3px;
+}
+
+.multi-paste-item:hover:not(:disabled) {
+    border-color: #1087d7;
+}
+
+.multi-paste-item-selected {
+    box-shadow: 0 0 0 2px #12b8c5;
+}
+
+.multi-paste-item-empty {
+    border-color: #aaaaaa;
+    cursor: default;
+}
+
+.multi-paste-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.multi-paste-actions button {
+    background: #ffffff;
+    border: 1px solid #b8b8b8;
+    border-radius: 3px;
+    color: #111111;
+    cursor: pointer;
+    font: 13px Arial, sans-serif;
+    height: 28px;
+    padding: 0 8px;
+}
+
+.multi-paste-actions button:disabled {
+    color: #999999;
+    cursor: default;
+}
+
+.multi-paste-actions button:hover:not(:disabled),
+.multi-paste-actions button:focus {
+    border-color: #1087d7;
+    outline: 1px solid #1087d7;
+}
+
+@media (max-width: 620px) {
+    .multi-paste {
+        gap: 12px;
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto;
+        padding: 10px;
+    }
+
+    .multi-paste-grid {
+        gap: 8px;
+        grid-template-columns: repeat(2, 92px);
+        grid-template-rows: repeat(4, 92px);
+    }
+
+    .multi-paste-item {
+        width: 92px;
+    }
+
+    .multi-paste-actions {
+        flex-direction: row;
+        padding-top: 0;
+    }
+
+    .multi-paste-actions button {
+        flex: 1 1 50%;
+    }
+}

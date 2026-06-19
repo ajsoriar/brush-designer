@@ -1,0 +1,83 @@
+.foreground-background-colors-container {
+    align-items: center;
+    display: flex;
+    gap: 2px;
+    position: relative;
+}
+
+.foreground-background-colors {
+    background-image: url("../../images/foreground-background-colors.png");
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    flex: 0 0 73px;
+    height: 73px;
+    position: relative;
+    width: 73px;
+}
+
+.foreground-background-colors-auxiliary {
+    height: 18px;
+    position: absolute;
+    width: 18px;
+}
+
+.foreground-background-colors-auxiliary-primary {
+    background-image: url("../../images/foreground-background-colors.png");
+    background-repeat: no-repeat;
+    background-position: -3px -51px;
+    cursor: pointer;
+    left: 53px;
+    outline: 1px solid black;
+    top: 2px;
+    outline: 0px solid black;
+    background-position: -53px -2px;
+    cursor: pointer;
+}
+
+.foreground-background-colors-auxiliary-primary:focus {
+    outline: 1px dotted #000000;
+}
+
+.foreground-background-colors-auxiliary-secondary {
+    background-image: url("../../images/foreground-background-colors.png");
+    background-repeat: no-repeat;
+    background-position: -2px -53px;
+    left: 2px;
+    top: 53px;
+    outline: 0px solid black;
+    cursor: pointer;
+}
+
+.foreground-background-colors-auxiliary-secondary:focus {
+    outline: 1px dotted #000000;
+}
+
+.foreground-background-colors-swatch {
+    position: absolute;
+}
+
+.foreground-background-colors-background {
+    box-shadow: unset;
+    cursor: pointer;
+    height: 38px;
+    left: 27px;
+    top: 27px;
+    width: 38px;
+    z-index: 1;
+}
+
+.foreground-background-colors-front {
+    box-shadow: unset;
+    cursor: pointer;
+    height: 38px;
+    left: 8px;
+    top: 8px;
+    width: 38px;
+    z-index: 2;
+}
+
+.foreground-background-colors-background:focus,
+.foreground-background-colors-front:focus {
+    outline: 1px dotted #ffffff;
+    outline-offset: -3px;
+}

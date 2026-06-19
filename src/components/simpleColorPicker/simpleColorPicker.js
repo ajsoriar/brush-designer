@@ -325,13 +325,14 @@
         var cells = picker.gridElement.querySelectorAll(".simple-color-picker-cell");
         var preview = picker.element.querySelector(".simple-color-picker-preview");
         var value = picker.element.querySelector(".simple-color-picker-value");
+        var normalizedColor = String(color || "").toLowerCase();
 
         picker.activeColor = color;
         preview.style.backgroundColor = color;
         value.innerHTML = color + "<br>" + getRgbText(color);
 
         Array.prototype.forEach.call(cells, function(cell) {
-            if (cell.getAttribute("data-color") === color) {
+            if (String(cell.getAttribute("data-color") || "").toLowerCase() === normalizedColor) {
                 cell.className = "simple-color-picker-cell simple-color-picker-cell-active";
             } else {
                 cell.className = "simple-color-picker-cell";

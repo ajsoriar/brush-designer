@@ -1,0 +1,50 @@
+{
+  "menus": [
+    {
+      "label": "File",
+      "items": [
+        { "label": "New Document", "action": "newDocument" },
+        { "label": "New Paint Board", "action": "createPaintBoard" },
+        { "type": "separator" },
+        { "label": "Save", "action": "saveImage" }
+      ]
+    },
+    {
+      "label": "Edit",
+      "items": [
+        { "label": "Copy", "action": "copyToClipboard" },
+        { "label": "Paste", "action": "pasteFromClipboard" },
+        { "label": "Multi Paste", "action": "openMultiPaste" },
+        { "type": "separator" },
+        { "label": "Clear Board", "action": "clearBoard" }
+      ]
+    },
+    {
+      "label": "Selection",
+      "items": [
+        { "label": "Fill Selection", "action": "fillSelectionWithFrontColor", "enabled": false }
+      ]
+    },
+    {
+      "label": "Design",
+      "items": [
+        { "label": "Brush Designer", "action": "openBrushDesigner" },
+        { "label": "Brush Designer 2", "action": "openBrushDesigner2" },
+        { "label": "Lines Designer", "action": "openLinesDesigner" },
+        { "label": "Star Generator", "action": "openStarGenerator" }
+      ]
+    },
+    {
+      "label": "Window",
+      "items": [
+        { "label": "Paint Tools", "action": "openPaintTools" },
+        { "type": "separator" },
+        { "label": "Color Picker", "action": "openColorPicker" },
+        { "label": "Big Color Picker", "action": "openBigColorPicker" },
+        { "type": "separator" },
+        { "label": "Line Width", "action": "openLineWidthPicker" },
+        { "label": "Brush Width", "action": "openBrushWidthPicker" }
+      ]
+    }
+  ]
+}

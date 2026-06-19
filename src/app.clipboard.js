@@ -6,6 +6,9 @@
         width: 800,
         height: 600
     };
+    var MAX_COPY_HISTORY = 8;
+    var copyHistory = [];
+    var historyId = 0;
 
     function getNewDocumentInitialSize() {
         if (!canReadClipboard()) {
@@ -47,19 +50,69 @@
     }
 
     function copyBoardToClipboard(board) {
-        if (!board || !global.navigator.clipboard || !global.navigator.clipboard.write || !global.ClipboardItem) {
+        if (!board) {
             return Promise.resolve(false);
         }
 
-        return getBoardBlob(board).then(function(blob) {
+        return getBoardClipboardEntry(board).then(function(entry) {
+            addCopyHistoryEntry(entry);
+
+            if (!global.navigator.clipboard ||
+                !global.navigator.clipboard.write ||
+                !global.ClipboardItem) {
+                return false;
+            }
+
             var item = new global.ClipboardItem({
-                "image/png": blob
+                "image/png": entry.blob
             });
 
-            return global.navigator.clipboard.write([item]);
-        }).then(function() {
+            return global.navigator.clipboard.write([item]).then(function() {
+                return true;
+            });
+        });
+    }
+
+    function getCopyHistory() {
+        return copyHistory.slice();
+    }
+
+    function pasteCopyHistoryEntry(board, entryId) {
+        var entry = copyHistory.find(function(item) {
+            return item.id === entryId;
+        });
+
+        if (!board || !entry) {
+            return Promise.resolve(false);
+        }
+
+        return pasteImageBlob(board, Promise.resolve(entry.blob)).then(function() {
             return true;
         });
+    }
+
+    function addCopyHistoryEntry(entry) {
+        copyHistory.unshift(entry);
+        copyHistory = copyHistory.slice(0, MAX_COPY_HISTORY);
+        notifyCopyHistoryChange();
+    }
+
+    function notifyCopyHistoryChange() {
+        var detail = {
+            entries: getCopyHistory()
+        };
+        var event;
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("app-clipboard-history-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("app-clipboard-history-change", false, false, detail);
+        }
+
+        global.dispatchEvent(event);
     }
 
     function canReadClipboard() {
@@ -160,6 +213,17 @@
     }
 
     function pasteImageOnBoard(board, image) {
+        if (board && typeof board.hasSelection === "function" &&
+            board.hasSelection() &&
+            typeof board.clearSelection === "function") {
+            board.clearSelection();
+        }
+
+        if (board && board.floatingPaste &&
+            typeof board.commitFloatingPaste === "function") {
+            board.commitFloatingPaste();
+        }
+
         if (board && typeof board.startFloatingPaste === "function") {
             board.startFloatingPaste(image);
             return;
@@ -168,15 +232,26 @@
         board.drawImage(image, 0, 0);
     }
 
-    function getBoardBlob(board) {
+    function getBoardClipboardEntry(board) {
+        var sourceCanvas = board.getClipboardCanvas ?
+            board.getClipboardCanvas() :
+            board.canvas;
+
         return new Promise(function(resolve, reject) {
-            board.canvas.toBlob(function(blob) {
+            sourceCanvas.toBlob(function(blob) {
                 if (!blob) {
                     reject(new Error("Could not create image blob from board."));
                     return;
                 }
 
-                resolve(blob);
+                historyId += 1;
+                resolve({
+                    id: historyId,
+                    blob: blob,
+                    width: sourceCanvas.width,
+                    height: sourceCanvas.height,
+                    createdAt: Date.now()
+                });
             }, "image/png");
         });
     }
@@ -184,7 +259,9 @@
     global.AppClipboard = {
         getNewDocumentInitialSize: getNewDocumentInitialSize,
         pasteImageFromClipboard: pasteImageFromClipboard,
-        copyBoardToClipboard: copyBoardToClipboard
+        copyBoardToClipboard: copyBoardToClipboard,
+        getCopyHistory: getCopyHistory,
+        pasteCopyHistoryEntry: pasteCopyHistoryEntry
     };
 
 }(window));

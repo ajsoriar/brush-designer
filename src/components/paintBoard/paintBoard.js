@@ -694,6 +694,9 @@
             hasSelection: function() {
                 return hasActiveSelection(board);
             },
+            getClipboardCanvas: function() {
+                return getClipboardCanvas(board);
+            },
             fillSelectionWithFrontColor: function() {
                 return fillSelectionWithFrontColor(board);
             },
@@ -711,6 +714,21 @@
             },
             cancelFloatingPaste: function() {
                 cancelFloatingPaste(board);
+            },
+            cancelFloatingPasteDistortion: function() {
+                return cancelFloatingPasteDistortion(board);
+            },
+            setFloatingPasteTransformAlgorithm: function(algorithm) {
+                return setFloatingPasteTransformAlgorithm(board, algorithm);
+            },
+            setFloatingPasteWarpRoundBehavior: function(active) {
+                return setFloatingPasteWarpRoundBehavior(board, active);
+            },
+            setFloatingPasteTransformOperation: function(operation) {
+                return setFloatingPasteTransformOperation(board, operation);
+            },
+            setFloatingPasteDistortMode: function(active) {
+                return setFloatingPasteDistortMode(board, active);
             },
             setSize: function(width, height) {
                 setSize(board, width, height);
@@ -2479,6 +2497,52 @@
         copyContext.drawImage(board.canvas, 0, 0);
 
         return copyCanvas;
+    }
+
+    function getClipboardCanvas(board) {
+        var bounds;
+        var clipboardCanvas;
+        var clipboardContext;
+
+        if (!hasActiveSelection(board)) {
+            return board.canvas;
+        }
+
+        bounds = getSelectionMaskBounds(board.selection.maskCanvas);
+        if (!bounds) {
+            return board.canvas;
+        }
+
+        clipboardCanvas = document.createElement("canvas");
+        clipboardCanvas.width = bounds.width;
+        clipboardCanvas.height = bounds.height;
+        clipboardContext = clipboardCanvas.getContext("2d");
+        clipboardContext.drawImage(
+            board.canvas,
+            bounds.left,
+            bounds.top,
+            bounds.width,
+            bounds.height,
+            0,
+            0,
+            bounds.width,
+            bounds.height
+        );
+        clipboardContext.globalCompositeOperation = "destination-in";
+        clipboardContext.drawImage(
+            board.selection.maskCanvas,
+            bounds.left,
+            bounds.top,
+            bounds.width,
+            bounds.height,
+            0,
+            0,
+            bounds.width,
+            bounds.height
+        );
+        clipboardContext.globalCompositeOperation = "source-over";
+
+        return clipboardCanvas;
     }
 
     function applySelectionMaskToPaint(board, beforeCanvas) {
@@ -4438,6 +4502,7 @@
         layer.setAttribute("data-type", "TEMP");
         layer.style.width = board.canvas.width + "px";
         layer.style.height = board.canvas.height + "px";
+        layer.title = "Scale mode: press T to distort corners independently.";
 
         canvas.className = "paint-board-floating-paste-canvas";
         canvas.width = board.canvas.width;
@@ -4457,6 +4522,35 @@
             y: 0,
             width: size.width,
             height: size.height,
+            corners: createFloatingPasteRectangleCorners(0, 0, size.width, size.height),
+            startCorners: null,
+            warpPoints: createFloatingPasteWarpGrid(
+                createFloatingPasteRectangleCorners(0, 0, size.width, size.height)
+            ),
+            startWarpPoints: null,
+            warpRoundBehavior: false,
+            transformOperation: "scale",
+            distortMode: false,
+            transformAlgorithms: {
+                scale: global.ImageTransformRegistry ?
+                    global.ImageTransformRegistry.getDefaultAlgorithm("scale") :
+                    "nearest-neighbor",
+                rotate: global.ImageTransformRegistry ?
+                    global.ImageTransformRegistry.getDefaultAlgorithm("rotate") :
+                    "smooth",
+                skew: global.ImageTransformRegistry ?
+                    global.ImageTransformRegistry.getDefaultAlgorithm("skew") :
+                    "smooth",
+                distort: global.ImageTransformRegistry ?
+                    global.ImageTransformRegistry.getDefaultAlgorithm("distort") :
+                    "pixel-warp",
+                perspective: global.ImageTransformRegistry ?
+                    global.ImageTransformRegistry.getDefaultAlgorithm("perspective") :
+                    "projective",
+                warp: global.ImageTransformRegistry ?
+                    global.ImageTransformRegistry.getDefaultAlgorithm("warp") :
+                    "smooth"
+            },
             isDragging: false,
             dragAction: null,
             resizeHandle: null,
@@ -4507,6 +4601,7 @@
         document.addEventListener("pointercancel", floatingPaste.pointerUp, true);
         document.addEventListener("keydown", floatingPaste.keyDown);
         renderFloatingPaste(board);
+        notifyFloatingPasteChange(board, true);
     }
 
     function getImageDrawSize(image) {
@@ -4526,19 +4621,28 @@
         }
 
         paste.context.clearRect(0, 0, paste.canvas.width, paste.canvas.height);
-        paste.context.drawImage(paste.image, paste.x, paste.y, paste.width, paste.height);
+        drawFloatingPasteImage(paste.context, paste);
         paste.context.save();
         paste.context.strokeStyle = "#000";
         paste.context.setLineDash([4, 4]);
         paste.context.lineWidth = 1;
-        paste.context.strokeRect(Math.round(paste.x) + 0.5, Math.round(paste.y) + 0.5, Math.max(1, paste.width - 1), Math.max(1, paste.height - 1));
+        traceFloatingPasteOutline(paste.context, paste.corners);
+        paste.context.stroke();
         paste.context.strokeStyle = "#fff";
         paste.context.lineDashOffset = 4;
-        paste.context.strokeRect(Math.round(paste.x) + 0.5, Math.round(paste.y) + 0.5, Math.max(1, paste.width - 1), Math.max(1, paste.height - 1));
+        traceFloatingPasteOutline(paste.context, paste.corners);
+        paste.context.stroke();
         paste.context.restore();
+        if (paste.transformOperation === "warp") {
+            drawFloatingPasteWarpGrid(
+                paste.context,
+                paste.warpPoints,
+                paste.warpRoundBehavior
+            );
+        }
         handles = getFloatingPasteHandles(paste);
         paste.context.save();
-        paste.context.fillStyle = "#fff";
+        paste.context.fillStyle = paste.transformOperation === "scale" ? "#fff" : "#ffe36e";
         paste.context.strokeStyle = "#000";
         paste.context.lineWidth = 1;
         paste.context.setLineDash([]);
@@ -4580,6 +4684,8 @@
         paste.startHeight = paste.height;
         paste.startPointerX = point.x;
         paste.startPointerY = point.y;
+        paste.startCorners = cloneFloatingPasteCorners(paste.corners);
+        paste.startWarpPoints = cloneFloatingPasteCorners(paste.warpPoints);
         paste.aspectRatio = paste.height ? paste.width / paste.height : 1;
         paste.layer.style.cursor = getFloatingPasteCursor(handle);
         capturePointer(paste.layer, event.pointerId);
@@ -4599,11 +4705,20 @@
 
         event.preventDefault();
         point = getSelectionPointerPosition(board, event);
-        if (paste.dragAction === "resize") {
+        if (paste.dragAction === "resize" && paste.transformOperation === "rotate") {
+            rotateFloatingPaste(board, point, event);
+        } else if (paste.dragAction === "resize" && paste.transformOperation === "skew") {
+            skewFloatingPaste(board, point);
+        } else if (paste.dragAction === "resize" && paste.transformOperation === "perspective") {
+            perspectiveFloatingPaste(board, point);
+        } else if (paste.dragAction === "resize" && paste.transformOperation === "warp") {
+            warpFloatingPaste(board, point);
+        } else if (paste.dragAction === "resize" && paste.transformOperation === "distort") {
+            distortFloatingPaste(board, point);
+        } else if (paste.dragAction === "resize") {
             resizeFloatingPaste(board, point, event);
         } else {
-            paste.x = Math.round(point.x - paste.dragOffsetX);
-            paste.y = Math.round(point.y - paste.dragOffsetY);
+            moveFloatingPasteBy(board, Math.round(point.x - paste.startPointerX), Math.round(point.y - paste.startPointerY));
         }
         renderFloatingPaste(board);
     }
@@ -4683,6 +4798,185 @@
         paste.y = Math.round(top);
         paste.width = Math.max(1, Math.round(right - left));
         paste.height = Math.max(1, Math.round(bottom - top));
+        paste.corners = scaleFloatingPasteCorners(
+            paste.startCorners,
+            paste.startX,
+            paste.startY,
+            paste.startWidth,
+            paste.startHeight,
+            paste.x,
+            paste.y,
+            paste.width,
+            paste.height
+        );
+    }
+
+    function distortFloatingPaste(board, point) {
+        var paste = board && board.floatingPaste;
+        var cornerIndex;
+
+        if (!paste || !paste.resizeHandle || !paste.startCorners) {
+            return;
+        }
+
+        cornerIndex = getFloatingPasteCornerIndex(paste.resizeHandle);
+        if (cornerIndex < 0) {
+            return;
+        }
+
+        paste.corners = cloneFloatingPasteCorners(paste.startCorners);
+        paste.corners[cornerIndex] = {
+            x: Math.round(point.x),
+            y: Math.round(point.y)
+        };
+        updateFloatingPasteBounds(paste);
+    }
+
+    function warpFloatingPaste(board, point) {
+        var paste = board && board.floatingPaste;
+        var pointIndex;
+
+        if (!paste || !paste.resizeHandle || !paste.startWarpPoints) {
+            return;
+        }
+
+        pointIndex = getFloatingPasteWarpPointIndex(paste.resizeHandle);
+        if (pointIndex < 0) {
+            return;
+        }
+
+        paste.warpPoints = cloneFloatingPasteCorners(paste.startWarpPoints);
+        paste.warpPoints[pointIndex] = {
+            x: Math.round(point.x),
+            y: Math.round(point.y)
+        };
+        syncFloatingPasteCornersFromWarp(paste);
+        updateFloatingPasteBoundsFromPoints(paste, paste.warpPoints);
+    }
+
+    function rotateFloatingPaste(board, point, event) {
+        var paste = board && board.floatingPaste;
+        var center;
+        var startAngle;
+        var currentAngle;
+        var angle;
+        var cosine;
+        var sine;
+
+        if (!paste || !paste.startCorners) {
+            return;
+        }
+
+        center = getCornersCenter(paste.startCorners);
+        startAngle = Math.atan2(paste.startPointerY - center.y, paste.startPointerX - center.x);
+        currentAngle = Math.atan2(point.y - center.y, point.x - center.x);
+        angle = currentAngle - startAngle;
+        if (event && event.shiftKey) {
+            angle = Math.round(angle / (Math.PI / 12)) * (Math.PI / 12);
+        }
+        cosine = Math.cos(angle);
+        sine = Math.sin(angle);
+        paste.corners = paste.startCorners.map(function(corner) {
+            var x = corner.x - center.x;
+            var y = corner.y - center.y;
+
+            return {
+                x: center.x + (x * cosine) - (y * sine),
+                y: center.y + (x * sine) + (y * cosine)
+            };
+        });
+        updateFloatingPasteBounds(paste);
+    }
+
+    function skewFloatingPaste(board, point) {
+        var paste = board && board.floatingPaste;
+        var deltaX;
+        var deltaY;
+        var indexes;
+
+        if (!paste || !paste.startCorners || !paste.resizeHandle) {
+            return;
+        }
+
+        deltaX = point.x - paste.startPointerX;
+        deltaY = point.y - paste.startPointerY;
+        paste.corners = cloneFloatingPasteCorners(paste.startCorners);
+        indexes = {
+            n: [0, 1],
+            e: [1, 2],
+            s: [2, 3],
+            w: [3, 0]
+        }[paste.resizeHandle];
+        if (!indexes) {
+            return;
+        }
+        indexes.forEach(function(index) {
+            if (paste.resizeHandle === "n" || paste.resizeHandle === "s") {
+                paste.corners[index].x += deltaX;
+            } else {
+                paste.corners[index].y += deltaY;
+            }
+        });
+        updateFloatingPasteBounds(paste);
+    }
+
+    function perspectiveFloatingPaste(board, point) {
+        var paste = board && board.floatingPaste;
+        var cornerIndex;
+        var deltaX;
+        var deltaY;
+        var partnerIndex;
+
+        if (!paste || !paste.startCorners || !paste.resizeHandle) {
+            return;
+        }
+
+        cornerIndex = getFloatingPasteCornerIndex(paste.resizeHandle);
+        if (cornerIndex < 0) {
+            return;
+        }
+        deltaX = point.x - paste.startPointerX;
+        deltaY = point.y - paste.startPointerY;
+        paste.corners = cloneFloatingPasteCorners(paste.startCorners);
+        paste.corners[cornerIndex] = {
+            x: paste.startCorners[cornerIndex].x + deltaX,
+            y: paste.startCorners[cornerIndex].y + deltaY
+        };
+
+        if (Math.abs(deltaX) >= Math.abs(deltaY)) {
+            partnerIndex = [3, 2, 1, 0][cornerIndex];
+            paste.corners[partnerIndex].x -= deltaX;
+        } else {
+            partnerIndex = [1, 0, 3, 2][cornerIndex];
+            paste.corners[partnerIndex].y -= deltaY;
+        }
+        updateFloatingPasteBounds(paste);
+    }
+
+    function moveFloatingPasteBy(board, deltaX, deltaY) {
+        var paste = board && board.floatingPaste;
+        var i;
+
+        if (!paste || !paste.startCorners) {
+            return;
+        }
+
+        paste.corners = cloneFloatingPasteCorners(paste.startCorners);
+        for (i = 0; i < paste.corners.length; i++) {
+            paste.corners[i].x += deltaX;
+            paste.corners[i].y += deltaY;
+        }
+        if (paste.transformOperation === "warp" && paste.startWarpPoints) {
+            paste.warpPoints = cloneFloatingPasteCorners(paste.startWarpPoints);
+            for (i = 0; i < paste.warpPoints.length; i++) {
+                paste.warpPoints[i].x += deltaX;
+                paste.warpPoints[i].y += deltaY;
+            }
+            syncFloatingPasteCornersFromWarp(paste);
+            updateFloatingPasteBoundsFromPoints(paste, paste.warpPoints);
+            return;
+        }
+        updateFloatingPasteBounds(paste);
     }
 
     function stopFloatingPasteDrag(board, event) {
@@ -4699,7 +4993,10 @@
         paste.isDragging = false;
         paste.dragAction = null;
         paste.resizeHandle = null;
+        paste.startCorners = null;
+        paste.startWarpPoints = null;
         paste.pointerId = null;
+        renderFloatingPaste(board);
         if (event) {
             updateFloatingPasteCursor(board, event);
         }
@@ -4720,7 +5017,15 @@
     }
 
     function handleFloatingPasteKeyDown(board, event) {
-        if (!board || !board.floatingPaste) {
+        var paste = board && board.floatingPaste;
+
+        if (!paste || isEditableKeyboardTarget(event.target)) {
+            return;
+        }
+
+        if (String(event.key).toLowerCase() === "t" && !event.repeat && !paste.isDragging) {
+            event.preventDefault();
+            setFloatingPasteDistortMode(board, !paste.distortMode);
             return;
         }
 
@@ -4736,6 +5041,118 @@
         }
     }
 
+    function setFloatingPasteDistortMode(board, active) {
+        return setFloatingPasteTransformOperation(board, active ? "distort" : "scale");
+    }
+
+    function setFloatingPasteTransformOperation(board, operation) {
+        var paste = board && board.floatingPaste;
+
+        if (!paste || paste.isDragging) {
+            return false;
+        }
+
+        if (isImmediateTransformOperation(operation)) {
+            return applyImmediateFloatingPasteTransform(board, operation);
+        }
+
+        if (!global.ImageTransformRegistry ||
+            !global.ImageTransformRegistry.hasOperation(operation)) {
+            return false;
+        }
+
+        if (operation === "warp" && paste.transformOperation !== "warp") {
+            paste.warpPoints = createFloatingPasteWarpGrid(paste.corners);
+        }
+        paste.transformOperation = operation;
+        paste.distortMode = operation === "distort";
+        paste.layer.classList.toggle("paint-board-floating-paste-distort", operation !== "scale");
+        paste.layer.title = operation + " mode";
+        renderFloatingPaste(board);
+        notifyFloatingPasteTransformChange(board, operation);
+        return true;
+    }
+
+    function setFloatingPasteTransformAlgorithm(board, algorithm) {
+        var paste = board && board.floatingPaste;
+        var operation;
+
+        if (!paste || !global.ImageTransformRegistry ||
+            !global.ImageTransformRegistry.hasAlgorithm) {
+            return false;
+        }
+
+        operation = paste.transformOperation || "scale";
+        if (!global.ImageTransformRegistry.hasAlgorithm(operation, algorithm)) {
+            return false;
+        }
+
+        paste.transformAlgorithms[operation] = algorithm;
+        renderFloatingPaste(board);
+        return true;
+    }
+
+    function setFloatingPasteWarpRoundBehavior(board, active) {
+        var paste = board && board.floatingPaste;
+
+        if (!paste) {
+            return false;
+        }
+
+        paste.warpRoundBehavior = !!active;
+        if (paste.transformOperation === "warp") {
+            renderFloatingPaste(board);
+        }
+        return true;
+    }
+
+    function cancelFloatingPasteDistortion(board) {
+        var paste = board && board.floatingPaste;
+
+        if (!paste || paste.isDragging) {
+            return false;
+        }
+
+        paste.corners = createFloatingPasteRectangleCorners(
+            paste.x,
+            paste.y,
+            paste.width,
+            paste.height
+        );
+        paste.warpPoints = createFloatingPasteWarpGrid(paste.corners);
+        setFloatingPasteTransformOperation(board, "scale");
+        return true;
+    }
+
+    function notifyFloatingPasteTransformChange(board, operation) {
+        var detail = {
+            board: board.element,
+            paintBoard: board,
+            operation: operation
+        };
+        var event;
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-board-floating-paste-transform-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-board-floating-paste-transform-change", false, false, detail);
+        }
+
+        global.dispatchEvent(event);
+    }
+
+    function isEditableKeyboardTarget(target) {
+        var tagName = target && target.tagName ? target.tagName.toLowerCase() : "";
+
+        return tagName === "input" ||
+            tagName === "textarea" ||
+            tagName === "select" ||
+            Boolean(target && target.isContentEditable);
+    }
+
     function isPointInsideBounds(point, bounds) {
         return !!(point && bounds &&
             point.x >= bounds.x &&
@@ -4747,12 +5164,46 @@
     function getFloatingPasteHandles(paste) {
         var size = 8;
         var half = size / 2;
-        var left = paste.x;
-        var top = paste.y;
-        var centerX = paste.x + (paste.width / 2);
-        var centerY = paste.y + (paste.height / 2);
-        var right = paste.x + paste.width;
-        var bottom = paste.y + paste.height;
+        var corners = paste.corners;
+        var left;
+        var top;
+        var centerX;
+        var centerY;
+        var right;
+        var bottom;
+
+        if (paste.transformOperation === "warp") {
+            return paste.warpPoints.map(function(point, index) {
+                return createFloatingPasteHandle("warp-" + index, point.x, point.y, size, half);
+            });
+        }
+
+        if (paste.transformOperation === "rotate" ||
+            paste.transformOperation === "distort" ||
+            paste.transformOperation === "perspective") {
+            return [
+                createFloatingPasteHandle("nw", corners[0].x, corners[0].y, size, half),
+                createFloatingPasteHandle("ne", corners[1].x, corners[1].y, size, half),
+                createFloatingPasteHandle("se", corners[2].x, corners[2].y, size, half),
+                createFloatingPasteHandle("sw", corners[3].x, corners[3].y, size, half)
+            ];
+        }
+
+        if (paste.transformOperation === "skew") {
+            return [
+                createFloatingPasteHandle("n", (corners[0].x + corners[1].x) / 2, (corners[0].y + corners[1].y) / 2, size, half),
+                createFloatingPasteHandle("e", (corners[1].x + corners[2].x) / 2, (corners[1].y + corners[2].y) / 2, size, half),
+                createFloatingPasteHandle("s", (corners[2].x + corners[3].x) / 2, (corners[2].y + corners[3].y) / 2, size, half),
+                createFloatingPasteHandle("w", (corners[3].x + corners[0].x) / 2, (corners[3].y + corners[0].y) / 2, size, half)
+            ];
+        }
+
+        left = paste.x;
+        top = paste.y;
+        centerX = paste.x + (paste.width / 2);
+        centerY = paste.y + (paste.height / 2);
+        right = paste.x + paste.width;
+        bottom = paste.y + paste.height;
 
         return [
             createFloatingPasteHandle("nw", left, top, size, half),
@@ -4799,6 +5250,10 @@
     }
 
     function getFloatingPasteCursor(handle) {
+        if (handle && handle.indexOf("warp-") === 0) {
+            return "move";
+        }
+
         if (handle === "nw" || handle === "se") {
             return "nwse-resize";
         }
@@ -4832,10 +5287,364 @@
         beginUndoableAction(board);
         markUndoableChange(board);
         paintWithSelection(board, function() {
-            board.context.drawImage(paste.image, paste.x, paste.y, paste.width, paste.height);
+            drawFloatingPasteImage(board.context, paste);
         });
         removeFloatingPaste(board);
         commitUndoableAction(board);
+        return true;
+    }
+
+    function createFloatingPasteRectangleCorners(x, y, width, height) {
+        return [
+            { x: x, y: y },
+            { x: x + width, y: y },
+            { x: x + width, y: y + height },
+            { x: x, y: y + height }
+        ];
+    }
+
+    function cloneFloatingPasteCorners(corners) {
+        return corners.map(function(corner) {
+            return {
+                x: corner.x,
+                y: corner.y
+            };
+        });
+    }
+
+    function getFloatingPasteCornerIndex(handle) {
+        var index = {
+            nw: 0,
+            ne: 1,
+            se: 2,
+            sw: 3
+        }[handle];
+
+        return typeof index === "number" ? index : -1;
+    }
+
+    function getFloatingPasteWarpPointIndex(handle) {
+        var match = /^warp-(\d+)$/.exec(handle || "");
+        var index = match ? Number(match[1]) : -1;
+
+        return index >= 0 && index < 16 ? index : -1;
+    }
+
+    function updateFloatingPasteBounds(paste) {
+        var xs = paste.corners.map(function(corner) {
+            return corner.x;
+        });
+        var ys = paste.corners.map(function(corner) {
+            return corner.y;
+        });
+        var right;
+        var bottom;
+
+        paste.x = Math.min.apply(Math, xs);
+        paste.y = Math.min.apply(Math, ys);
+        right = Math.max.apply(Math, xs);
+        bottom = Math.max.apply(Math, ys);
+        paste.width = Math.max(1, right - paste.x);
+        paste.height = Math.max(1, bottom - paste.y);
+    }
+
+    function updateFloatingPasteBoundsFromPoints(paste, points) {
+        var xs = points.map(function(point) {
+            return point.x;
+        });
+        var ys = points.map(function(point) {
+            return point.y;
+        });
+
+        paste.x = Math.min.apply(Math, xs);
+        paste.y = Math.min.apply(Math, ys);
+        paste.width = Math.max(1, Math.max.apply(Math, xs) - paste.x);
+        paste.height = Math.max(1, Math.max.apply(Math, ys) - paste.y);
+    }
+
+    function getCornersCenter(corners) {
+        var total = corners.reduce(function(result, corner) {
+            result.x += corner.x;
+            result.y += corner.y;
+            return result;
+        }, { x: 0, y: 0 });
+
+        return {
+            x: total.x / corners.length,
+            y: total.y / corners.length
+        };
+    }
+
+    function scaleFloatingPasteCorners(corners, fromX, fromY, fromWidth, fromHeight, toX, toY, toWidth, toHeight) {
+        var safeWidth = fromWidth || 1;
+        var safeHeight = fromHeight || 1;
+
+        return corners.map(function(corner) {
+            return {
+                x: toX + (((corner.x - fromX) / safeWidth) * toWidth),
+                y: toY + (((corner.y - fromY) / safeHeight) * toHeight)
+            };
+        });
+    }
+
+    function createFloatingPasteWarpGrid(corners) {
+        var points = [];
+        var row;
+        var column;
+        var u;
+        var v;
+
+        for (row = 0; row < 4; row += 1) {
+            v = row / 3;
+            for (column = 0; column < 4; column += 1) {
+                u = column / 3;
+                points.push({
+                    x: lerpNumber(
+                        lerpNumber(corners[0].x, corners[1].x, u),
+                        lerpNumber(corners[3].x, corners[2].x, u),
+                        v
+                    ),
+                    y: lerpNumber(
+                        lerpNumber(corners[0].y, corners[1].y, u),
+                        lerpNumber(corners[3].y, corners[2].y, u),
+                        v
+                    )
+                });
+            }
+        }
+        return points;
+    }
+
+    function syncFloatingPasteCornersFromWarp(paste) {
+        paste.corners = [
+            paste.warpPoints[0],
+            paste.warpPoints[3],
+            paste.warpPoints[15],
+            paste.warpPoints[12]
+        ].map(function(point) {
+            return {
+                x: point.x,
+                y: point.y
+            };
+        });
+    }
+
+    function lerpNumber(first, second, amount) {
+        return first + ((second - first) * amount);
+    }
+
+    function traceFloatingPasteOutline(context, corners) {
+        context.beginPath();
+        context.moveTo(Math.round(corners[0].x) + 0.5, Math.round(corners[0].y) + 0.5);
+        context.lineTo(Math.round(corners[1].x) + 0.5, Math.round(corners[1].y) + 0.5);
+        context.lineTo(Math.round(corners[2].x) + 0.5, Math.round(corners[2].y) + 0.5);
+        context.lineTo(Math.round(corners[3].x) + 0.5, Math.round(corners[3].y) + 0.5);
+        context.closePath();
+    }
+
+    function drawFloatingPasteWarpGrid(context, points, roundBehavior) {
+        var row;
+        var column;
+
+        if (!points || points.length !== 16) {
+            return;
+        }
+
+        context.save();
+        context.lineWidth = 1;
+        context.strokeStyle = roundBehavior ?
+            "rgba(255, 255, 255, 0.28)" :
+            "rgba(255, 255, 255, 0.65)";
+        context.setLineDash(roundBehavior ? [2, 3] : []);
+        context.beginPath();
+        for (row = 0; row < 4; row += 1) {
+            context.moveTo(points[row * 4].x, points[row * 4].y);
+            for (column = 1; column < 4; column += 1) {
+                context.lineTo(points[(row * 4) + column].x, points[(row * 4) + column].y);
+            }
+        }
+        for (column = 0; column < 4; column += 1) {
+            context.moveTo(points[column].x, points[column].y);
+            for (row = 1; row < 4; row += 1) {
+                context.lineTo(points[(row * 4) + column].x, points[(row * 4) + column].y);
+            }
+        }
+        context.stroke();
+
+        if (roundBehavior) {
+            drawFloatingPasteBezierGrid(context, points);
+        }
+        context.restore();
+    }
+
+    function drawFloatingPasteBezierGrid(context, points) {
+        var line;
+        var step;
+        var point;
+
+        context.strokeStyle = "rgba(255, 255, 255, 0.82)";
+        context.setLineDash([]);
+        context.beginPath();
+        for (line = 0; line < 4; line += 1) {
+            for (step = 0; step <= 24; step += 1) {
+                point = evaluateFloatingPasteBezierPoint(points, step / 24, line / 3);
+                if (step === 0) {
+                    context.moveTo(point.x, point.y);
+                } else {
+                    context.lineTo(point.x, point.y);
+                }
+            }
+        }
+        for (line = 0; line < 4; line += 1) {
+            for (step = 0; step <= 24; step += 1) {
+                point = evaluateFloatingPasteBezierPoint(points, line / 3, step / 24);
+                if (step === 0) {
+                    context.moveTo(point.x, point.y);
+                } else {
+                    context.lineTo(point.x, point.y);
+                }
+            }
+        }
+        context.stroke();
+    }
+
+    function evaluateFloatingPasteBezierPoint(points, u, v) {
+        var inverseU = 1 - u;
+        var inverseV = 1 - v;
+        var basisU = [
+            inverseU * inverseU * inverseU,
+            3 * inverseU * inverseU * u,
+            3 * inverseU * u * u,
+            u * u * u
+        ];
+        var basisV = [
+            inverseV * inverseV * inverseV,
+            3 * inverseV * inverseV * v,
+            3 * inverseV * v * v,
+            v * v * v
+        ];
+        var result = { x: 0, y: 0 };
+        var row;
+        var column;
+        var weight;
+
+        for (row = 0; row < 4; row += 1) {
+            for (column = 0; column < 4; column += 1) {
+                weight = basisU[column] * basisV[row];
+                result.x += points[(row * 4) + column].x * weight;
+                result.y += points[(row * 4) + column].y * weight;
+            }
+        }
+        return result;
+    }
+
+    function drawFloatingPasteImage(context, paste) {
+        var operation = paste.transformOperation || "scale";
+
+        if (global.ImageTransformRegistry && global.ImageTransformRegistry.render) {
+            global.ImageTransformRegistry.render(context, paste.image, paste.corners, {
+                operation: operation,
+                algorithm: paste.transformAlgorithms[operation],
+                warpPoints: paste.warpPoints,
+                roundBehavior: paste.warpRoundBehavior,
+                preview: paste.isDragging
+            });
+            return;
+        }
+
+        context.drawImage(paste.image, paste.x, paste.y, paste.width, paste.height);
+    }
+
+    function isImmediateTransformOperation(operation) {
+        return operation === "rotate-180" ||
+            operation === "rotate-90-cw" ||
+            operation === "rotate-90-ccw" ||
+            operation === "flip-horizontal" ||
+            operation === "flip-vertical";
+    }
+
+    function applyImmediateFloatingPasteTransform(board, operation) {
+        var paste = board && board.floatingPaste;
+        var rendered;
+        var transformed;
+        var transformedContext;
+        var center;
+        var width;
+        var height;
+        var localCorners;
+        var localWarpPoints;
+
+        if (!paste) {
+            return false;
+        }
+
+        width = Math.max(1, Math.ceil(paste.width));
+        height = Math.max(1, Math.ceil(paste.height));
+        rendered = document.createElement("canvas");
+        rendered.width = width;
+        rendered.height = height;
+        localCorners = paste.corners.map(function(corner) {
+            return {
+                x: corner.x - paste.x,
+                y: corner.y - paste.y
+            };
+        });
+        localWarpPoints = paste.warpPoints.map(function(point) {
+            return {
+                x: point.x - paste.x,
+                y: point.y - paste.y
+            };
+        });
+        if (global.ImageTransformRegistry && global.ImageTransformRegistry.render) {
+            global.ImageTransformRegistry.render(rendered.getContext("2d"), paste.image, localCorners, {
+                operation: paste.transformOperation || "scale",
+                algorithm: paste.transformAlgorithms[paste.transformOperation || "scale"],
+                warpPoints: localWarpPoints,
+                roundBehavior: paste.warpRoundBehavior
+            });
+        }
+
+        transformed = document.createElement("canvas");
+        if (operation === "rotate-90-cw" || operation === "rotate-90-ccw") {
+            transformed.width = height;
+            transformed.height = width;
+        } else {
+            transformed.width = width;
+            transformed.height = height;
+        }
+        transformedContext = transformed.getContext("2d");
+
+        if (operation === "rotate-180") {
+            transformedContext.translate(width, height);
+            transformedContext.rotate(Math.PI);
+        } else if (operation === "rotate-90-cw") {
+            transformedContext.translate(height, 0);
+            transformedContext.rotate(Math.PI / 2);
+        } else if (operation === "rotate-90-ccw") {
+            transformedContext.translate(0, width);
+            transformedContext.rotate(-Math.PI / 2);
+        } else if (operation === "flip-horizontal") {
+            transformedContext.translate(width, 0);
+            transformedContext.scale(-1, 1);
+        } else if (operation === "flip-vertical") {
+            transformedContext.translate(0, height);
+            transformedContext.scale(1, -1);
+        }
+        transformedContext.drawImage(rendered, 0, 0);
+
+        center = getCornersCenter(paste.corners);
+        paste.image = transformed;
+        paste.width = transformed.width;
+        paste.height = transformed.height;
+        paste.x = center.x - (paste.width / 2);
+        paste.y = center.y - (paste.height / 2);
+        paste.corners = createFloatingPasteRectangleCorners(paste.x, paste.y, paste.width, paste.height);
+        paste.warpPoints = createFloatingPasteWarpGrid(paste.corners);
+        paste.transformOperation = "scale";
+        paste.distortMode = false;
+        paste.layer.classList.remove("paint-board-floating-paste-distort");
+        renderFloatingPaste(board);
+        notifyFloatingPasteTransformChange(board, "scale");
         return true;
     }
 
@@ -4871,6 +5680,27 @@
         }
 
         board.floatingPaste = null;
+        notifyFloatingPasteChange(board, false);
+    }
+
+    function notifyFloatingPasteChange(board, active) {
+        var detail = {
+            board: board.element,
+            paintBoard: board,
+            active: !!active
+        };
+        var event;
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-board-floating-paste-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-board-floating-paste-change", false, false, detail);
+        }
+
+        global.dispatchEvent(event);
     }
 
     function getCurrentPaintColor(board) {

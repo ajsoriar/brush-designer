@@ -26,11 +26,6 @@
             background-color: #e0e0e0;
         }
 
-        &.tools-bar-toggle-on {
-            background-color: #111827;
-            border-color: #00ff00;
-            color: #00ff00;
-        }
     }
 
     .tools-bar-frame {
@@ -68,22 +63,7 @@
         input {
             margin: 0;
         }
+
     }
 
-    .tools-bar-crazy-grid {
-        align-items: center;
-        display: grid;
-        gap: 6px;
-        grid-template-columns: auto auto auto;
-    }
-
-    .tools-bar-option-stack {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-
-    .tools-bar-crazy-frame {
-        margin-left: auto;
-    }
 }

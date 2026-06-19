@@ -5,6 +5,8 @@
     var be = null;
     var demoWindowCount = 0;
     var appBigColorPicker = null;
+    var appBigColorPickerWindow = null;
+    var appBigColorPickerTarget = "front";
     var appColorPicker = null;
     var appLineWidthPicker = null;
     var appBrushWidthPicker = null;
@@ -126,8 +128,6 @@
         var existingWindow = WindowsManager.getWindowByWindowId("new-document");
         var dialogWidth = 775;
         var dialogHeight = 320;
-        var dialogX = Math.max(0, Math.round((global.innerWidth - dialogWidth) / 2));
-        var dialogY = Math.max(0, Math.round((global.innerHeight - dialogHeight) / 2));
         var dialogWindow;
         var dialog;
 
@@ -136,23 +136,15 @@
             return;
         }
 
-        dialogWindow = WindowsManager.create({
+        dialogWindow = ModalWindow({
             id: "new-document-window",
             windowId: "new-document",
             title: "New",
-            type: "MODAL",
-            x: dialogX,
-            y: dialogY,
             width: dialogWidth,
             height: dialogHeight,
-            fixed: true,
-            minimizable: false,
-            scrollBarX: false,
-            scrollBarY: false,
-            contentId: "new-document-window-content"
+            className: "wm-window-new-document"
         });
 
-        dialogWindow.element.className += " wm-window-new-document";
         dialog = NewDocumentDialog({
             width: size.width,
             height: size.height,
@@ -166,6 +158,61 @@
         });
 
         dialogWindow.setContent(dialog.element);
+    }
+
+    function openMultiPaste() {
+        var existingWindow = WindowsManager.getWindowByWindowId("multi-paste");
+        var dialogWindow;
+        var multiPasteComponent;
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return existingWindow;
+        }
+
+        dialogWindow = ModalWindow({
+            id: "multi-paste-window",
+            windowId: "multi-paste",
+            title: "Multi Paste",
+            width: Math.max(320, Math.min(670, global.innerWidth - 40)),
+            height: Math.max(300, Math.min(325, global.innerHeight - 40)),
+            className: "wm-window-multi-paste",
+            beforeClose: function() {
+                if (multiPasteComponent) {
+                    multiPasteComponent.destroy();
+                    multiPasteComponent = null;
+                }
+                return true;
+            }
+        });
+
+        if (!dialogWindow) {
+            return null;
+        }
+
+        multiPasteComponent = MultiPaste({
+            entries: global.AppClipboard.getCopyHistory(),
+            onCancel: function() {
+                dialogWindow.close();
+            },
+            onPaste: function(entry) {
+                var targetBoard = getActivePaintBoard();
+
+                if (!targetBoard) {
+                    return;
+                }
+
+                global.AppClipboard.pasteCopyHistoryEntry(targetBoard, entry.id).then(function(pasted) {
+                    if (pasted) {
+                        dialogWindow.close();
+                    }
+                }).catch(function(error) {
+                    console.log("Multi Paste failed:", error);
+                });
+            }
+        });
+        dialogWindow.setContent(multiPasteComponent.element);
+        return dialogWindow;
     }
 
     function openPaintBoardWindow(options) {
@@ -852,16 +899,22 @@
         return appColorPicker;
     }
 
-    function openBigColorPickerWindow() {
+    function openBigColorPickerWindow(initialColor, target) {
         var existingWindow = WindowsManager.getWindowByWindowId("big-color-picker");
+        var openingColor = initialColor || global.App.memory.currentColor;
+
+        appBigColorPickerTarget = target === "background" ? "background" : "front";
 
         if (existingWindow) {
+            if (appBigColorPicker && appBigColorPicker.setActiveColor) {
+                appBigColorPicker.setActiveColor(openingColor);
+            }
             WindowsManager.bringToFront(existingWindow);
             return appBigColorPicker;
         }
 
         var pickerWidth = 488;
-        var pickerHeight = 278;
+        var pickerHeight = 338;
         var windowFrameWidth = 16;
         var windowFrameHeight = 36;
         var pickerWindow = WindowsManager.create({
@@ -874,28 +927,60 @@
             width: pickerWidth + windowFrameWidth,
             height: pickerHeight + windowFrameHeight,
             minWidth: 420,
-            minHeight: 280,
+            minHeight: 350,
             resizable: true,
             scrollBarX: false,
             scrollBarY: false,
-            contentId: "big-color-picker-window-content"
+            contentId: "big-color-picker-window-content",
+            beforeClose: function() {
+                appBigColorPickerWindow = null;
+                appBigColorPickerTarget = "front";
+                if (appBigColorPicker) {
+                    appBigColorPicker.destroy();
+                    appBigColorPicker = null;
+                }
+                return true;
+            }
         });
+        appBigColorPickerWindow = pickerWindow;
 
         appBigColorPicker = BigColorPicker({
             id: "app-big-color-picker",
             containerId: pickerWindow.contentId,
             width: pickerWidth,
             height: pickerHeight,
-            activeColor: global.App.memory.currentColor,
-            onColorSelected: function(color) {
-                global.App.memory.currentColor = color;
-                console.log("Selected color:", color);
+            activeColor: openingColor,
+            onAccept: function(color) {
+                applyBigColorPickerColor(color);
+                if (appBigColorPickerWindow) {
+                    appBigColorPickerWindow.close();
+                }
+            },
+            onApply: function(color) {
+                applyBigColorPickerColor(color);
+            },
+            onCancel: function() {
+                if (appBigColorPickerWindow) {
+                    appBigColorPickerWindow.close();
+                }
             }
         });
 
         pickerWindow.scaleToContent(appBigColorPicker.getWidth(), appBigColorPicker.getHeight());
 
         return appBigColorPicker;
+    }
+
+    function applyBigColorPickerColor(color) {
+        if (appBigColorPickerTarget === "background") {
+            if (global.ForegroundBackgroundColorsApi &&
+                global.ForegroundBackgroundColorsApi.setBackgroundColor) {
+                global.ForegroundBackgroundColorsApi.setBackgroundColor(color);
+            }
+            return;
+        }
+
+        setActiveColor(color);
     }
 
     function openSimpleLineWidthPickerWindow() {
@@ -1399,11 +1484,17 @@
         if (appBigColorPicker && appBigColorPicker.setActiveColor) {
             appBigColorPicker.setActiveColor(color);
         }
+
+        if (global.ForegroundBackgroundColorsApi &&
+            global.ForegroundBackgroundColorsApi.setFrontColor) {
+            global.ForegroundBackgroundColorsApi.setFrontColor(color, true);
+        }
     }
 
     global.AppOpenWindows = {
         openEditor: openEditor,
         newDocument: newDocument,
+        openMultiPaste: openMultiPaste,
         createDemoWindow: createDemoWindow,
         openPaintBoardWindow: openPaintBoardWindow,
         openBrushDesignerInWindow: openBrushDesignerInWindow,
