@@ -33,6 +33,10 @@
     z-index: 1;
 }
 
+/* Debug-only marker for the currently active layer. Intentionally empty. */
+.ACTIVE-LAYER {
+}
+
 .paint-board-floating-paste-canvas {
     display: block;
     height: 100%;

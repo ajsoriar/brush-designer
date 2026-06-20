@@ -20,9 +20,9 @@
     // PaintBoardLayersManager module (layersManager.js). The board only delegates
     // to it. The layer object shape is shared with the LayersPanel component
     // (src/components/layersPanel) and must stay in sync with it.
-    function createInitialLayers() {
+    function createInitialLayers(boardId) {
         if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.createInitialLayers) {
-            return global.PaintBoardLayersManager.createInitialLayers();
+            return global.PaintBoardLayersManager.createInitialLayers(boardId);
         }
 
         return [];
@@ -686,9 +686,90 @@
             paintColor: getOppositeColor(config.backgroundColor),
             brushSize: config.brushSize,
             useLayers: config.useLayers,
-            layers: config.layers || (config.useLayers ? createInitialLayers() : []),
+            layers: config.layers || (config.useLayers ? createInitialLayers(boardId) : []),
+            layerSequence: 1,
             getLayers: function() {
                 return board.layers;
+            },
+            addLayer: function(options) {
+                var previousCanvas = board.canvas;
+                var layer;
+
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.addLayer) {
+                    layer = global.PaintBoardLayersManager.addLayer(board, options);
+
+                    if (config.paintOnPointer && layer) {
+                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                            startPainting: startPainting,
+                            continuePainting: continuePainting,
+                            leaveCanvas: leaveCanvas,
+                            rememberHoverGuidePointer: rememberHoverGuidePointer,
+                            finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                        }, supportsPointerEvents);
+                    }
+
+                    return layer;
+                }
+
+                return null;
+            },
+            removeLayer: function(layerId) {
+                var previousCanvas = board.canvas;
+                var removed;
+
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.removeLayer) {
+                    removed = global.PaintBoardLayersManager.removeLayer(board, layerId);
+
+                    if (config.paintOnPointer && removed) {
+                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                            startPainting: startPainting,
+                            continuePainting: continuePainting,
+                            leaveCanvas: leaveCanvas,
+                            rememberHoverGuidePointer: rememberHoverGuidePointer,
+                            finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                        }, supportsPointerEvents);
+                    }
+
+                    return removed;
+                }
+
+                return false;
+            },
+            setActiveLayer: function(layerId) {
+                var previousCanvas = board.canvas;
+                var activated;
+
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setActiveLayer) {
+                    activated = global.PaintBoardLayersManager.setActiveLayer(board, layerId);
+
+                    if (config.paintOnPointer && activated) {
+                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                            startPainting: startPainting,
+                            continuePainting: continuePainting,
+                            leaveCanvas: leaveCanvas,
+                            rememberHoverGuidePointer: rememberHoverGuidePointer,
+                            finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                        }, supportsPointerEvents);
+                    }
+
+                    return activated;
+                }
+
+                return false;
+            },
+            setLayerVisibility: function(layerId, visible) {
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayerVisibility) {
+                    return global.PaintBoardLayersManager.setLayerVisibility(board, layerId, visible);
+                }
+
+                return false;
+            },
+            setLayersOrder: function(layers) {
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayersOrder) {
+                    return global.PaintBoardLayersManager.setLayersOrder(board, layers);
+                }
+
+                return false;
             },
             lastPointerPosition: null,
             previewPointerPosition: null,
@@ -787,24 +868,28 @@
 
         if (config.paintOnPointer) {
             if (supportsPointerEvents) {
-                canvas.addEventListener("pointerdown", startPainting);
+                bindCanvasPaintHandlers(canvas, {
+                    startPainting: startPainting,
+                    continuePainting: continuePainting,
+                    leaveCanvas: leaveCanvas,
+                    rememberHoverGuidePointer: rememberHoverGuidePointer,
+                    finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                }, true, true);
                 container.addEventListener("pointerdown", startPaintingFromOutside);
-                canvas.addEventListener("dblclick", finishPolygonalSelectionFromEvent);
-                canvas.addEventListener("pointerenter", rememberHoverGuidePointer);
-                canvas.addEventListener("pointermove", continuePainting);
                 document.addEventListener("pointermove", continuePainting, true);
                 document.addEventListener("pointerup", endPainting, true);
                 document.addEventListener("pointercancel", endPainting, true);
-                canvas.addEventListener("pointerleave", leaveCanvas);
             } else {
-                canvas.addEventListener("mousedown", startPainting);
+                bindCanvasPaintHandlers(canvas, {
+                    startPainting: startPainting,
+                    continuePainting: continuePainting,
+                    leaveCanvas: leaveCanvas,
+                    rememberHoverGuidePointer: rememberHoverGuidePointer,
+                    finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                }, false, true);
                 container.addEventListener("mousedown", startPaintingFromOutside);
-                canvas.addEventListener("dblclick", finishPolygonalSelectionFromEvent);
-                canvas.addEventListener("mouseenter", rememberHoverGuidePointer);
-                canvas.addEventListener("mousemove", continuePainting);
                 document.addEventListener("mousemove", continuePainting, true);
                 document.addEventListener("mouseup", endPainting, true);
-                canvas.addEventListener("mouseleave", leaveCanvas);
             }
 
             document.addEventListener("keydown", updatePreviewModifier);
@@ -5970,32 +6055,55 @@
         return data;
     }
 
+    function bindCanvasPaintHandlers(canvas, paintHandlers, supportsPointerEvents, bind) {
+        var method = bind ? "addEventListener" : "removeEventListener";
+
+        if (!canvas || !paintHandlers) {
+            return;
+        }
+
+        if (supportsPointerEvents) {
+            canvas[method]("pointerdown", paintHandlers.startPainting);
+            canvas[method]("dblclick", paintHandlers.finishPolygonalSelectionFromEvent);
+            canvas[method]("pointerenter", paintHandlers.rememberHoverGuidePointer);
+            canvas[method]("pointermove", paintHandlers.continuePainting);
+            canvas[method]("pointerleave", paintHandlers.leaveCanvas);
+        } else {
+            canvas[method]("mousedown", paintHandlers.startPainting);
+            canvas[method]("dblclick", paintHandlers.finishPolygonalSelectionFromEvent);
+            canvas[method]("mouseenter", paintHandlers.rememberHoverGuidePointer);
+            canvas[method]("mousemove", paintHandlers.continuePainting);
+            canvas[method]("mouseleave", paintHandlers.leaveCanvas);
+        }
+    }
+
+    function rebindCanvasPaintHandlers(previousCanvas, nextCanvas, paintHandlers, supportsPointerEvents) {
+        if (!paintHandlers || previousCanvas === nextCanvas) {
+            return;
+        }
+
+        bindCanvasPaintHandlers(previousCanvas, paintHandlers, supportsPointerEvents, false);
+        bindCanvasPaintHandlers(nextCanvas, paintHandlers, supportsPointerEvents, true);
+    }
+
     function destroy(board, paintHandlers, paintToolChangeHandlers) {
         cancelFloatingPaste(board);
 
         if (paintHandlers && paintHandlers.supportsPointerEvents) {
-            board.canvas.removeEventListener("pointerdown", paintHandlers.startPainting);
+            bindCanvasPaintHandlers(board.canvas, paintHandlers, true, false);
             if (paintHandlers.container) {
                 paintHandlers.container.removeEventListener("pointerdown", paintHandlers.startPaintingFromOutside);
             }
-            board.canvas.removeEventListener("dblclick", paintHandlers.finishPolygonalSelectionFromEvent);
-            board.canvas.removeEventListener("pointerenter", paintHandlers.rememberHoverGuidePointer);
-            board.canvas.removeEventListener("pointermove", paintHandlers.continuePainting);
             document.removeEventListener("pointermove", paintHandlers.continuePainting, true);
             document.removeEventListener("pointerup", paintHandlers.endPainting, true);
             document.removeEventListener("pointercancel", paintHandlers.endPainting, true);
-            board.canvas.removeEventListener("pointerleave", paintHandlers.leaveCanvas);
         } else if (paintHandlers) {
-            board.canvas.removeEventListener("mousedown", paintHandlers.startPainting);
+            bindCanvasPaintHandlers(board.canvas, paintHandlers, false, false);
             if (paintHandlers.container) {
                 paintHandlers.container.removeEventListener("mousedown", paintHandlers.startPaintingFromOutside);
             }
-            board.canvas.removeEventListener("dblclick", paintHandlers.finishPolygonalSelectionFromEvent);
-            board.canvas.removeEventListener("mouseenter", paintHandlers.rememberHoverGuidePointer);
-            board.canvas.removeEventListener("mousemove", paintHandlers.continuePainting);
             document.removeEventListener("mousemove", paintHandlers.continuePainting, true);
             document.removeEventListener("mouseup", paintHandlers.endPainting, true);
-            board.canvas.removeEventListener("mouseleave", paintHandlers.leaveCanvas);
         }
 
         if (paintHandlers && paintHandlers.updatePreviewModifier) {

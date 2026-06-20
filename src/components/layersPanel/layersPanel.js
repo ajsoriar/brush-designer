@@ -12,6 +12,7 @@
         thumbnailMaxSize: 75,
         activeLayerId: null,
         onActiveLayerChange: null,
+        onLayerVisibilityChange: null,
         onLayersReorder: null,
         // The panel no longer owns any default layers stack. Layers are data that
         // belong to each board (document): a board creates its own layers and feeds
@@ -184,12 +185,19 @@
 
         function toggleLayerVisibility(layerId) {
             var layer = getLayerById(config.layers, layerId);
+            var visible;
 
             if (!layer) {
                 return false;
             }
 
-            layer.visible = layer.visible === false;
+            visible = layer.visible === false;
+            layer.visible = visible;
+
+            if (typeof config.onLayerVisibilityChange === "function") {
+                config.onLayerVisibilityChange(layer, visible, component);
+            }
+
             renderLayers();
             return true;
         }

@@ -1518,8 +1518,21 @@
                 activePaintBoard.canvas.width : 800,
             boardHeight: activePaintBoard && activePaintBoard.canvas ?
                 activePaintBoard.canvas.height : 600,
-            onActiveLayerChange: function() {
+            onActiveLayerChange: function(layer) {
+                if (activePaintBoard && activePaintBoard.setActiveLayer && layer) {
+                    activePaintBoard.setActiveLayer(layer.id);
+                }
                 updateLayersPanelFooterState(appLayersPanel);
+            },
+            onLayerVisibilityChange: function(layer, visible) {
+                if (activePaintBoard && activePaintBoard.setLayerVisibility && layer) {
+                    activePaintBoard.setLayerVisibility(layer.id, visible);
+                }
+            },
+            onLayersReorder: function(layers) {
+                if (activePaintBoard && activePaintBoard.setLayersOrder) {
+                    activePaintBoard.setLayersOrder(layers);
+                }
             }
         });
         layersWindow.scaleToContent(appLayersPanel.getWidth(), appLayersPanel.getHeight());
@@ -1574,9 +1587,24 @@
         removeMaskButton = footerElement.querySelector(".layers-panel-remove-mask-btn");
 
         addButton.addEventListener("click", function() {
+            if (activePaintBoard && activePaintBoard.addLayer) {
+                activePaintBoard.addLayer();
+                syncLayersPanelLayers(activePaintBoard);
+                updateLayersPanelFooterState(layersPanel);
+                return;
+            }
+
             layersPanel.addLayer();
         });
         removeButton.addEventListener("click", function() {
+            if (activePaintBoard && activePaintBoard.removeLayer) {
+                if (activePaintBoard.removeLayer(layersPanel.getActiveLayerId())) {
+                    syncLayersPanelLayers(activePaintBoard);
+                    updateLayersPanelFooterState(layersPanel);
+                }
+                return;
+            }
+
             layersPanel.removeActiveLayer();
         });
         addMaskButton.addEventListener("click", function() {
