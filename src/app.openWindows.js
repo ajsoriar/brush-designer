@@ -268,7 +268,8 @@
             containerId: paintBoardWindow.contentId,
             width: paintBoardWidth,
             height: paintBoardHeight,
-            backgroundColor: config.backgroundColor || "#ffffff"
+            backgroundColor: config.backgroundColor || "#ffffff",
+            useLayers: true
         });
         paintBoard.rules = rules;
         rules.setBoardElement(paintBoard.element);
@@ -379,6 +380,8 @@
 
         activePaintBoard = paintBoard;
         syncLayersPanelBoardSize(paintBoard);
+        syncLayersPanelLayers(paintBoard);
+        syncLayersPanelWindowTitle(paintBoard);
         notifyActivePaintBoardChange(paintBoard);
     }
 
@@ -391,6 +394,48 @@
             paintBoard.canvas ? paintBoard.canvas.width : paintBoard.width,
             paintBoard.canvas ? paintBoard.canvas.height : paintBoard.height
         );
+    }
+
+    function syncLayersPanelLayers(paintBoard) {
+        if (!appLayersPanel || !appLayersPanel.setLayers) {
+            return;
+        }
+
+        if (!paintBoard || !paintBoard.getLayers) {
+            appLayersPanel.setLayers([]);
+            return;
+        }
+
+        appLayersPanel.setLayers(paintBoard.getLayers());
+    }
+
+    function syncLayersPanelWindowTitle(paintBoard) {
+        var layersWindow = WindowsManager.getWindowByWindowId("layers-panel");
+        var titleElement;
+        var contextElement;
+        var paintBoardTitle;
+
+        if (!layersWindow || !layersWindow.element) {
+            return;
+        }
+
+        paintBoardTitle = paintBoard && paintBoard.window ?
+            (paintBoard.window.baseTitle || paintBoard.window.title) :
+            "";
+        layersWindow.setTitle(
+            paintBoardTitle ? "Layers (" + paintBoardTitle + ")" : "Layers"
+        );
+
+        titleElement = layersWindow.element.querySelector(".wm-title");
+        if (!titleElement || !paintBoardTitle) {
+            return;
+        }
+
+        titleElement.textContent = "Layers ";
+        contextElement = document.createElement("span");
+        contextElement.className = "wm-title-context";
+        contextElement.textContent = "(" + paintBoardTitle + ")";
+        titleElement.appendChild(contextElement);
     }
 
     function notifyActivePaintBoardChange(paintBoard) {
@@ -1423,6 +1468,7 @@
 
         if (existingWindow) {
             WindowsManager.bringToFront(existingWindow);
+            syncLayersPanelWindowTitle(activePaintBoard);
             return appLayersPanel;
         }
 
@@ -1479,6 +1525,8 @@
         layersWindow.scaleToContent(appLayersPanel.getWidth(), appLayersPanel.getHeight());
         renderLayersPanelToolsRow(layersWindow.toolsRowElement, appLayersPanel);
         renderLayersPanelFooter(layersWindow.toolsFooterElement, appLayersPanel);
+        syncLayersPanelLayers(activePaintBoard);
+        syncLayersPanelWindowTitle(activePaintBoard);
         return appLayersPanel;
     }
 

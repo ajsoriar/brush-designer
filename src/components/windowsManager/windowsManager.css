@@ -122,6 +122,10 @@
     white-space: nowrap;
 }
 
+.wm-title-context {
+    font-weight: 300;
+}
+
 .wm-actions {
     align-items: center;
     display: flex;

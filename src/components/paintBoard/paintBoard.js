@@ -11,8 +11,22 @@
         paintOnPointer: true,
         brushSize: 1,
         className: "",
+        useLayers: false,
+        layers: null,
         onSave: null
     };
+
+    // Layer management (including the initial layers stack) lives in the
+    // PaintBoardLayersManager module (layersManager.js). The board only delegates
+    // to it. The layer object shape is shared with the LayersPanel component
+    // (src/components/layersPanel) and must stay in sync with it.
+    function createInitialLayers() {
+        if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.createInitialLayers) {
+            return global.PaintBoardLayersManager.createInitialLayers();
+        }
+
+        return [];
+    }
 
     var PAINT_TOOL_MODES = {
         SQUARED_POINTS: "SQUARED-POINTS",
@@ -671,6 +685,11 @@
             backgroundColor: config.backgroundColor,
             paintColor: getOppositeColor(config.backgroundColor),
             brushSize: config.brushSize,
+            useLayers: config.useLayers,
+            layers: config.layers || (config.useLayers ? createInitialLayers() : []),
+            getLayers: function() {
+                return board.layers;
+            },
             lastPointerPosition: null,
             previewPointerPosition: null,
             previewModifierState: null,

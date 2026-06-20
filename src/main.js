@@ -42,6 +42,7 @@ await import("../vendor/div-lines/dist/div-lines.min.js");
 await import("./components/coordinateLabel/coordinateLabel.js");
 await import("./components/boardRules/boardRules.js");
 await import("./components/paintBoard/tempLayer.js");
+await import("./components/paintBoard/layersManager.js");
 await import("./components/paintBoard/imageTransforms/distortAlgorithms.js");
 await import("./components/paintBoard/imageTransforms/scaleAlgorithms.js");
 await import("./components/paintBoard/imageTransforms/affineTransformAlgorithms.js");

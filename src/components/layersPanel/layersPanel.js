@@ -13,20 +13,26 @@
         activeLayerId: null,
         onActiveLayerChange: null,
         onLayersReorder: null,
-        layers: [
-            {
-                id: "layer-3",
-                label: "Layer 3",
-                visible: true,
-                blocked: false,
-                "order-from-the-bottom": 3,
-                selected: true,
-                mask: { id: "layer-3-mask" }
-            },
-            { id: "layer-2", label: "Layer 2", visible: true, blocked: false, "order-from-the-bottom": 2, selected: false },
-            { id: "layer-1", label: "Layer 1", visible: true, blocked: false, "order-from-the-bottom": 1, selected: false },
-            { id: "background", label: "Background", visible: true, blocked: true, "order-from-the-bottom": 0, selected: false, background: true }
-        ]
+        // The panel no longer owns any default layers stack. Layers are data that
+        // belong to each board (document): a board creates its own layers and feeds
+        // them to this panel through the setLayers() API. The structure below is kept
+        // here only as a reference of the expected shape of each layer object.
+        //
+        // layers: [
+        //     {
+        //         id: "layer-3",
+        //         label: "Layer 3",
+        //         visible: true,
+        //         blocked: false,
+        //         "order-from-the-bottom": 3,
+        //         selected: true,
+        //         mask: { id: "layer-3-mask" }
+        //     },
+        //     { id: "layer-2", label: "Layer 2", visible: true, blocked: false, "order-from-the-bottom": 2, selected: false },
+        //     { id: "layer-1", label: "Layer 1", visible: true, blocked: false, "order-from-the-bottom": 1, selected: false },
+        //     { id: "background", label: "Background", visible: true, blocked: true, "order-from-the-bottom": 0, selected: false, background: true }
+        // ]
+        layers: []
     };
 
     function LayersPanel(options) {
