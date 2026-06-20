@@ -83,6 +83,7 @@
         global.AppOpenWindows.openSimpleLineWidthPickerWindow();
         global.AppOpenWindows.openSimpleBrushWidthPickerWindow();
         global.AppOpenWindows.openPaintToolsWindow();
+        global.AppOpenWindows.openLayersPanelWindow();
         initSelectionBehabiourComponent();
         initToolsMagicWandOptionsComponent();
         initToolsTransformOptionsComponent();
@@ -417,6 +418,7 @@
                 openLinesDesigner: global.AppOpenWindows.openLinesDesignerWindow,
                 openStarGenerator: global.AppOpenWindows.openStarGeneratorWindow,
                 openPaintTools: global.AppOpenWindows.openPaintToolsWindow,
+                openLayers: global.AppOpenWindows.openLayersPanelWindow,
                 openColorPicker: global.AppOpenWindows.openSimpleColorPickerWindow,
                 openBigColorPicker: global.AppOpenWindows.openBigColorPickerWindow,
                 openLineWidthPicker: global.AppOpenWindows.openSimpleLineWidthPickerWindow,
@@ -607,6 +609,7 @@
     global.SimpleBrushWidthPickerApi = global.AppOpenWindows.getSimpleBrushWidthPickerApi();
     global.LinesDesignerApi = global.AppOpenWindows.getLinesDesignerApi();
     global.openPaintToolsWindow = global.AppOpenWindows.openPaintToolsWindow;
+    global.openLayersPanelWindow = global.AppOpenWindows.openLayersPanelWindow;
     global.openStarGeneratorWindow = global.AppOpenWindows.openStarGeneratorWindow;
     global.renderBruses = renderBruses;
     global.storeImage = storeImage;

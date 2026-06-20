@@ -38,6 +38,7 @@
       "label": "Window",
       "items": [
         { "label": "Paint Tools", "action": "openPaintTools" },
+        { "label": "Layers", "action": "openLayers" },
         { "type": "separator" },
         { "label": "Color Picker", "action": "openColorPicker" },
         { "label": "Big Color Picker", "action": "openBigColorPicker" },

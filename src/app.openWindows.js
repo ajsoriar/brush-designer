@@ -11,6 +11,7 @@
     var appLineWidthPicker = null;
     var appBrushWidthPicker = null;
     var appPaintTools = null;
+    var appLayersPanel = null;
     var appStarGenerator = null;
     var appBrushDesigner2 = null;
     var appRetroBrushDesigner = null;
@@ -377,7 +378,19 @@
         }
 
         activePaintBoard = paintBoard;
+        syncLayersPanelBoardSize(paintBoard);
         notifyActivePaintBoardChange(paintBoard);
+    }
+
+    function syncLayersPanelBoardSize(paintBoard) {
+        if (!paintBoard || !appLayersPanel || !appLayersPanel.setBoardSize) {
+            return;
+        }
+
+        appLayersPanel.setBoardSize(
+            paintBoard.canvas ? paintBoard.canvas.width : paintBoard.width,
+            paintBoard.canvas ? paintBoard.canvas.height : paintBoard.height
+        );
     }
 
     function notifyActivePaintBoardChange(paintBoard) {
@@ -1400,6 +1413,116 @@
         return appPaintTools;
     }
 
+    function openLayersPanelWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("layers-panel");
+        var panelWidth = 320;
+        var panelHeight = 420;
+        var frameWidth = 16;
+        var frameHeight = 36;
+        var layersWindow;
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return appLayersPanel;
+        }
+
+        layersWindow = WindowsManager.create({
+            id: "layers-panel-window",
+            windowId: "layers-panel",
+            title: "Layers",
+            type: "TOOL",
+            x: Math.max(20, global.innerWidth - panelWidth - frameWidth - 20),
+            y: 92,
+            width: panelWidth + frameWidth,
+            height: panelHeight + frameHeight,
+            minWidth: 250,
+            minHeight: 260,
+            resizable: true,
+            toolsRow: true,
+            toolsFooter: true,
+            scrollBarX: false,
+            scrollBarY: false,
+            contentId: "layers-panel-window-content",
+            onResize: function(width, height) {
+                if (appLayersPanel) {
+                    appLayersPanel.element.style.width = width + "px";
+                    appLayersPanel.element.style.height = height + "px";
+                }
+            },
+            beforeClose: function() {
+                if (appLayersPanel) {
+                    appLayersPanel.destroy();
+                    appLayersPanel = null;
+                }
+                return true;
+            }
+        });
+
+        appLayersPanel = LayersPanel({
+            id: "app-layers-panel",
+            containerId: layersWindow.contentId,
+            width: panelWidth,
+            height: panelHeight,
+            boardWidth: activePaintBoard && activePaintBoard.canvas ?
+                activePaintBoard.canvas.width : 800,
+            boardHeight: activePaintBoard && activePaintBoard.canvas ?
+                activePaintBoard.canvas.height : 600
+        });
+        layersWindow.scaleToContent(appLayersPanel.getWidth(), appLayersPanel.getHeight());
+        renderLayersPanelToolsRow(layersWindow.toolsRowElement, appLayersPanel);
+        renderLayersPanelFooter(layersWindow.toolsFooterElement, appLayersPanel);
+        return appLayersPanel;
+    }
+
+    function renderLayersPanelToolsRow(toolsRowElement, layersPanel) {
+        var blockButton;
+
+        if (!toolsRowElement || !layersPanel) {
+            return;
+        }
+
+        toolsRowElement.innerHTML = [
+            '<button class="layers-panel-toolbar-btn layers-panel-block-btn" type="button" title="Block layer" aria-label="Block layer">Block</button>'
+        ].join("");
+
+        blockButton = toolsRowElement.querySelector(".layers-panel-block-btn");
+        blockButton.addEventListener("click", function() {
+            layersPanel.toggleActiveLayerBlocked();
+        });
+    }
+
+    function renderLayersPanelFooter(footerElement, layersPanel) {
+        var addButton;
+        var removeButton;
+        var addMaskButton;
+
+        if (!footerElement || !layersPanel) {
+            return;
+        }
+
+        footerElement.innerHTML = [
+            '<div class="layers-panel-footer-row">',
+                '<button class="layers-panel-footer-btn layers-panel-add-btn" type="button" title="Add layer" aria-label="Add layer">+</button>',
+                '<button class="layers-panel-footer-btn layers-panel-remove-btn" type="button" title="Remove layer" aria-label="Remove layer">\u2212</button>',
+            '</div>',
+            '<button class="layers-panel-footer-btn layers-panel-add-mask-btn" type="button" title="Add mask" aria-label="Add mask">Add Mask</button>'
+        ].join("");
+
+        addButton = footerElement.querySelector(".layers-panel-add-btn");
+        removeButton = footerElement.querySelector(".layers-panel-remove-btn");
+        addMaskButton = footerElement.querySelector(".layers-panel-add-mask-btn");
+
+        addButton.addEventListener("click", function() {
+            layersPanel.addLayer();
+        });
+        removeButton.addEventListener("click", function() {
+            layersPanel.removeActiveLayer();
+        });
+        addMaskButton.addEventListener("click", function() {
+            layersPanel.addMaskToActiveLayer();
+        });
+    }
+
     function openStarGeneratorWindow() {
         var existingWindow = WindowsManager.getWindowByWindowId("star-generator");
 
@@ -1515,6 +1638,7 @@
         getSimpleBrushWidthPickerApi: getSimpleBrushWidthPickerApi,
         getLinesDesignerApi: getLinesDesignerApi,
         openPaintToolsWindow: openPaintToolsWindow,
+        openLayersPanelWindow: openLayersPanelWindow,
         openStarGeneratorWindow: openStarGeneratorWindow,
         updatePaintBoardWindowTitle: updatePaintBoardWindowTitle,
         updatePaintBoardToolbarState: updatePaintBoardToolbarState,
