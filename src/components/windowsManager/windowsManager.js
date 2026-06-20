@@ -282,6 +282,7 @@
         var topLeft;
         var top;
         var topRight;
+        var title;
 
         if (!topBarGradient || !topBarGradient.a || !topBarGradient.b) {
             return;
@@ -289,13 +290,24 @@
 
         colorA = topBarGradient.a;
         colorB = topBarGradient.b;
-        orientation = String(topBarGradient.orientation || topBarGradient.orientacion || "horizontal").toLowerCase();
+        orientation = String(topBarGradient.orientation || "horizontal").toLowerCase();
         topLeft = element.querySelector(".wm-top-left");
         top = element.querySelector(".wm-top");
         topRight = element.querySelector(".wm-top-right");
+        title = element.querySelector(".wm-title");
 
         if (!topLeft || !top || !topRight) {
             return;
+        }
+
+        if (title) {
+            if (isDarkColor(colorA)) {
+                title.style.color = "#ffffff";
+                title.style.textShadow = "0 1px #000000";
+            } else {
+                title.style.color = "#111111";
+                title.style.textShadow = "none";
+            }
         }
 
         if (orientation === "vertical") {
@@ -310,6 +322,36 @@
         topLeft.style.background = colorA;
         top.style.background = gradient;
         topRight.style.background = colorB;
+    }
+
+    function isDarkColor(color) {
+        var value = String(color || "").trim();
+        var match;
+        var red;
+        var green;
+        var blue;
+        var luminance;
+
+        if (/^#[0-9a-f]{3}$/i.test(value)) {
+            red = parseInt(value.charAt(1) + value.charAt(1), 16);
+            green = parseInt(value.charAt(2) + value.charAt(2), 16);
+            blue = parseInt(value.charAt(3) + value.charAt(3), 16);
+        } else if (/^#[0-9a-f]{6}$/i.test(value)) {
+            red = parseInt(value.slice(1, 3), 16);
+            green = parseInt(value.slice(3, 5), 16);
+            blue = parseInt(value.slice(5, 7), 16);
+        } else {
+            match = value.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+            if (!match) {
+                return false;
+            }
+            red = Math.min(255, parseInt(match[1], 10));
+            green = Math.min(255, parseInt(match[2], 10));
+            blue = Math.min(255, parseInt(match[3], 10));
+        }
+
+        luminance = (red * 299 + green * 587 + blue * 114) / 1000;
+        return luminance < 128;
     }
 
     function getWindowsByGroupName(windowGroupName) {

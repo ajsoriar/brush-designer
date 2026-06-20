@@ -604,7 +604,7 @@
             topBarGradient: {
                 a: "#00c7e8",
                 b: "#2458c7",
-                orientacion: "horizontal"
+                orientation: "horizontal"
             },
             contentId: "retro-brush-designer-window-content"
         });
@@ -805,7 +805,7 @@
             topBarGradient: {
                 a: "#2563eb",
                 b: "#14b8a6",
-                orientacion: "vertical"
+                orientation: "vertical"
             },
             scrollBarX: false,
             scrollBarY: true,
@@ -863,7 +863,7 @@
             topBarGradient: {
                 a: "#2563eb",
                 b: "#14b8a6",
-                orientacion: "horizontal"
+                orientation: "horizontal"
             },
             scrollBarX: false,
             scrollBarY: false,
@@ -1438,6 +1438,11 @@
             minWidth: 250,
             minHeight: 260,
             resizable: true,
+            topBarGradient: {
+                a: "#123477",
+                b: "#9bc8ef",
+                orientation: "horizontal"
+            },
             toolsRow: true,
             toolsFooter: true,
             scrollBarX: false,
@@ -1466,7 +1471,10 @@
             boardWidth: activePaintBoard && activePaintBoard.canvas ?
                 activePaintBoard.canvas.width : 800,
             boardHeight: activePaintBoard && activePaintBoard.canvas ?
-                activePaintBoard.canvas.height : 600
+                activePaintBoard.canvas.height : 600,
+            onActiveLayerChange: function() {
+                updateLayersPanelFooterState(appLayersPanel);
+            }
         });
         layersWindow.scaleToContent(appLayersPanel.getWidth(), appLayersPanel.getHeight());
         renderLayersPanelToolsRow(layersWindow.toolsRowElement, appLayersPanel);
@@ -1525,10 +1533,48 @@
         });
         addMaskButton.addEventListener("click", function() {
             layersPanel.addMaskToActiveLayer();
+            updateLayersPanelFooterState(layersPanel);
         });
         removeMaskButton.addEventListener("click", function() {
             layersPanel.removeMaskFromActiveLayer();
+            updateLayersPanelFooterState(layersPanel);
         });
+        updateLayersPanelFooterState(layersPanel);
+    }
+
+    function updateLayersPanelFooterState(layersPanel) {
+        var footerElement;
+        var addMaskButton;
+        var removeMaskButton;
+        var activeLayer;
+        var hasMask;
+
+        if (!layersPanel || !layersPanel.element) {
+            return;
+        }
+
+        footerElement = layersPanel.element.closest(".wm-window");
+        addMaskButton = footerElement &&
+            footerElement.querySelector(".layers-panel-add-mask-btn");
+        removeMaskButton = footerElement &&
+            footerElement.querySelector(".layers-panel-remove-mask-btn");
+        activeLayer = layersPanel.getActiveLayer && layersPanel.getActiveLayer();
+        hasMask = !!(activeLayer && activeLayer.mask);
+
+        if (addMaskButton) {
+            addMaskButton.disabled = !activeLayer || hasMask;
+            addMaskButton.setAttribute(
+                "aria-disabled",
+                addMaskButton.disabled ? "true" : "false"
+            );
+        }
+        if (removeMaskButton) {
+            removeMaskButton.disabled = !hasMask;
+            removeMaskButton.setAttribute(
+                "aria-disabled",
+                removeMaskButton.disabled ? "true" : "false"
+            );
+        }
     }
 
     function openStarGeneratorWindow() {

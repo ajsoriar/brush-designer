@@ -142,7 +142,12 @@
 
             list.innerHTML = "";
             ordered.forEach(function(layer) {
-                list.appendChild(createLayerRow(layer, setActiveLayer, setActivePreview));
+                list.appendChild(createLayerRow(
+                    layer,
+                    setActiveLayer,
+                    setActivePreview,
+                    toggleLayerVisibility
+                ));
             });
             syncActiveLayer();
             syncActivePreview();
@@ -169,6 +174,18 @@
 
         function setActivePreview(layerId, preview) {
             return setActiveLayer(layerId, preview);
+        }
+
+        function toggleLayerVisibility(layerId) {
+            var layer = getLayerById(config.layers, layerId);
+
+            if (!layer) {
+                return false;
+            }
+
+            layer.visible = layer.visible === false;
+            renderLayers();
+            return true;
         }
 
         function addLayer(layerOptions) {
@@ -563,9 +580,9 @@
         }
     }
 
-    function createLayerRow(layer, onSelect, onPreviewSelect) {
+    function createLayerRow(layer, onSelect, onPreviewSelect, onVisibilityToggle) {
         var item = document.createElement("li");
-        var visibility = document.createElement("span");
+        var visibility = document.createElement("button");
         var previews = document.createElement("span");
         var thumbnail = document.createElement("span");
         var maskConnector;
@@ -592,11 +609,18 @@
             }
         });
 
+        visibility.type = "button";
         visibility.className = "layers-panel-visibility";
         visibility.setAttribute("aria-label", layer.visible === false ? "Hidden" : "Visible");
         if (layer.visible !== false) {
             visibility.className += " layers-panel-visibility-on";
+        } else {
+            visibility.className += " layers-panel-visibility-off";
         }
+        visibility.addEventListener("click", function(event) {
+            event.stopPropagation();
+            onVisibilityToggle(layer.id);
+        });
 
         previews.className = "layers-panel-previews";
 
