@@ -407,6 +407,7 @@
                 createPaintBoard: function() {
                     global.AppOpenWindows.openPaintBoardWindow();
                 },
+                openImage: openImage,
                 saveImage: saveImage,
                 copyToClipboard: copyToClipboard,
                 pasteFromClipboard: pasteFromClipboard,
@@ -426,6 +427,52 @@
             }
         });
         global.AppMenuApi = appMenuComponent;
+    }
+
+    function openImage() {
+        var input = document.createElement("input");
+
+        input.type = "file";
+        input.accept = "image/*";
+        input.addEventListener("change", function() {
+            var file = input.files && input.files[0];
+
+            if (file) {
+                loadImageFile(file);
+            }
+        });
+        input.click();
+    }
+
+    function loadImageFile(file) {
+        var image = new Image();
+        var objectUrl = URL.createObjectURL(file);
+
+        image.onload = function() {
+            var paintBoard;
+
+            URL.revokeObjectURL(objectUrl);
+            global.AppOpenWindows.openPaintBoardWindow({
+                width: image.naturalWidth || image.width,
+                height: image.naturalHeight || image.height,
+                backgroundColor: "rgba(0, 0, 0, 0)"
+            });
+            paintBoard = global.AppOpenWindows.getActivePaintBoard();
+            if (!paintBoard) {
+                return;
+            }
+
+            paintBoard.context.drawImage(image, 0, 0);
+            if (paintBoard.window) {
+                paintBoard.window.baseTitle = file.name;
+                global.AppOpenWindows.updatePaintBoardWindowTitle(paintBoard);
+            }
+        };
+        image.onerror = function() {
+            URL.revokeObjectURL(objectUrl);
+            showNotify("Unable to open image");
+        };
+        image.src = objectUrl;
     }
 
     function pasteFromClipboard() {

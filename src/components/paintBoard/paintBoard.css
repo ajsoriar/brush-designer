@@ -2,6 +2,7 @@
     display: block;
     overflow: hidden;
     position: relative;
+    background-image: url("../../images/transparency-checker_board.png");
 }
 
 .paint-board-layers {

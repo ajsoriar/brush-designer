@@ -1495,6 +1495,7 @@
         var addButton;
         var removeButton;
         var addMaskButton;
+        var removeMaskButton;
 
         if (!footerElement || !layersPanel) {
             return;
@@ -1505,12 +1506,16 @@
                 '<button class="layers-panel-footer-btn layers-panel-add-btn" type="button" title="Add layer" aria-label="Add layer">+</button>',
                 '<button class="layers-panel-footer-btn layers-panel-remove-btn" type="button" title="Remove layer" aria-label="Remove layer">\u2212</button>',
             '</div>',
-            '<button class="layers-panel-footer-btn layers-panel-add-mask-btn" type="button" title="Add mask" aria-label="Add mask">Add Mask</button>'
+            '<div class="layers-panel-footer-row">',
+                '<button class="layers-panel-footer-btn layers-panel-add-mask-btn" type="button" title="Add mask" aria-label="Add mask">Add Mask</button>',
+                '<button class="layers-panel-footer-btn layers-panel-remove-mask-btn" type="button" title="Remove mask" aria-label="Remove mask">Remove Mask</button>',
+            '</div>'
         ].join("");
 
         addButton = footerElement.querySelector(".layers-panel-add-btn");
         removeButton = footerElement.querySelector(".layers-panel-remove-btn");
         addMaskButton = footerElement.querySelector(".layers-panel-add-mask-btn");
+        removeMaskButton = footerElement.querySelector(".layers-panel-remove-mask-btn");
 
         addButton.addEventListener("click", function() {
             layersPanel.addLayer();
@@ -1520,6 +1525,9 @@
         });
         addMaskButton.addEventListener("click", function() {
             layersPanel.addMaskToActiveLayer();
+        });
+        removeMaskButton.addEventListener("click", function() {
+            layersPanel.removeMaskFromActiveLayer();
         });
     }
 

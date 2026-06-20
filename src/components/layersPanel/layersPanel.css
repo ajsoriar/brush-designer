@@ -13,6 +13,7 @@
     margin: 0;
     overflow-y: auto;
     padding: 0;
+    position: relative;
 }
 
 .layers-panel-row {
@@ -25,8 +26,32 @@
     cursor: default;
 }
 
+.layers-panel-row:not(.layers-panel-row-fixed) {
+    cursor: grab;
+}
+
+.layers-panel-row:not(.layers-panel-row-fixed):active {
+    cursor: grabbing;
+}
+
 .layers-panel-row-dragging {
-    opacity: 0.5;
+    opacity: 1;
+}
+
+.layers-panel-drop-indicator {
+    background: #363636;
+    display: none;
+    height: 5px;
+    left: 4px;
+    pointer-events: none;
+    position: absolute;
+    right: 4px;
+    transform: translateY(-50%);
+    z-index: 2;
+}
+
+.layers-panel-drop-indicator-visible {
+    display: block;
 }
 
 .layers-panel-row-selected {
@@ -70,7 +95,7 @@
 
 .layers-panel-thumbnail {
     background-color: #ffffff;
-    background-image: url("../../images/transparency-checkerboard.png");
+    background-image: url("../../images/transparency-checker_layers.png");
     background-repeat: repeat;
     border: 2px solid #333333;
     box-shadow: inset 0 0 0 1px #ffffff;
@@ -83,8 +108,8 @@
 }
 
 .layers-panel-thumbnail-selected {
-    outline: 1px solid #ff0000;
-    outline-offset: 1px;
+    outline: 2px solid #E91E63;
+    outline-offset: 0px;
 }
 
 .layers-panel-previews {
@@ -116,8 +141,8 @@
 }
 
 .layers-panel-label {
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 400;
 }
 
 .layers-panel-label-background {
@@ -193,12 +218,16 @@
     margin-bottom: 4px;
 }
 
-.layers-panel-add-mask-btn {
+.layers-panel-add-mask-btn,
+.layers-panel-remove-mask-btn {
     font-size: 13px;
     height: 24px;
-    margin-right: 0;
     width: auto;
     padding: 0 10px;
+}
+
+.layers-panel-remove-mask-btn {
+    margin-right: 0;
 }
 
 .layers-panel-footer-btn:hover {

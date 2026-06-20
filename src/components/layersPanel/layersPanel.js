@@ -106,6 +106,9 @@
             addMaskToActiveLayer: function() {
                 return addMaskToActiveLayer();
             },
+            removeMaskFromActiveLayer: function() {
+                return removeMaskFromActiveLayer();
+            },
             toggleActiveLayerBlocked: function() {
                 return toggleActiveLayerBlocked();
             },
@@ -253,6 +256,22 @@
             return true;
         }
 
+        function removeMaskFromActiveLayer() {
+            var activeLayer = getLayerById(config.layers, activeLayerId);
+
+            if (!activeLayer || !activeLayer.mask) {
+                return false;
+            }
+
+            delete activeLayer.mask;
+            activePreview = "board";
+            renderLayers();
+            if (typeof config.onActiveLayerChange === "function") {
+                config.onActiveLayerChange(activeLayer, component);
+            }
+            return true;
+        }
+
         function toggleActiveLayerBlocked() {
             var activeLayer = getLayerById(config.layers, activeLayerId);
 
@@ -313,40 +332,64 @@
         }
 
         function setupDragAndDrop() {
+            var dropIndicator = document.createElement("li");
+            var draggedLayerId = null;
+            var dropIndex = null;
+            var dropAccepted = false;
+
+            dropIndicator.className = "layers-panel-drop-indicator";
+            dropIndicator.setAttribute("aria-hidden", "true");
+            list.appendChild(dropIndicator);
+
             list.addEventListener("dragstart", function(event) {
                 var row = getRowFromEvent(event);
+                var layer;
 
                 if (!row) {
                     return;
                 }
+                layer = getLayerById(config.layers, row.getAttribute("data-layer-id"));
+                if (!layer || layer.background) {
+                    event.preventDefault();
+                    return;
+                }
+                if (!dropIndicator.parentNode) {
+                    list.appendChild(dropIndicator);
+                }
+                draggedLayerId = row.getAttribute("data-layer-id") || null;
+                dropIndex = null;
+                dropAccepted = false;
                 row.classList.add("layers-panel-row-dragging");
                 if (event.dataTransfer) {
                     event.dataTransfer.effectAllowed = "move";
-                    event.dataTransfer.setData("text/plain", row.getAttribute("data-layer-id") || "");
+                    event.dataTransfer.setData("text/plain", draggedLayerId || "");
                 }
             });
 
             list.addEventListener("dragover", function(event) {
-                var dragging = list.querySelector(".layers-panel-row-dragging");
-                var afterElement;
-
-                if (!dragging) {
+                if (!draggedLayerId) {
                     return;
                 }
                 event.preventDefault();
                 if (event.dataTransfer) {
                     event.dataTransfer.dropEffect = "move";
                 }
-                afterElement = getDragAfterElement(event.clientY);
-                if (afterElement === null) {
-                    list.appendChild(dragging);
-                } else if (afterElement !== dragging) {
-                    list.insertBefore(dragging, afterElement);
-                }
+                dropIndex = getDropIndex(event.clientY);
+                showDropIndicator(dropIndex);
             });
 
             list.addEventListener("drop", function(event) {
+                if (!draggedLayerId || dropIndex === null) {
+                    return;
+                }
                 event.preventDefault();
+                dropAccepted = true;
+            });
+
+            list.addEventListener("dragleave", function(event) {
+                if (!list.contains(event.relatedTarget)) {
+                    hideDropIndicator();
+                }
             });
 
             list.addEventListener("dragend", function() {
@@ -355,12 +398,101 @@
                 if (dragging) {
                     dragging.classList.remove("layers-panel-row-dragging");
                 }
-                applyOrderFromDom();
-                renderLayers();
-                if (typeof config.onLayersReorder === "function") {
+                hideDropIndicator();
+                if (dropAccepted && applyDropOrder(draggedLayerId, dropIndex)) {
+                    renderLayers();
+                }
+                if (dropAccepted && typeof config.onLayersReorder === "function") {
                     config.onLayersReorder(component.getLayers(), component);
                 }
+                draggedLayerId = null;
+                dropIndex = null;
+                dropAccepted = false;
             });
+
+            function getDropIndex(y) {
+                var rows = list.querySelectorAll(".layers-panel-row");
+                var lastMovableIndex = getBackgroundRowIndex(rows);
+                var index;
+
+                for (index = 0; index < lastMovableIndex; index += 1) {
+                    if (y < rows[index].getBoundingClientRect().top + rows[index].offsetHeight / 2) {
+                        return index;
+                    }
+                }
+                return lastMovableIndex;
+            }
+
+            function showDropIndicator(index) {
+                var rows = list.querySelectorAll(".layers-panel-row");
+                var top;
+
+                if (!rows.length) {
+                    return;
+                }
+                if (index < rows.length) {
+                    top = rows[index].offsetTop;
+                } else {
+                    top = rows[rows.length - 1].offsetTop + rows[rows.length - 1].offsetHeight;
+                }
+                dropIndicator.style.top = top + "px";
+                dropIndicator.classList.add("layers-panel-drop-indicator-visible");
+            }
+
+            function hideDropIndicator() {
+                dropIndicator.classList.remove("layers-panel-drop-indicator-visible");
+            }
+
+            function applyDropOrder(layerId, targetIndex) {
+                var rows = Array.prototype.slice.call(list.querySelectorAll(".layers-panel-row"));
+                var backgroundIndex = getBackgroundRowIndex(rows);
+                var sourceIndex = -1;
+                var orderedLayers = rows.map(function(row) {
+                    return getLayerById(config.layers, row.getAttribute("data-layer-id"));
+                });
+                var movingLayer;
+                var index;
+
+                for (index = 0; index < rows.length; index += 1) {
+                    if (rows[index].getAttribute("data-layer-id") === layerId) {
+                        sourceIndex = index;
+                        break;
+                    }
+                }
+
+                if (sourceIndex < 0) {
+                    return false;
+                }
+                if (orderedLayers[sourceIndex].background) {
+                    return false;
+                }
+                targetIndex = Math.min(targetIndex, backgroundIndex);
+                movingLayer = orderedLayers.splice(sourceIndex, 1)[0];
+                if (targetIndex > sourceIndex) {
+                    targetIndex -= 1;
+                }
+                if (targetIndex === sourceIndex) {
+                    return false;
+                }
+                orderedLayers.splice(targetIndex, 0, movingLayer);
+                orderedLayers.forEach(function(layer, index) {
+                    layer["order-from-the-bottom"] = orderedLayers.length - 1 - index;
+                });
+                return true;
+            }
+
+            function getBackgroundRowIndex(rows) {
+                var index;
+                var layer;
+
+                for (index = 0; index < rows.length; index += 1) {
+                    layer = getLayerById(config.layers, rows[index].getAttribute("data-layer-id"));
+                    if (layer && layer.background) {
+                        return index;
+                    }
+                }
+                return rows.length;
+            }
         }
 
         function getRowFromEvent(event) {
@@ -376,35 +508,6 @@
                 target = target.parentNode;
             }
             return null;
-        }
-
-        function getDragAfterElement(y) {
-            var rows = Array.prototype.slice.call(
-                list.querySelectorAll(".layers-panel-row:not(.layers-panel-row-dragging)")
-            );
-
-            return rows.reduce(function(closest, row) {
-                var box = row.getBoundingClientRect();
-                var offset = y - box.top - box.height / 2;
-
-                if (offset < 0 && offset > closest.offset) {
-                    return { offset: offset, element: row };
-                }
-                return closest;
-            }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
-        }
-
-        function applyOrderFromDom() {
-            var rows = list.querySelectorAll(".layers-panel-row");
-            var count = rows.length;
-
-            Array.prototype.forEach.call(rows, function(row, index) {
-                var layer = getLayerById(config.layers, row.getAttribute("data-layer-id"));
-
-                if (layer) {
-                    layer["order-from-the-bottom"] = count - 1 - index;
-                }
-            });
         }
 
         function syncActiveLayer() {
@@ -472,8 +575,11 @@
 
         item.className = "layers-panel-row";
         item.setAttribute("role", "option");
-        item.setAttribute("draggable", "true");
+        item.setAttribute("draggable", layer.background ? "false" : "true");
         item.setAttribute("data-layer-id", layer.id || "");
+        if (layer.background) {
+            item.className += " layers-panel-row-fixed";
+        }
         item.addEventListener("click", function(event) {
             if (!event.target.closest(".layers-panel-thumbnail")) {
                 onSelect(layer.id, "board");

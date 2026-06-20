@@ -5,6 +5,7 @@
       "items": [
         { "label": "New Document", "action": "newDocument" },
         { "label": "New Paint Board", "action": "createPaintBoard" },
+        { "label": "Open", "action": "openImage" },
         { "type": "separator" },
         { "label": "Save", "action": "saveImage" }
       ]
