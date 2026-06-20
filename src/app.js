@@ -135,6 +135,20 @@
         updateFillSelectionButton();
     });
 
+    global.addEventListener("paint-board-content-change", function(event) {
+        if (!event.detail ||
+            !event.detail.paintBoard ||
+            !event.detail.layerId ||
+            !global.AppOpenWindows.updateLayersPanelThumbnail) {
+            return;
+        }
+
+        global.AppOpenWindows.updateLayersPanelThumbnail(
+            event.detail.paintBoard,
+            event.detail.layerId
+        );
+    });
+
     global.addEventListener("paint-board-active-change", function() {
         updateFillSelectionButton();
         syncToolsTransformOptionsVisibility();

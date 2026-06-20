@@ -44,6 +44,7 @@
         var component;
         var activeLayerId;
         var activePreview = "board";
+        var thumbnailSources = {};
 
         config.layers = (options && options.layers ? options.layers : DEFAULTS.layers).map(function(layer) {
             return cloneLayer(layer);
@@ -106,6 +107,21 @@
             },
             setActiveLayer: function(layerId) {
                 return setActiveLayer(layerId, "board");
+            },
+            updateThumbnail: function(layerId, sourceCanvas, previewType) {
+                var type = previewType === "mask" ? "mask" : "board";
+                var sourceKey = getThumbnailSourceKey(layerId, type);
+                var thumbnailCanvas = getThumbnailCanvas(layerId, type);
+
+                if (!layerId || !sourceCanvas || typeof sourceCanvas.getContext !== "function") {
+                    return false;
+                }
+
+                thumbnailSources[sourceKey] = sourceCanvas;
+                if (thumbnailCanvas) {
+                    drawThumbnailCanvas(thumbnailCanvas, sourceCanvas);
+                }
+                return !!thumbnailCanvas;
             },
             addLayer: function(layerOptions) {
                 return addLayer(layerOptions);
@@ -588,9 +604,35 @@
             }
 
             Array.prototype.forEach.call(thumbnails, function(thumbnail) {
+                var canvas = thumbnail.querySelector(".layers-panel-thumbnail-canvas");
+
                 thumbnail.style.width = thumbnailWidth + "px";
                 thumbnail.style.height = thumbnailHeight + "px";
+                if (canvas) {
+                    canvas.width = thumbnailWidth;
+                    canvas.height = thumbnailHeight;
+                    drawThumbnailCanvas(
+                        canvas,
+                        thumbnailSources[getThumbnailSourceKey(
+                            thumbnail.getAttribute("data-layer-id"),
+                            thumbnail.getAttribute("data-preview-type")
+                        )]
+                    );
+                }
             });
+        }
+
+        function getThumbnailCanvas(layerId, previewType) {
+            var thumbnails = list.querySelectorAll(".layers-panel-thumbnail");
+            var index;
+
+            for (index = 0; index < thumbnails.length; index += 1) {
+                if (thumbnails[index].getAttribute("data-layer-id") === layerId &&
+                    thumbnails[index].getAttribute("data-preview-type") === previewType) {
+                    return thumbnails[index].querySelector(".layers-panel-thumbnail-canvas");
+                }
+            }
+            return null;
         }
     }
 
@@ -646,6 +688,7 @@
             event.stopPropagation();
             onPreviewSelect(layer.id, "board");
         });
+        thumbnail.appendChild(createThumbnailCanvas());
         if (layer.background) {
             thumbnail.className += " layers-panel-thumbnail-background";
         }
@@ -667,6 +710,7 @@
                 event.stopPropagation();
                 onPreviewSelect(layer.id, "mask");
             });
+            maskThumbnail.appendChild(createThumbnailCanvas());
 
             previews.appendChild(maskConnector);
             previews.appendChild(maskThumbnail);
@@ -689,6 +733,41 @@
         item.appendChild(label);
         item.appendChild(lock);
         return item;
+    }
+
+    function createThumbnailCanvas() {
+        var canvas = document.createElement("canvas");
+
+        canvas.className = "layers-panel-thumbnail-canvas";
+        canvas.setAttribute("aria-hidden", "true");
+        return canvas;
+    }
+
+    function getThumbnailSourceKey(layerId, previewType) {
+        return String(layerId || "") + ":" + (previewType === "mask" ? "mask" : "board");
+    }
+
+    function drawThumbnailCanvas(thumbnailCanvas, sourceCanvas) {
+        var context;
+
+        if (!thumbnailCanvas || !sourceCanvas || !thumbnailCanvas.width || !thumbnailCanvas.height) {
+            return false;
+        }
+
+        context = thumbnailCanvas.getContext("2d");
+        context.clearRect(0, 0, thumbnailCanvas.width, thumbnailCanvas.height);
+        context.drawImage(
+            sourceCanvas,
+            0,
+            0,
+            sourceCanvas.width,
+            sourceCanvas.height,
+            0,
+            0,
+            thumbnailCanvas.width,
+            thumbnailCanvas.height
+        );
+        return true;
     }
 
     function getOrderFromBottom(layer) {

@@ -103,6 +103,12 @@
     outline-offset: 0px;
 }
 
+.layers-panel-thumbnail-canvas {
+    display: block;
+    height: 100%;
+    width: 100%;
+}
+
 .layers-panel-previews {
     align-items: center;
     display: flex;

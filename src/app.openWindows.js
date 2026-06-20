@@ -397,6 +397,8 @@
     }
 
     function syncLayersPanelLayers(paintBoard) {
+        var layers;
+
         if (!appLayersPanel || !appLayersPanel.setLayers) {
             return;
         }
@@ -406,7 +408,34 @@
             return;
         }
 
-        appLayersPanel.setLayers(paintBoard.getLayers());
+        layers = paintBoard.getLayers();
+        appLayersPanel.setLayers(layers);
+        layers.forEach(function(layer) {
+            updateLayersPanelThumbnail(paintBoard, layer.id);
+        });
+    }
+
+    function updateLayersPanelThumbnail(paintBoard, layerId) {
+        var layerElement;
+        var canvas;
+
+        if (!paintBoard ||
+            paintBoard !== activePaintBoard ||
+            !appLayersPanel ||
+            !appLayersPanel.updateThumbnail ||
+            !layerId) {
+            return false;
+        }
+
+        layerElement = paintBoard.layersElement &&
+            paintBoard.layersElement.querySelector('[data-layer="' + layerId + '"]');
+        canvas = layerElement && layerElement.querySelector("canvas");
+
+        if (!canvas) {
+            return false;
+        }
+
+        return appLayersPanel.updateThumbnail(layerId, canvas, "board");
     }
 
     function syncLayersPanelWindowTitle(paintBoard) {
@@ -1772,6 +1801,7 @@
         openStarGeneratorWindow: openStarGeneratorWindow,
         updatePaintBoardWindowTitle: updatePaintBoardWindowTitle,
         updatePaintBoardToolbarState: updatePaintBoardToolbarState,
+        updateLayersPanelThumbnail: updateLayersPanelThumbnail,
         getActivePaintBoard: getActivePaintBoard,
         clearBoard: clearBoard,
         setActiveColor: setActiveColor

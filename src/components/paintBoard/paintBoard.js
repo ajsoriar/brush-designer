@@ -377,6 +377,33 @@
         global.dispatchEvent(event);
     }
 
+    function notifyContentChange(board) {
+        var event;
+        var detail;
+
+        if (!board) {
+            return;
+        }
+
+        detail = {
+            board: board.element,
+            paintBoard: board,
+            layerId: board.activeLayerId,
+            canvas: board.canvas
+        };
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-board-content-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-board-content-change", false, false, detail);
+        }
+
+        global.dispatchEvent(event);
+    }
+
     function extend(target, source) {
         var key;
 
@@ -396,6 +423,7 @@
         var container = getContainer(config.containerId);
         var element = document.createElement("div");
         var layers = document.createElement("ol");
+        var overlays = document.createElement("div");
         var baseLayer = document.createElement("li");
         var canvas = document.createElement("canvas");
         var tempLayer = createTempLayer(config.width, config.height);
@@ -501,7 +529,7 @@
 
             if (supportsPointerEvents) {
                 activePointerId = event.pointerId;
-                capturePointer(canvas, event.pointerId);
+                capturePointer(getPointerCaptureTarget(board), event.pointerId);
             }
 
             isPainting = true;
@@ -515,7 +543,18 @@
                 return;
             }
 
+            if (event.target === board.canvas) {
+                return;
+            }
+
+            if (board.floatingPaste &&
+                board.floatingPaste.layer &&
+                board.floatingPaste.layer.contains(event.target)) {
+                return;
+            }
+
             if (isPointerInsideCanvas(board, event)) {
+                startPainting(event);
                 return;
             }
 
@@ -532,7 +571,9 @@
                 return;
             }
 
-            if (isDocumentMove && isPointerInsideCanvas(board, event)) {
+            if (isDocumentMove &&
+                isPointerInsideCanvas(board, event) &&
+                event.target === board.canvas) {
                 return;
             }
 
@@ -644,8 +685,12 @@
         layers.style.width = config.width + "px";
         layers.style.height = config.height + "px";
 
+        overlays.className = "paint-board-overlays";
+        overlays.style.width = config.width + "px";
+        overlays.style.height = config.height + "px";
+
         baseLayer.id = baseLayerId;
-        baseLayer.className = "paint-board-layer";
+        baseLayer.className = "paint-board-layer ACTIVE-LAYER";
         baseLayer.setAttribute("data-layer", baseLayerId);
         baseLayer.setAttribute("data-type", "CANVAS");
         baseLayer.style.width = config.width + "px";
@@ -660,9 +705,10 @@
 
         baseLayer.appendChild(canvas);
         layers.appendChild(baseLayer);
+        overlays.appendChild(tempLayer);
+        overlays.appendChild(selectionLayer);
         element.appendChild(layers);
-        element.appendChild(selectionLayer);
-        element.appendChild(tempLayer);
+        element.appendChild(overlays);
         container.appendChild(element);
 
         context = canvas.getContext("2d");
@@ -673,6 +719,7 @@
             id: boardId,
             element: element,
             layersElement: layers,
+            overlaysElement: overlays,
             selectionLayerElement: selectionLayer,
             tempLayerElement: tempLayer,
             activeLayerElement: baseLayer,
@@ -961,6 +1008,8 @@
         board.element.style.height = height + "px";
         board.layersElement.style.width = width + "px";
         board.layersElement.style.height = height + "px";
+        board.overlaysElement.style.width = width + "px";
+        board.overlaysElement.style.height = height + "px";
         setSelectionLayerSize(board.selectionLayerElement, width, height);
         setTempLayerSize(board.tempLayerElement, width, height);
         board.activeLayerElement.style.width = width + "px";
@@ -1031,6 +1080,8 @@
         board.element.style.backgroundColor = snapshot.backgroundColor;
         board.layersElement.style.width = snapshot.width + "px";
         board.layersElement.style.height = snapshot.height + "px";
+        board.overlaysElement.style.width = snapshot.width + "px";
+        board.overlaysElement.style.height = snapshot.height + "px";
         setSelectionLayerSize(board.selectionLayerElement, snapshot.width, snapshot.height);
         setTempLayerSize(board.tempLayerElement, snapshot.width, snapshot.height);
         board.activeLayerElement.style.width = snapshot.width + "px";
@@ -1063,17 +1114,24 @@
     }
 
     function commitUndoableAction(board) {
+        var contentChanged;
+
         if (!board) {
             return;
         }
 
-        if (board.pendingUndoSnapshot && board.actionHasChanges) {
+        contentChanged = !!(board.pendingUndoSnapshot && board.actionHasChanges);
+
+        if (contentChanged) {
             board.undoSnapshot = board.pendingUndoSnapshot;
         }
 
         board.pendingUndoSnapshot = null;
         board.actionHasChanges = false;
         notifyUndoStateChange(board);
+        if (contentChanged) {
+            notifyContentChange(board);
+        }
     }
 
     function undo(board) {
@@ -1092,7 +1150,11 @@
         board.pointerStartPosition = null;
         clearTempSquare(board);
         notifyUndoStateChange(board);
-        return restoreBoardSnapshot(board, snapshot);
+        if (!restoreBoardSnapshot(board, snapshot)) {
+            return false;
+        }
+        notifyContentChange(board);
+        return true;
     }
 
     function getPointerPosition(board, event) {
@@ -1115,7 +1177,7 @@
     }
 
     function getUnclampedPointerPosition(board, event) {
-        var rect = board.canvas.getBoundingClientRect();
+        var rect = getBoardInputRect(board);
         var scaleX = board.canvas.width / rect.width;
         var scaleY = board.canvas.height / rect.height;
 
@@ -1126,7 +1188,7 @@
     }
 
     function getClampedPointerPosition(board, event) {
-        var rect = board.canvas.getBoundingClientRect();
+        var rect = getBoardInputRect(board);
         var scaleX = board.canvas.width / rect.width;
         var scaleY = board.canvas.height / rect.height;
 
@@ -1137,7 +1199,7 @@
     }
 
     function getCanvasPointerPosition(board, event) {
-        var rect = board.canvas.getBoundingClientRect();
+        var rect = getBoardInputRect(board);
         var scaleX;
         var scaleY;
         var x;
@@ -1160,6 +1222,48 @@
             x: clamp(x, 0, board.canvas.width),
             y: clamp(y, 0, board.canvas.height)
         };
+    }
+
+    function getBoardInputRect(board) {
+        var rect;
+
+        if (!board || !board.element || !board.element.getBoundingClientRect) {
+            return {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: 1,
+                height: 1
+            };
+        }
+
+        rect = board.element.getBoundingClientRect();
+        if (!rect.width || !rect.height) {
+            return {
+                left: rect.left || 0,
+                top: rect.top || 0,
+                right: rect.right || rect.left || 0,
+                bottom: rect.bottom || rect.top || 0,
+                width: 1,
+                height: 1
+            };
+        }
+        return rect;
+    }
+
+    function getPointerCaptureTarget(board) {
+        var canvasRect;
+
+        if (!board || !board.canvas) {
+            return board && board.element;
+        }
+
+        canvasRect = board.canvas.getBoundingClientRect();
+        if (canvasRect.width && canvasRect.height) {
+            return board.canvas;
+        }
+        return board.element;
     }
 
     function getStrokePointerPosition(board, event) {
@@ -1372,7 +1476,7 @@
             return false;
         }
 
-        rect = board.canvas.getBoundingClientRect();
+        rect = getBoardInputRect(board);
 
         return event.clientX >= rect.left &&
             event.clientX <= rect.right &&
@@ -4596,12 +4700,12 @@
 
         cancelFloatingPaste(board);
         size = getImageDrawSize(image);
-        layer = document.createElement("li");
+        layer = document.createElement("div");
         canvas = document.createElement("canvas");
         context = canvas.getContext("2d");
 
         layer.id = board.id + "-floating-paste-layer";
-        layer.className = "paint-board-layer paint-board-layer-temp-paste";
+        layer.className = "paint-board-floating-paste-layer";
         layer.setAttribute("data-layer", layer.id);
         layer.setAttribute("data-type", "TEMP");
         layer.style.width = board.canvas.width + "px";
@@ -4615,7 +4719,7 @@
         canvas.style.height = board.canvas.height + "px";
 
         layer.appendChild(canvas);
-        board.layersElement.appendChild(layer);
+        board.overlaysElement.insertBefore(layer, board.tempLayerElement);
 
         floatingPaste = {
             image: image,

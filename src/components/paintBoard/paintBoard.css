@@ -15,6 +15,7 @@
     position: absolute;
     top: 0;
     width: 100%;
+    z-index: 0;
 }
 
 .paint-board-layer {
@@ -28,13 +29,39 @@
     width: 100%;
 }
 
-.paint-board-layer[data-type="TEMP"] {
-    cursor: move;
-    z-index: 1;
+.paint-board-layer[data-type="CANVAS"] {
+    pointer-events: none;
+}
+
+.paint-board-layer[data-type="CANVAS"].ACTIVE-LAYER {
+    pointer-events: auto;
 }
 
 /* Debug-only marker for the currently active layer. Intentionally empty. */
 .ACTIVE-LAYER {
+}
+
+.paint-board-overlays {
+    display: block;
+    height: 100%;
+    left: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    z-index: 1;
+}
+
+.paint-board-floating-paste-layer {
+    cursor: move;
+    display: block;
+    height: 100%;
+    left: 0;
+    pointer-events: auto;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    z-index: 1;
 }
 
 .paint-board-floating-paste-canvas {
