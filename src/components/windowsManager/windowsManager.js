@@ -435,6 +435,9 @@
         var minimizeButton = element.querySelector(".wm-btn-minimize");
         var maximizeButton = element.querySelector(".wm-btn-maximize");
         var resizeHandles = element.querySelectorAll("[data-wm-resize]");
+        var lastTopBarPressTime = 0;
+        var lastTopBarPressX = 0;
+        var lastTopBarPressY = 0;
 
         element.addEventListener(getStartEventName(), function() {
             bringToFront(currentWindow.id);
@@ -470,20 +473,51 @@
                 event.stopPropagation();
                 currentWindow.maximize();
             });
+        }
 
-            topBar.addEventListener("dblclick", function(event) {
+        if (config.minimizable || config.maximizable) {
+            topBar.addEventListener(getStartEventName(), function(event) {
+                var now = Date.now();
+                var isDoublePress = now - lastTopBarPressTime <= 400 &&
+                    Math.abs(event.clientX - lastTopBarPressX) <= 6 &&
+                    Math.abs(event.clientY - lastTopBarPressY) <= 6;
+
                 if (event.target.closest(".wm-actions")) {
+                    lastTopBarPressTime = 0;
                     return;
                 }
 
+                if (!isPrimaryInputStart(event)) {
+                    return;
+                }
+
+                lastTopBarPressTime = now;
+                lastTopBarPressX = event.clientX;
+                lastTopBarPressY = event.clientY;
+
+                if (!isDoublePress) {
+                    return;
+                }
+
+                lastTopBarPressTime = 0;
                 event.preventDefault();
+
+                if (config.minimizable) {
+                    if (currentWindow.minimized) {
+                        currentWindow.restore();
+                    } else {
+                        currentWindow.minimize();
+                    }
+                    return;
+                }
+
                 currentWindow.maximize();
             });
         }
 
         if (config.movable) {
             topBar.addEventListener(getStartEventName(), function(event) {
-                if (event.target.closest(".wm-actions")) {
+                if (event.defaultPrevented || event.target.closest(".wm-actions")) {
                     return;
                 }
 

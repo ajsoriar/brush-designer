@@ -324,6 +324,18 @@
     display: block;
 }
 
+.wm-window-paint-board .wm-top-left,
+.wm-window-paint-board .wm-top,
+.wm-window-paint-board .wm-top-right {
+    transition: filter 120ms ease;
+}
+
+.wm-window-paint-board-inactive .wm-top-left,
+.wm-window-paint-board-inactive .wm-top,
+.wm-window-paint-board-inactive .wm-top-right {
+    filter: grayscale(1);
+}
+
 .paint-board-scroll-area {
     display: block;
     left: 0;

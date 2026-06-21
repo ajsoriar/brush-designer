@@ -13,6 +13,7 @@
         activeLayerId: null,
         onActiveLayerChange: null,
         onLayerBlockedChange: null,
+        onLayerMaskChange: null,
         onLayerVisibilityChange: null,
         onLayersReorder: null,
         // The panel no longer owns any default layers stack. Layers are data that
@@ -299,7 +300,7 @@
                 return layer.selected;
             })[0] || getLayerById(config.layers, activeLayerId);
 
-            if (!activeLayer || activeLayer.mask) {
+            if (!activeLayer || activeLayer.background || activeLayer.mask) {
                 return false;
             }
 
@@ -307,8 +308,8 @@
                 id: activeLayer.id + "-mask"
             };
             renderLayers();
-            if (typeof config.onActiveLayerChange === "function") {
-                config.onActiveLayerChange(activeLayer, component);
+            if (typeof config.onLayerMaskChange === "function") {
+                config.onLayerMaskChange(activeLayer, activeLayer.mask, component);
             }
             return true;
         }
@@ -323,8 +324,8 @@
             delete activeLayer.mask;
             activePreview = "board";
             renderLayers();
-            if (typeof config.onActiveLayerChange === "function") {
-                config.onActiveLayerChange(activeLayer, component);
+            if (typeof config.onLayerMaskChange === "function") {
+                config.onLayerMaskChange(activeLayer, null, component);
             }
             return true;
         }

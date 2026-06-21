@@ -286,11 +286,14 @@
         setActiveZoomBoard(paintBoard);
         updatePaintBoardWindowTitle(paintBoard);
 
-        paintBoardWindow.element.addEventListener("mousedown", function() {
-            setActivePaintBoard(paintBoard);
-            setActiveZoomBoard(paintBoard);
-            updatePaintBoardWindowTitle(paintBoard);
-        });
+        paintBoardWindow.element.addEventListener(
+            typeof global.PointerEvent === "function" ? "pointerdown" : "mousedown",
+            function() {
+                setActivePaintBoard(paintBoard);
+                setActiveZoomBoard(paintBoard);
+                updatePaintBoardWindowTitle(paintBoard);
+            }
+        );
 
         return paintBoardWindow;
     }
@@ -380,14 +383,39 @@
 
     function setActivePaintBoard(paintBoard) {
         if (activePaintBoard === paintBoard) {
+            updatePaintBoardWindowActivity();
             return;
         }
 
         activePaintBoard = paintBoard;
+        updatePaintBoardWindowActivity();
         syncLayersPanelBoardSize(paintBoard);
         syncLayersPanelLayers(paintBoard);
         syncLayersPanelWindowTitle(paintBoard);
         notifyActivePaintBoardChange(paintBoard);
+    }
+
+    function updatePaintBoardWindowActivity() {
+        var paintBoardWindows = document.querySelectorAll(".wm-window-paint-board");
+        var activeWindowElement = activePaintBoard &&
+            activePaintBoard.window &&
+            activePaintBoard.window.element;
+        var index;
+        var windowElement;
+        var isActive;
+
+        for (index = 0; index < paintBoardWindows.length; index += 1) {
+            windowElement = paintBoardWindows[index];
+            isActive = windowElement === activeWindowElement;
+            windowElement.classList.toggle(
+                "wm-window-paint-board-inactive",
+                !isActive
+            );
+            windowElement.setAttribute(
+                "data-paint-board-active",
+                isActive ? "true" : "false"
+            );
+        }
     }
 
     function syncLayersPanelBoardSize(paintBoard) {
@@ -1574,6 +1602,11 @@
                     activePaintBoard.setLayerBlocked(layer.id, blocked);
                 }
             },
+            onLayerMaskChange: function(layer, mask) {
+                if (activePaintBoard && activePaintBoard.setLayerMask && layer) {
+                    activePaintBoard.setLayerMask(layer.id, mask);
+                }
+            },
             onLayersReorder: function(layers) {
                 if (activePaintBoard && activePaintBoard.setLayersOrder) {
                     activePaintBoard.setLayersOrder(layers);
@@ -1709,7 +1742,9 @@
             );
         }
         if (addMaskButton) {
-            addMaskButton.disabled = !activeLayer || hasMask;
+            addMaskButton.disabled = !activeLayer ||
+                !!activeLayer.background ||
+                hasMask;
             addMaskButton.setAttribute(
                 "aria-disabled",
                 addMaskButton.disabled ? "true" : "false"

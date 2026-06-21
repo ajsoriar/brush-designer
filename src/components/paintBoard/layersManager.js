@@ -229,6 +229,27 @@
         return layerFound;
     }
 
+    // Synchronizes mask metadata in the board-owned layers data. Passing null
+    // removes the mask. Background layers never accept masks.
+    function setLayerMask(board, layerId, mask) {
+        var layerFound = false;
+
+        board.layers.forEach(function(layer) {
+            if (layer.id !== layerId || layer.background) {
+                return;
+            }
+
+            if (mask && typeof mask === "object") {
+                layer.mask = cloneLayer(mask);
+            } else {
+                delete layer.mask;
+            }
+            layerFound = true;
+        });
+
+        return layerFound;
+    }
+
     // Applies the order emitted by LayersPanel to the board layers and updates
     // visual stacking using z-index. Canvases are not recreated, so drawing data
     // is preserved.
@@ -362,6 +383,7 @@
         removeLayer: removeLayer,
         setActiveLayer: setActiveLayer,
         setLayerBlocked: setLayerBlocked,
+        setLayerMask: setLayerMask,
         setLayerVisibility: setLayerVisibility,
         setLayersOrder: setLayersOrder
     };

@@ -818,6 +818,13 @@
 
                 return false;
             },
+            setLayerMask: function(layerId, mask) {
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayerMask) {
+                    return global.PaintBoardLayersManager.setLayerMask(board, layerId, mask);
+                }
+
+                return false;
+            },
             setLayersOrder: function(layers) {
                 if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayersOrder) {
                     return global.PaintBoardLayersManager.setLayersOrder(board, layers);
