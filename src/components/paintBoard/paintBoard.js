@@ -1795,7 +1795,7 @@
         var height;
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH) {
-            return Math.max(2, getCurrentRetroBrush().size);
+            return Math.max(1, getCurrentRetroBrush().size);
         }
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH) {
@@ -1807,13 +1807,13 @@
         }
 
         if (!brush) {
-            return Math.max(2, getCurrentBrushSize(board));
+            return Math.max(1, getCurrentBrushSize(board));
         }
 
         width = brush.naturalWidth || brush.width || getCurrentBrushSize(board);
         height = brush.naturalHeight || brush.height || width;
 
-        return Math.max(2, Math.max(width, height));
+        return Math.max(1, Math.max(width, height));
     }
 
     function isSpacePanModeActive() {

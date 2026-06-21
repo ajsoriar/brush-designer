@@ -3,6 +3,7 @@
     overflow: hidden;
     position: relative;
     background-image: url("../../images/transparency-checker_board.png");
+    image-rendering: pixelated;
 }
 
 .paint-board-layers {
@@ -168,6 +169,10 @@
     width: 100%;
 }
 
+.paint-board-temp-line-preview {
+    vector-effect: non-scaling-stroke;
+}
+
 .paint-board-temp-oval {
     border-radius: 50%;
     box-sizing: border-box;
@@ -176,18 +181,21 @@
     position: absolute;
 }
 
-.paint-board-temp-circle {
-    border: 2px solid rgba(255, 0, 0, 0.5);
-    border-radius: 50%;
+.paint-board-temp-brush-svg {
     display: block;
+    overflow: visible;
+    pointer-events: none;
     position: absolute;
 }
 
-.paint-board-temp-square {
-    border: 2px solid rgba(255, 0, 0, 0.5);
-    box-sizing: border-box;
-    display: block;
-    position: absolute;
+.paint-board-temp-brush-outline {
+    fill: none;
+    shape-rendering: crispEdges;
+    stroke: rgba(255, 0, 0, 0.5);
+}
+
+.paint-board-temp-brush-outline-solid {
+    fill: rgba(255, 0, 0, 0.5);
 }
 
 .paint-board-canvas {

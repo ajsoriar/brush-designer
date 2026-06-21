@@ -108,45 +108,74 @@
     }
 
     function showCircle(tempLayer, point, radius) {
-        var circle;
         var diameter;
+        var left;
+        var top;
 
         if (!tempLayer || !point) {
             return;
         }
 
         diameter = Math.max(1, Math.round(radius * 2));
-        circle = document.createElement("div");
-        circle.className = "paint-board-temp-circle";
-        circle.style.left = Math.round(point.x - radius) + "px";
-        circle.style.top = Math.round(point.y - radius) + "px";
-        circle.style.width = diameter + "px";
-        circle.style.height = diameter + "px";
-
-        tempLayer.tempShape = null;
-        tempLayer.innerHTML = "";
-        tempLayer.appendChild(circle);
+        left = Math.round(point.x - radius);
+        top = Math.round(point.y - radius);
+        showBrushOutline(tempLayer, left, top, diameter, true);
     }
 
     function showSquare(tempLayer, point, size) {
-        var square;
         var squareSize;
+        var left;
+        var top;
 
         if (!tempLayer || !point) {
             return;
         }
 
         squareSize = Math.max(1, Math.round(size));
-        square = document.createElement("div");
-        square.className = "paint-board-temp-square";
-        square.style.left = Math.round(point.x - (squareSize / 2)) + "px";
-        square.style.top = Math.round(point.y - (squareSize / 2)) + "px";
-        square.style.width = squareSize + "px";
-        square.style.height = squareSize + "px";
+        left = Math.round(point.x - (squareSize / 2));
+        top = Math.round(point.y - (squareSize / 2));
+        showBrushOutline(tempLayer, left, top, squareSize, false);
+    }
+
+    function showBrushOutline(tempLayer, left, top, size, circle) {
+        var namespace = "http://www.w3.org/2000/svg";
+        var screenPixel = getScreenPixelScale(tempLayer);
+        var inset = Math.min(size / 2, screenPixel / 2);
+        var innerSize = Math.max(0, size - (inset * 2));
+        var svg = document.createElementNS(namespace, "svg");
+        var outline = document.createElementNS(namespace, circle ? "ellipse" : "rect");
+
+        svg.classList.add("paint-board-temp-brush-svg");
+        svg.style.left = left + "px";
+        svg.style.top = top + "px";
+        svg.style.width = size + "px";
+        svg.style.height = size + "px";
+        svg.setAttribute("viewBox", "0 0 " + size + " " + size);
+
+        outline.classList.add("paint-board-temp-brush-outline");
+        outline.setAttribute("stroke-width", screenPixel);
+
+        if (innerSize === 0) {
+            outline.classList.add("paint-board-temp-brush-outline-solid");
+        }
+
+        if (circle) {
+            outline.setAttribute("cx", size / 2);
+            outline.setAttribute("cy", size / 2);
+            outline.setAttribute("rx", innerSize / 2);
+            outline.setAttribute("ry", innerSize / 2);
+        } else {
+            outline.setAttribute("x", inset);
+            outline.setAttribute("y", inset);
+            outline.setAttribute("width", innerSize);
+            outline.setAttribute("height", innerSize);
+        }
+
+        svg.appendChild(outline);
 
         tempLayer.tempShape = null;
         tempLayer.innerHTML = "";
-        tempLayer.appendChild(square);
+        tempLayer.appendChild(svg);
     }
 
     function renderSquare(tempLayer, point) {
@@ -159,12 +188,29 @@
         renderShapeFromPoints(tempLayer, tempLayer.tempShape.origin, point, options);
     }
 
+    function getScreenPixelScale(tempLayer) {
+        var board = tempLayer && tempLayer.closest ? tempLayer.closest(".paint-board") : null;
+        var zoom;
+
+        if (!board) {
+            return 1;
+        }
+
+        zoom = parseFloat(board.getAttribute("data-zoom"));
+
+        if (!zoom || isNaN(zoom)) {
+            return 1;
+        }
+
+        return 1 / zoom;
+    }
+
     function renderShapeFromPoints(tempLayer, fromPoint, toPoint, options) {
         var left = Math.min(fromPoint.x, toPoint.x);
         var top = Math.min(fromPoint.y, toPoint.y);
         var right = Math.max(fromPoint.x, toPoint.x);
         var bottom = Math.max(fromPoint.y, toPoint.y);
-        var lineWeight = 1;
+        var lineWeight = getScreenPixelScale(tempLayer);
         var lineColor = "#2563eb";
         var lineOpacity = 1;
         var guideOpacity = 0.5;
@@ -240,7 +286,7 @@
 
     function renderLine(tempLayer, point, options) {
         var origin = tempLayer.tempShape.origin;
-        var lineWeight = 1;
+        var lineWeight = getScreenPixelScale(tempLayer);
         var lineColor = "#2563eb";
         var lineOpacity = 1;
         var fragments;
