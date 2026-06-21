@@ -847,6 +847,9 @@
             fillSelectionWithFrontColor: function() {
                 return fillSelectionWithFrontColor(board);
             },
+            deleteSelection: function() {
+                return deleteSelection(board);
+            },
             paintAt: function(x, y) {
                 paintAt(board, x, y);
             },
@@ -2780,6 +2783,22 @@
             board.context.fillStyle = getCurrentPaintColor(board);
             board.context.fillRect(0, 0, board.canvas.width, board.canvas.height);
         });
+        commitUndoableAction(board);
+
+        return true;
+    }
+
+    function deleteSelection(board) {
+        if (!hasActiveSelection(board)) {
+            return false;
+        }
+
+        beginUndoableAction(board);
+        markUndoableChange(board);
+        board.context.save();
+        board.context.globalCompositeOperation = "destination-out";
+        board.context.drawImage(board.selection.maskCanvas, 0, 0);
+        board.context.restore();
         commitUndoableAction(board);
 
         return true;

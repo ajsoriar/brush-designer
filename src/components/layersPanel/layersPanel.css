@@ -202,6 +202,13 @@
     background: #d0d0d0;
 }
 
+.layers-panel-toolbar-btn:disabled {
+    background: #d8d8d8;
+    color: #888888;
+    cursor: default;
+    opacity: 0.65;
+}
+
 .layers-panel-footer-row {
     display: flex;
     margin-bottom: 4px;

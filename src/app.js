@@ -604,6 +604,19 @@
         return targetBoard.undo();
     }
 
+    function deleteActiveSelection() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (!targetBoard ||
+            typeof targetBoard.deleteSelection !== "function" ||
+            !targetBoard.hasSelection ||
+            !targetBoard.hasSelection()) {
+            return false;
+        }
+
+        return targetBoard.deleteSelection();
+    }
+
     function isEditableTarget(target) {
         if (!target) {
             return false;
@@ -617,9 +630,22 @@
     }
 
     global.addEventListener("keydown", function(event) {
+        var isDeleteKey;
         var isUndoShortcut;
 
         if (isEditableTarget(event.target)) {
+            return;
+        }
+
+        isDeleteKey = !event.ctrlKey &&
+            !event.metaKey &&
+            !event.altKey &&
+            (event.key === "Delete" || event.key === "Backspace");
+
+        if (isDeleteKey) {
+            if (deleteActiveSelection()) {
+                event.preventDefault();
+            }
             return;
         }
 

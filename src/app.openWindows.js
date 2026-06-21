@@ -1585,7 +1585,9 @@
 
         blockButton = toolsRowElement.querySelector(".layers-panel-block-btn");
         blockButton.addEventListener("click", function() {
-            layersPanel.toggleActiveLayerBlocked();
+            if (layersPanel.toggleActiveLayerBlocked()) {
+                updateLayersPanelFooterState(layersPanel);
+            }
         });
     }
 
@@ -1651,6 +1653,7 @@
         var footerElement;
         var addMaskButton;
         var removeMaskButton;
+        var blockButton;
         var activeLayer;
         var hasMask;
 
@@ -1663,9 +1666,18 @@
             footerElement.querySelector(".layers-panel-add-mask-btn");
         removeMaskButton = footerElement &&
             footerElement.querySelector(".layers-panel-remove-mask-btn");
+        blockButton = footerElement &&
+            footerElement.querySelector(".layers-panel-block-btn");
         activeLayer = layersPanel.getActiveLayer && layersPanel.getActiveLayer();
         hasMask = !!(activeLayer && activeLayer.mask);
 
+        if (blockButton) {
+            blockButton.disabled = !activeLayer || !!activeLayer.background;
+            blockButton.setAttribute(
+                "aria-disabled",
+                blockButton.disabled ? "true" : "false"
+            );
+        }
         if (addMaskButton) {
             addMaskButton.disabled = !activeLayer || hasMask;
             addMaskButton.setAttribute(

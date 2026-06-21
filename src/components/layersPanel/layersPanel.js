@@ -47,7 +47,13 @@
         var thumbnailSources = {};
 
         config.layers = (options && options.layers ? options.layers : DEFAULTS.layers).map(function(layer) {
-            return cloneLayer(layer);
+            var copy = cloneLayer(layer);
+
+            if (copy.background) {
+                copy.blocked = true;
+            }
+
+            return copy;
         });
         activeLayerId = config.activeLayerId ||
             ((config.layers.filter(function(layer) {
@@ -87,7 +93,13 @@
                 }
 
                 config.layers = layers.map(function(layer) {
-                    return cloneLayer(layer);
+                    var copy = cloneLayer(layer);
+
+                    if (copy.background) {
+                        copy.blocked = true;
+                    }
+
+                    return copy;
                 });
                 activeLayerId = (config.layers.filter(function(layer) {
                     return layer.selected;
@@ -322,7 +334,7 @@
         function toggleActiveLayerBlocked() {
             var activeLayer = getLayerById(config.layers, activeLayerId);
 
-            if (!activeLayer) {
+            if (!activeLayer || activeLayer.background) {
                 return false;
             }
 
