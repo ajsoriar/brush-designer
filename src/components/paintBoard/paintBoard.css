@@ -173,12 +173,8 @@
     vector-effect: non-scaling-stroke;
 }
 
-.paint-board-temp-oval {
-    border-radius: 50%;
-    box-sizing: border-box;
-    display: block;
-    pointer-events: none;
-    position: absolute;
+.paint-board-temp-shape-guide {
+    shape-rendering: geometricPrecision;
 }
 
 .paint-board-temp-brush-svg {

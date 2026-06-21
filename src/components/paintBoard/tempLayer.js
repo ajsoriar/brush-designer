@@ -215,6 +215,8 @@
         var lineOpacity = 1;
         var guideOpacity = 0.5;
         var outlineOpacity = options && options.oval ? 0.5 : lineOpacity;
+        var centerX;
+        var centerY;
         var fragments;
 
         if (right === left) {
@@ -225,44 +227,44 @@
             bottom += 1;
         }
 
-        if (!global.dljs || !global.dljs.getLineString) {
-            return;
-        }
-
+        centerX = left + ((right - left) / 2);
+        centerY = top + ((bottom - top) / 2);
         fragments = [
-            global.dljs.getLineString("temp-top", left, top, right, top, lineWeight, lineColor, outlineOpacity, false, 0, null),
-            global.dljs.getLineString("temp-right", right, top, right, bottom, lineWeight, lineColor, outlineOpacity, false, 0, null),
-            global.dljs.getLineString("temp-bottom", left, bottom, right, bottom, lineWeight, lineColor, outlineOpacity, false, 0, null),
-            global.dljs.getLineString("temp-left", left, top, left, bottom, lineWeight, lineColor, outlineOpacity, false, 0, null),
-            global.dljs.getLineString("temp-center-x", left, top + ((bottom - top) / 2), right, top + ((bottom - top) / 2), lineWeight, lineColor, guideOpacity, false, 0, null),
-            global.dljs.getLineString("temp-center-y", left + ((right - left) / 2), top, left + ((right - left) / 2), bottom, lineWeight, lineColor, guideOpacity, false, 0, null)
+            "<svg class=\"paint-board-temp-line-svg\" xmlns=\"http://www.w3.org/2000/svg\">",
+            getSvgRectString(left, top, right - left, bottom - top, lineWeight, lineColor, outlineOpacity),
+            getSvgLineString(left, centerY, right, centerY, lineWeight, lineColor, guideOpacity),
+            getSvgLineString(centerX, top, centerX, bottom, lineWeight, lineColor, guideOpacity)
         ];
 
         if (options && options.oval) {
-            fragments.push(getOvalString(left, top, right, bottom, lineWeight, lineColor));
+            fragments.push(getSvgEllipseString(centerX, centerY, (right - left) / 2, (bottom - top) / 2, lineWeight, lineColor, lineOpacity));
         }
 
+        fragments.push("</svg>");
         addCoordinateLabels(fragments, {
             x: left,
             y: top
         }, {
-            x: left + ((right - left) / 2),
-            y: top + ((bottom - top) / 2)
+            x: centerX,
+            y: centerY
         }, {
             x: right,
             y: bottom
-        });
+        }, lineWeight);
 
         tempLayer.innerHTML = fragments.join("");
     }
 
-    function addCoordinateLabels(fragments, startPoint, centerPoint, endPoint) {
+    function addCoordinateLabels(fragments, startPoint, centerPoint, endPoint, scale) {
+        var normalizedScale = typeof scale === "number" && scale > 0 ? scale : 1;
         var labelConfig = {
             bgOpacity: 0.5,
             borderColor: "blue",
             borderWidth: 1,
             bgColor: "white",
-            fontSize: 10
+            fontSize: 10,
+            offset: 7 * normalizedScale,
+            scale: normalizedScale
         };
 
         if (!global.PaintBoardCoordinateLabel || !global.PaintBoardCoordinateLabel.getString) {
@@ -274,14 +276,31 @@
         fragments.push(global.PaintBoardCoordinateLabel.getString(endPoint, labelConfig));
     }
 
-    function getOvalString(left, top, right, bottom, lineWeight, lineColor) {
-        return "<div class=\"paint-board-temp-oval\" style=\"" +
-            "left:" + Math.round(left) + "px;" +
-            "top:" + Math.round(top) + "px;" +
-            "width:" + Math.max(1, Math.round(right - left)) + "px;" +
-            "height:" + Math.max(1, Math.round(bottom - top)) + "px;" +
-            "border:" + lineWeight + "px solid " + lineColor + ";" +
-            "\"></div>";
+    function getSvgLineString(x1, y1, x2, y2, lineWeight, lineColor, opacity) {
+        return "<line class=\"paint-board-temp-shape-guide\" " +
+            "x1=\"" + escapeHtml(x1) + "\" y1=\"" + escapeHtml(y1) + "\" " +
+            "x2=\"" + escapeHtml(x2) + "\" y2=\"" + escapeHtml(y2) + "\" " +
+            "stroke=\"" + escapeHtml(lineColor) + "\" " +
+            "stroke-width=\"" + escapeHtml(lineWeight) + "\" " +
+            "stroke-opacity=\"" + escapeHtml(opacity) + "\"></line>";
+    }
+
+    function getSvgRectString(x, y, width, height, lineWeight, lineColor, opacity) {
+        return "<rect class=\"paint-board-temp-shape-guide\" " +
+            "x=\"" + escapeHtml(x) + "\" y=\"" + escapeHtml(y) + "\" " +
+            "width=\"" + escapeHtml(width) + "\" height=\"" + escapeHtml(height) + "\" " +
+            "fill=\"none\" stroke=\"" + escapeHtml(lineColor) + "\" " +
+            "stroke-width=\"" + escapeHtml(lineWeight) + "\" " +
+            "stroke-opacity=\"" + escapeHtml(opacity) + "\"></rect>";
+    }
+
+    function getSvgEllipseString(cx, cy, rx, ry, lineWeight, lineColor, opacity) {
+        return "<ellipse class=\"paint-board-temp-shape-guide\" " +
+            "cx=\"" + escapeHtml(cx) + "\" cy=\"" + escapeHtml(cy) + "\" " +
+            "rx=\"" + escapeHtml(rx) + "\" ry=\"" + escapeHtml(ry) + "\" " +
+            "fill=\"none\" stroke=\"" + escapeHtml(lineColor) + "\" " +
+            "stroke-width=\"" + escapeHtml(lineWeight) + "\" " +
+            "stroke-opacity=\"" + escapeHtml(opacity) + "\"></ellipse>";
     }
 
     function renderLine(tempLayer, point, options) {
@@ -316,7 +335,7 @@
             )
         ];
 
-        addCoordinateLabels(fragments, origin, null, point);
+        addCoordinateLabels(fragments, origin, null, point, lineWeight);
 
         tempLayer.innerHTML = fragments.join("");
     }
@@ -337,7 +356,7 @@
             "</svg>"
         ];
 
-        addCoordinateLabels(fragments, origin, null, point);
+        addCoordinateLabels(fragments, origin, null, point, getScreenPixelScale(tempLayer));
         tempLayer.innerHTML = fragments.join("");
     }
 
