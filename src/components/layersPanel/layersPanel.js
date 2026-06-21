@@ -12,6 +12,7 @@
         thumbnailMaxSize: 75,
         activeLayerId: null,
         onActiveLayerChange: null,
+        onLayerBlockedChange: null,
         onLayerVisibilityChange: null,
         onLayersReorder: null,
         // The panel no longer owns any default layers stack. Layers are data that
@@ -261,12 +262,7 @@
             layer["order-from-the-bottom"] = activeOrder + 1;
 
             config.layers.push(layer);
-            activeLayerId = layer.id;
-            activePreview = "board";
             renderLayers();
-            if (typeof config.onActiveLayerChange === "function") {
-                config.onActiveLayerChange(layer, component);
-            }
             return extend({}, layer);
         }
 
@@ -274,7 +270,9 @@
             var activeLayer = getLayerById(config.layers, activeLayerId);            var activeOrder;
             var nextLayer;
 
-            if (!activeLayer || config.layers.length <= 1) {
+            if (!activeLayer ||
+                config.layers.length <= 1 ||
+                (activeLayer.blocked && !activeLayer.background)) {
                 return false;
             }
 
@@ -340,8 +338,8 @@
 
             activeLayer.blocked = !activeLayer.blocked;
             renderLayers();
-            if (typeof config.onActiveLayerChange === "function") {
-                config.onActiveLayerChange(activeLayer, component);
+            if (typeof config.onLayerBlockedChange === "function") {
+                config.onLayerBlockedChange(activeLayer, activeLayer.blocked, component);
             }
             return true;
         }

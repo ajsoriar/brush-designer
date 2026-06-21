@@ -1,6 +1,9 @@
 import $ from "jquery";
+import brushDesigner2BackgroundUrl from "./components/brushdesigner.v2/bd2-bg.png";
+import brushDesigner2HandlesUrl from "./components/brushdesigner.v2/bd2-handles.png";
 
 import "./components/brushdesigner.v1/jqbrushdesigner.css";
+import "./components/brushdesigner.v2/brushdesigner.v2.css";
 import "./components/bigColorPicker/bigColorPicker.css";
 import "./components/appMenu/appMenu.css";
 import "./components/layersPanel/layersPanel.css";
@@ -31,6 +34,11 @@ import "./toolsBar.css";
 
 window.$ = $;
 window.jQuery = $;
+window.BrushDesignerV2Assets = {
+    "bd2-bg.png": brushDesigner2BackgroundUrl,
+    "bd2-handles.png": brushDesigner2HandlesUrl,
+    stylesIncluded: true
+};
 
 await import("./components/brushdesigner.v1/jqbrushdesigner.js");
 await import("./components/brushdesigner.v1/brushEditorOutputs.js");

@@ -236,6 +236,11 @@
             height: paintBoardHeight + windowFrameHeight,
             resizable: true,
             maximizable: true,
+            topBarGradient: {
+                a: "#123477",
+                b: "#9bc8ef",
+                orientation: "horizontal"
+            },
             toolsRow: true,
             toolsFooter: true,
             scrollbars: true,
@@ -636,7 +641,6 @@
         });
 
         appBrushDesigner2 = global.createBrushDesignerV2(bdWindow.contentElement, {
-            assetBaseUrl: "/components/brushdesigner.v2/",
             algorithm: "C",
             onChange: function(brush, designer) {
                 global.App.memory.currentBrushDesigner2 = brush;
@@ -1565,6 +1569,11 @@
                     activePaintBoard.setLayerVisibility(layer.id, visible);
                 }
             },
+            onLayerBlockedChange: function(layer, blocked) {
+                if (activePaintBoard && activePaintBoard.setLayerBlocked && layer) {
+                    activePaintBoard.setLayerBlocked(layer.id, blocked);
+                }
+            },
             onLayersReorder: function(layers) {
                 if (activePaintBoard && activePaintBoard.setLayersOrder) {
                     activePaintBoard.setLayersOrder(layers);
@@ -1658,17 +1667,21 @@
 
     function updateLayersPanelFooterState(layersPanel) {
         var footerElement;
+        var removeButton;
         var addMaskButton;
         var removeMaskButton;
         var blockButton;
         var activeLayer;
         var hasMask;
+        var layers;
 
         if (!layersPanel || !layersPanel.element) {
             return;
         }
 
         footerElement = layersPanel.element.closest(".wm-window");
+        removeButton = footerElement &&
+            footerElement.querySelector(".layers-panel-remove-btn");
         addMaskButton = footerElement &&
             footerElement.querySelector(".layers-panel-add-mask-btn");
         removeMaskButton = footerElement &&
@@ -1676,8 +1689,18 @@
         blockButton = footerElement &&
             footerElement.querySelector(".layers-panel-block-btn");
         activeLayer = layersPanel.getActiveLayer && layersPanel.getActiveLayer();
+        layers = layersPanel.getLayers ? layersPanel.getLayers() : [];
         hasMask = !!(activeLayer && activeLayer.mask);
 
+        if (removeButton) {
+            removeButton.disabled = !activeLayer ||
+                layers.length <= 1 ||
+                (activeLayer.blocked && !activeLayer.background);
+            removeButton.setAttribute(
+                "aria-disabled",
+                removeButton.disabled ? "true" : "false"
+            );
+        }
         if (blockButton) {
             blockButton.disabled = !activeLayer || !!activeLayer.background;
             blockButton.setAttribute(

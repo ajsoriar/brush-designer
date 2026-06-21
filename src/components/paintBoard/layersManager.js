@@ -214,6 +214,21 @@
         return layerFound && !!listItem;
     }
 
+    // Synchronizes the locked state in the board-owned layers data. Background
+    // remains permanently locked and is not changed through this operation.
+    function setLayerBlocked(board, layerId, blocked) {
+        var layerFound = false;
+
+        board.layers.forEach(function(layer) {
+            if (layer.id === layerId && !layer.background) {
+                layer.blocked = blocked === true;
+                layerFound = true;
+            }
+        });
+
+        return layerFound;
+    }
+
     // Applies the order emitted by LayersPanel to the board layers and updates
     // visual stacking using z-index. Canvases are not recreated, so drawing data
     // is preserved.
@@ -254,34 +269,50 @@
         return true;
     }
 
-    // Adds a new layer to a board: updates the board's layers data structure and
-    // creates the matching <li> (id "<boardId>-layer-<n>") inside the board's <ol>.
-    // The new layer becomes the active/selected one. Returns a copy of the layer.
+    // Adds a new layer immediately above the active layer: updates the board's
+    // layers data structure and creates the matching <li> (id
+    // "<boardId>-layer-<n>") inside the board's <ol>. The current active layer
+    // remains active. Returns a copy of the new layer.
     function addLayer(board, options) {
         var settings = options || {};
         var number = getNextLayerNumber(board);
         var layerId = board.id + "-layer-" + number;
+        var activeOrder = getTopOrder(board.layers);
         var layerData = {
             id: layerId,
             label: settings.label || ("Layer " + number),
             visible: true,
             blocked: false,
-            "order-from-the-bottom": getTopOrder(board.layers) + 1,
-            selected: true
+            "order-from-the-bottom": 0,
+            selected: false
         };
 
+        board.layers.forEach(function(layer) {
+            if (layer.id === board.activeLayerId) {
+                activeOrder = getOrderFromBottom(layer);
+            }
+        });
+
+        board.layers.forEach(function(layer) {
+            if (getOrderFromBottom(layer) > activeOrder) {
+                layer["order-from-the-bottom"] = getOrderFromBottom(layer) + 1;
+            }
+        });
+
+        layerData["order-from-the-bottom"] = activeOrder + 1;
         board.layers.push(layerData);
 
         createLayerElement(board, layerId, layerData["order-from-the-bottom"]);
-        setActiveLayer(board, layerId);
+        syncLayerOrderInDom(board);
 
         return cloneLayer(layerData);
     }
 
     // Removes a layer from a board: deletes its entry from the board's layers data
     // structure and removes the matching <li> from the board's <ol>. The previous
-    // layer (or the first one) becomes the active/selected layer. The background
-    // (base) layer cannot be removed. Returns true when the layer was removed.
+    // layer (or the first one) becomes the active/selected layer. Any layer,
+    // including the background, can be removed while at least one other layer
+    // remains. Returns true when the layer was removed.
     function removeLayer(board, layerId) {
         var layers = board.layers;
         var index = -1;
@@ -298,7 +329,9 @@
             }
         }
 
-        if (!target || target.background) {
+        if (!target ||
+            layers.length <= 1 ||
+            (target.blocked && !target.background)) {
             return false;
         }
 
@@ -328,6 +361,7 @@
         addLayer: addLayer,
         removeLayer: removeLayer,
         setActiveLayer: setActiveLayer,
+        setLayerBlocked: setLayerBlocked,
         setLayerVisibility: setLayerVisibility,
         setLayersOrder: setLayersOrder
     };

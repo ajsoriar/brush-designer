@@ -21,6 +21,11 @@
     }
 
     function assetUrl(fileName, baseUrl) {
+        var bundledAssets = global.BrushDesignerV2Assets;
+        if (!baseUrl && bundledAssets && bundledAssets[fileName]) {
+            return bundledAssets[fileName];
+        }
+
         var base = baseUrl || assetBaseUrl || "/components/brushdesigner.v2/";
         var resolvedBase = new URL(base, global.location.href);
 
@@ -51,6 +56,10 @@
     }
 
     function injectStyles(baseUrl) {
+        if (!baseUrl && global.BrushDesignerV2Assets && global.BrushDesignerV2Assets.stylesIncluded) {
+            return;
+        }
+
         if (document.getElementById("brush-designer-v2-styles")) {
             return;
         }

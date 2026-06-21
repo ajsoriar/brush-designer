@@ -811,6 +811,13 @@
 
                 return false;
             },
+            setLayerBlocked: function(layerId, blocked) {
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayerBlocked) {
+                    return global.PaintBoardLayersManager.setLayerBlocked(board, layerId, blocked);
+                }
+
+                return false;
+            },
             setLayersOrder: function(layers) {
                 if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayersOrder) {
                     return global.PaintBoardLayersManager.setLayersOrder(board, layers);
