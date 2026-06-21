@@ -16,6 +16,7 @@
         { "label": "Copy", "action": "copyToClipboard" },
         { "label": "Paste", "action": "pasteFromClipboard" },
         { "label": "Multi Paste", "action": "openMultiPaste" },
+        { "label": "Fill", "action": "openFillBigColorPicker" },
         { "type": "separator" },
         { "label": "Clear Board", "action": "clearBoard" }
       ]

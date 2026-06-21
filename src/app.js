@@ -426,6 +426,7 @@
                 copyToClipboard: copyToClipboard,
                 pasteFromClipboard: pasteFromClipboard,
                 openMultiPaste: global.AppOpenWindows.openMultiPaste,
+                openFillBigColorPicker: openFillBigColorPicker,
                 clearBoard: clearBoard,
                 fillSelectionWithFrontColor: fillSelectionWithFrontColor,
                 openBrushDesigner: global.AppOpenWindows.openBrushDesignerInWindow,
@@ -559,6 +560,27 @@
         global.AppOpenWindows.clearBoard();
     }
 
+    function openFillBigColorPicker() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (!targetBoard) {
+            return false;
+        }
+
+        global.AppOpenWindows.openBigColorPickerWindow(global.App.memory.currentColor, "fill");
+        return true;
+    }
+
+    function fillActiveLayerOrSelectionWithColor(color) {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (!targetBoard || typeof targetBoard.fillSelectionOrActiveLayerWithColor !== "function") {
+            return false;
+        }
+
+        return !!targetBoard.fillSelectionOrActiveLayerWithColor(color);
+    }
+
     function fillSelectionWithFrontColor() {
         var targetBoard = global.AppOpenWindows.getActivePaintBoard();
 
@@ -677,6 +699,8 @@
     global.copyToClipboard = copyToClipboard;
     global.saveImage = saveImage;
     global.clearBoard = clearBoard;
+    global.openFillBigColorPicker = openFillBigColorPicker;
+    global.fillActiveLayerOrSelectionWithColor = fillActiveLayerOrSelectionWithColor;
     global.fillSelectionWithFrontColor = fillSelectionWithFrontColor;
     global.undoLastAction = undoLastAction;
     global.createDemoWindow = global.AppOpenWindows.createDemoWindow;

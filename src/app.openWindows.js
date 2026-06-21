@@ -990,7 +990,7 @@
         var existingWindow = WindowsManager.getWindowByWindowId("big-color-picker");
         var openingColor = initialColor || global.App.memory.currentColor;
 
-        appBigColorPickerTarget = target === "background" ? "background" : "front";
+        appBigColorPickerTarget = (target === "background" || target === "fill") ? target : "front";
 
         if (existingWindow) {
             if (appBigColorPicker && appBigColorPicker.setActiveColor) {
@@ -1063,6 +1063,13 @@
             if (global.ForegroundBackgroundColorsApi &&
                 global.ForegroundBackgroundColorsApi.setBackgroundColor) {
                 global.ForegroundBackgroundColorsApi.setBackgroundColor(color);
+            }
+            return;
+        }
+
+        if (appBigColorPickerTarget === "fill") {
+            if (typeof global.fillActiveLayerOrSelectionWithColor === "function") {
+                global.fillActiveLayerOrSelectionWithColor(color);
             }
             return;
         }

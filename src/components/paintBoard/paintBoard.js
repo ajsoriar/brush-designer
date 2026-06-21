@@ -847,6 +847,9 @@
             fillSelectionWithFrontColor: function() {
                 return fillSelectionWithFrontColor(board);
             },
+            fillSelectionOrActiveLayerWithColor: function(color) {
+                return fillSelectionOrActiveLayerWithColor(board, color);
+            },
             deleteSelection: function() {
                 return deleteSelection(board);
             },
@@ -2781,6 +2784,18 @@
         markUndoableChange(board);
         paintWithSelection(board, function() {
             board.context.fillStyle = getCurrentPaintColor(board);
+            board.context.fillRect(0, 0, board.canvas.width, board.canvas.height);
+        });
+        commitUndoableAction(board);
+
+        return true;
+    }
+
+    function fillSelectionOrActiveLayerWithColor(board, color) {
+        beginUndoableAction(board);
+        markUndoableChange(board);
+        paintWithSelection(board, function() {
+            board.context.fillStyle = color;
             board.context.fillRect(0, 0, board.canvas.width, board.canvas.height);
         });
         commitUndoableAction(board);
