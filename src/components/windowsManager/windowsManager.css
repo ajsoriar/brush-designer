@@ -34,7 +34,8 @@
 
 .wm-window-minimized {
     height: 28px !important;
-    min-height: 28px;
+    min-height: 28px !important;
+    grid-template-rows: 28px 0 0 0 0 !important;
 }
 
 .wm-window-maximized {
@@ -78,7 +79,7 @@
 .wm-window-minimized .wm-bottom-left,
 .wm-window-minimized .wm-bottom,
 .wm-window-minimized .wm-bottom-right {
-    display: none;
+    display: none !important;
 }
 
 .wm-top-left,

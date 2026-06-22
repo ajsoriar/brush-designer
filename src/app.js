@@ -429,6 +429,7 @@
                 openFillBigColorPicker: openFillBigColorPicker,
                 clearBoard: clearBoard,
                 fillSelectionWithFrontColor: fillSelectionWithFrontColor,
+                reverseSelection: reverseSelection,
                 openBrushDesigner: global.AppOpenWindows.openBrushDesignerInWindow,
                 openBrushDesigner2: global.AppOpenWindows.openBrushDesigner2InWindow,
                 openLinesDesigner: global.AppOpenWindows.openLinesDesignerWindow,
@@ -613,7 +614,21 @@
 
         if (appMenuComponent && appMenuComponent.setItemEnabled) {
             appMenuComponent.setItemEnabled("fillSelectionWithFrontColor", hasSelection);
+            appMenuComponent.setItemEnabled("reverseSelection", hasSelection);
         }
+    }
+
+    function reverseSelection() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (!targetBoard ||
+            typeof targetBoard.reverseSelection !== "function" ||
+            !targetBoard.hasSelection ||
+            !targetBoard.hasSelection()) {
+            return false;
+        }
+
+        return targetBoard.reverseSelection();
     }
 
     function undoLastAction() {
@@ -702,6 +717,7 @@
     global.openFillBigColorPicker = openFillBigColorPicker;
     global.fillActiveLayerOrSelectionWithColor = fillActiveLayerOrSelectionWithColor;
     global.fillSelectionWithFrontColor = fillSelectionWithFrontColor;
+    global.reverseSelection = reverseSelection;
     global.undoLastAction = undoLastAction;
     global.createDemoWindow = global.AppOpenWindows.createDemoWindow;
     global.openBrushDesignerInWindow = global.AppOpenWindows.openBrushDesignerInWindow;

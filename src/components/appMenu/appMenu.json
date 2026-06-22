@@ -24,7 +24,8 @@
     {
       "label": "Selection",
       "items": [
-        { "label": "Fill Selection", "action": "fillSelectionWithFrontColor", "enabled": false }
+        { "label": "Fill Selection", "action": "fillSelectionWithFrontColor", "enabled": false },
+        { "label": "Reverse Selection", "action": "reverseSelection", "enabled": false }
       ]
     },
     {

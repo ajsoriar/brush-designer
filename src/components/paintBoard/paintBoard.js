@@ -855,6 +855,9 @@
             hasSelection: function() {
                 return hasActiveSelection(board);
             },
+            reverseSelection: function() {
+                return reverseSelection(board);
+            },
             getClipboardCanvas: function() {
                 return getClipboardCanvas(board);
             },
@@ -2199,6 +2202,38 @@
 
         clearTempSquare(board);
         notifySelectionStateChange(board);
+    }
+
+    function reverseSelection(board) {
+        var reversedMask;
+        var reversedContext;
+
+        if (!hasActiveSelection(board)) {
+            return false;
+        }
+
+        reversedMask = createSelectionMaskCanvas(board);
+        reversedContext = reversedMask.getContext("2d");
+        reversedContext.fillStyle = "#ffffff";
+        reversedContext.fillRect(0, 0, reversedMask.width, reversedMask.height);
+        reversedContext.globalCompositeOperation = "destination-out";
+        reversedContext.drawImage(board.selection.maskCanvas, 0, 0);
+        reversedContext.globalCompositeOperation = "source-over";
+
+        if (isSelectionMaskEmpty(reversedMask)) {
+            clearSelection(board);
+            return true;
+        }
+
+        board.selection = {
+            type: "mask",
+            bounds: getSelectionMaskBounds(reversedMask),
+            maskCanvas: reversedMask
+        };
+        clearSelectionDraft(board);
+        renderLassoSelection(board);
+        notifySelectionStateChange(board);
+        return true;
     }
 
     function clearSelectionDraft(board) {
