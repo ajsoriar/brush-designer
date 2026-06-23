@@ -16,6 +16,7 @@
         onLayerBlockedChange: null,
         onLayerMaskChange: null,
         onLayerVisibilityChange: null,
+        onLayerOpacityChange: null,
         onLayersReorder: null,
         // The panel no longer owns any default layers stack. Layers are data that
         // belong to each board (document): a board creates its own layers and feeds
@@ -56,6 +57,7 @@
             if (copy.background) {
                 copy.blocked = true;
             }
+            copy.opacity = normalizeLayerOpacity(copy.opacity);
 
             return copy;
         });
@@ -113,6 +115,7 @@
                     if (copy.background) {
                         copy.blocked = true;
                     }
+                    copy.opacity = normalizeLayerOpacity(copy.opacity);
 
                     return copy;
                 });
@@ -154,6 +157,17 @@
             },
             setActiveLayer: function(layerId, additive) {
                 return setActiveLayer(layerId, "board", additive === true);
+            },
+            getActiveLayerOpacity: function() {
+                var activeLayer = getLayerById(config.layers, activeLayerId);
+
+                return normalizeLayerOpacity(activeLayer && activeLayer.opacity);
+            },
+            setLayerOpacity: function(layerId, opacity) {
+                return setLayerOpacity(layerId, opacity);
+            },
+            setActiveLayerOpacity: function(opacity) {
+                return setLayerOpacity(activeLayerId, opacity);
             },
             updateThumbnail: function(layerId, sourceCanvas, previewType) {
                 var type = previewType === "mask" ? "mask" : "board";
@@ -347,11 +361,13 @@
                 id: createLayerId(),
                 label: createLayerLabel(),
                 visible: true,
+                opacity: 100,
                 blocked: false,
                 selected: false,
                 background: false
             }, layerOptions || {});
             layer["order-from-the-bottom"] = activeOrder + 1;
+            layer.opacity = normalizeLayerOpacity(layer.opacity);
 
             config.layers.push(layer);
             renderLayers();
@@ -433,6 +449,27 @@
             if (typeof config.onLayerBlockedChange === "function") {
                 config.onLayerBlockedChange(activeLayer, activeLayer.blocked, component);
             }
+            return true;
+        }
+
+        function setLayerOpacity(layerId, opacity) {
+            var layer = getLayerById(config.layers, layerId);
+            var normalized;
+
+            if (!layer) {
+                return false;
+            }
+
+            normalized = normalizeLayerOpacity(opacity);
+            if (layer.opacity === normalized) {
+                return true;
+            }
+
+            layer.opacity = normalized;
+            if (typeof config.onLayerOpacityChange === "function") {
+                config.onLayerOpacityChange(layer, normalized, component);
+            }
+
             return true;
         }
 
@@ -880,6 +917,24 @@
         return typeof layer["order-from-the-bottom"] === "number" ? layer["order-from-the-bottom"] : 0;
     }
 
+    function normalizeLayerOpacity(opacity) {
+        var value = Number(opacity);
+
+        if (!isFinite(value)) {
+            return 100;
+        }
+
+        value = Math.round(value);
+        if (value < 0) {
+            return 0;
+        }
+        if (value > 100) {
+            return 100;
+        }
+
+        return value;
+    }
+
     function getLayerById(layers, layerId) {
         var index;
 
@@ -917,6 +972,7 @@
         if (layer.mask && typeof layer.mask === "object") {
             clone.mask = extend({}, layer.mask);
         }
+        clone.opacity = normalizeLayerOpacity(clone.opacity);
         return clone;
     }
 

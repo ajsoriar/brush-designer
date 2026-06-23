@@ -932,6 +932,13 @@
 
                 return false;
             },
+            setLayerOpacity: function(layerId, opacity) {
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayerOpacity) {
+                    return global.PaintBoardLayersManager.setLayerOpacity(board, layerId, opacity);
+                }
+
+                return false;
+            },
             setLayerMask: function(layerId, mask) {
                 if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayerMask) {
                     return global.PaintBoardLayersManager.setLayerMask(board, layerId, mask);

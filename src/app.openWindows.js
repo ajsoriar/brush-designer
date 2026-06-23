@@ -1647,6 +1647,11 @@
                     activePaintBoard.setLayerMask(layer.id, mask);
                 }
             },
+            onLayerOpacityChange: function(layer, opacity) {
+                if (activePaintBoard && activePaintBoard.setLayerOpacity && layer) {
+                    activePaintBoard.setLayerOpacity(layer.id, opacity);
+                }
+            },
             onLayersReorder: function(layers) {
                 if (activePaintBoard && activePaintBoard.setLayersOrder) {
                     activePaintBoard.setLayersOrder(layers);
@@ -1663,21 +1668,60 @@
 
     function renderLayersPanelToolsRow(toolsRowElement, layersPanel) {
         var blockButton;
+        var opacityRange;
+        var opacityValue;
 
         if (!toolsRowElement || !layersPanel) {
             return;
         }
 
         toolsRowElement.innerHTML = [
-            '<button class="layers-panel-toolbar-btn layers-panel-block-btn" type="button" title="Block layer" aria-label="Block layer">Block</button>'
+            '<div class="layers-panel-tools-row">',
+                '<button class="layers-panel-toolbar-btn layers-panel-block-btn" type="button" title="Block layer" aria-label="Block layer">Block</button>',
+                '<label class="layers-panel-opacity-control" for="layers-panel-opacity-range">Opacity</label>',
+                '<input id="layers-panel-opacity-range" class="layers-panel-opacity-range" type="range" min="0" max="100" step="1" value="100" aria-label="Layer opacity">',
+                '<span class="layers-panel-opacity-value">100%</span>',
+            '</div>'
         ].join("");
 
         blockButton = toolsRowElement.querySelector(".layers-panel-block-btn");
+        opacityRange = toolsRowElement.querySelector(".layers-panel-opacity-range");
+        opacityValue = toolsRowElement.querySelector(".layers-panel-opacity-value");
+
+        function syncOpacityValueLabel() {
+            var value = parseInt(opacityRange.value, 10);
+
+            if (!opacityValue) {
+                return;
+            }
+
+            if (isNaN(value)) {
+                value = 100;
+            }
+            opacityValue.textContent = value + "%";
+        }
+
         blockButton.addEventListener("click", function() {
             if (layersPanel.toggleActiveLayerBlocked()) {
                 updateLayersPanelFooterState(layersPanel);
             }
         });
+        opacityRange.addEventListener("input", function() {
+            var value = parseInt(opacityRange.value, 10);
+
+            if (isNaN(value)) {
+                return;
+            }
+
+            if (layersPanel.setActiveLayerOpacity) {
+                layersPanel.setActiveLayerOpacity(value);
+            }
+            syncOpacityValueLabel();
+            updateLayersPanelFooterState(layersPanel);
+        });
+        opacityRange.addEventListener("change", syncOpacityValueLabel);
+        syncOpacityValueLabel();
+        updateLayersPanelFooterState(layersPanel);
     }
 
     function renderLayersPanelFooter(footerElement, layersPanel) {
@@ -1744,11 +1788,14 @@
         var addMaskButton;
         var removeMaskButton;
         var blockButton;
+        var opacityRange;
+        var opacityValue;
         var activeLayer;
         var selectedLayers;
         var removableSelectedCount;
         var hasMask;
         var layers;
+        var activeOpacity;
 
         if (!layersPanel || !layersPanel.element) {
             return;
@@ -1763,12 +1810,26 @@
             footerElement.querySelector(".layers-panel-remove-mask-btn");
         blockButton = footerElement &&
             footerElement.querySelector(".layers-panel-block-btn");
+        opacityRange = footerElement &&
+            footerElement.querySelector(".layers-panel-opacity-range");
+        opacityValue = footerElement &&
+            footerElement.querySelector(".layers-panel-opacity-value");
         activeLayer = layersPanel.getActiveLayer && layersPanel.getActiveLayer();
         selectedLayers = layersPanel.getSelectedLayers ?
             layersPanel.getSelectedLayers() :
             [];
         layers = layersPanel.getLayers ? layersPanel.getLayers() : [];
         hasMask = !!(activeLayer && activeLayer.mask);
+        activeOpacity = Math.round(Number(activeLayer && activeLayer.opacity));
+        if (isNaN(activeOpacity)) {
+            activeOpacity = 100;
+        }
+        if (activeOpacity < 0) {
+            activeOpacity = 0;
+        }
+        if (activeOpacity > 100) {
+            activeOpacity = 100;
+        }
         removableSelectedCount = selectedLayers.filter(function(layer) {
             return !layer.blocked || layer.background;
         }).length;
@@ -1803,6 +1864,17 @@
                 "aria-disabled",
                 removeMaskButton.disabled ? "true" : "false"
             );
+        }
+        if (opacityRange) {
+            opacityRange.disabled = !activeLayer;
+            opacityRange.value = String(activeOpacity);
+            opacityRange.setAttribute(
+                "aria-disabled",
+                opacityRange.disabled ? "true" : "false"
+            );
+        }
+        if (opacityValue) {
+            opacityValue.textContent = activeOpacity + "%";
         }
     }
 

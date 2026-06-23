@@ -38,6 +38,7 @@
                 id: baseId,
                 label: "Background",
                 visible: true,
+                opacity: 100,
                 blocked: true,
                 "order-from-the-bottom": 0,
                 active: true,
@@ -67,6 +68,55 @@
     function getOrderFromBottom(layer) {
         return typeof layer["order-from-the-bottom"] === "number" ?
             layer["order-from-the-bottom"] : 0;
+    }
+
+    function normalizeLayerOpacity(opacity) {
+        var value = Number(opacity);
+
+        if (!isFinite(value)) {
+            return 100;
+        }
+
+        value = Math.round(value);
+        if (value < 0) {
+            return 0;
+        }
+        if (value > 100) {
+            return 100;
+        }
+
+        return value;
+    }
+
+    function getLayerOpacity(layer) {
+        var opacity = normalizeLayerOpacity(layer && layer.opacity);
+
+        if (layer && layer.opacity !== opacity) {
+            layer.opacity = opacity;
+        }
+
+        return opacity;
+    }
+
+    function applyLayerOpacityToElement(listItem, opacity) {
+        if (!listItem) {
+            return;
+        }
+
+        listItem.style.opacity = String(normalizeLayerOpacity(opacity) / 100);
+    }
+
+    function drawLayerWithOpacity(context, layerCanvas, layer) {
+        var opacity = getLayerOpacity(layer);
+
+        if (!context || !layerCanvas || opacity <= 0) {
+            return;
+        }
+
+        context.save();
+        context.globalAlpha = opacity / 100;
+        context.drawImage(layerCanvas, 0, 0);
+        context.restore();
     }
 
     function normalizeOrders(layers) {
@@ -108,6 +158,7 @@
 
             if (listItem) {
                 listItem.style.zIndex = String(getOrderFromBottom(layer));
+                applyLayerOpacityToElement(listItem, getLayerOpacity(layer));
             }
         });
     }
@@ -236,6 +287,27 @@
         return layerFound && !!listItem;
     }
 
+    // Synchronizes layer opacity in board data and DOM. Opacity is stored as an
+    // integer percentage in the [0..100] range.
+    function setLayerOpacity(board, layerId, opacity) {
+        var listItem = getLayerElement(board, layerId);
+        var layerFound = false;
+        var normalized = normalizeLayerOpacity(opacity);
+
+        board.layers.forEach(function(layer) {
+            if (layer.id === layerId) {
+                layer.opacity = normalized;
+                layerFound = true;
+            }
+        });
+
+        if (listItem) {
+            applyLayerOpacityToElement(listItem, normalized);
+        }
+
+        return layerFound;
+    }
+
     // Synchronizes the locked state in the board-owned layers data. Background
     // remains permanently locked and is not changed through this operation.
     function setLayerBlocked(board, layerId, blocked) {
@@ -325,6 +397,7 @@
             id: layerId,
             label: settings.label || ("Layer " + number),
             visible: true,
+            opacity: normalizeLayerOpacity(settings.opacity),
             blocked: false,
             "order-from-the-bottom": 0,
             active: false,
@@ -348,6 +421,7 @@
 
         createLayerElement(board, layerId, layerData["order-from-the-bottom"]);
         syncLayerOrderInDom(board);
+        setLayerOpacity(board, layerId, layerData.opacity);
         setActiveLayer(board, layerId);
 
         return cloneLayer(layerData);
@@ -391,6 +465,7 @@
         }
 
         duplicatedLayerData.visible = sourceLayer.visible !== false;
+        duplicatedLayerData.opacity = getLayerOpacity(sourceLayer);
         duplicatedLayerData.blocked = sourceLayer.background ?
             false :
             sourceLayer.blocked === true;
@@ -415,6 +490,7 @@
                 "" :
                 "none";
         }
+        setLayerOpacity(board, duplicatedLayerData.id, duplicatedLayerData.opacity);
 
         setActiveLayer(board, duplicatedLayerData.id);
         return cloneLayer(duplicatedLayerData);
@@ -587,7 +663,7 @@
             layerElement = getLayerElement(board, layer.id);
             layerCanvas = layerElement && layerElement.querySelector("canvas");
             if (layerCanvas) {
-                compositeContext.drawImage(layerCanvas, 0, 0);
+                drawLayerWithOpacity(compositeContext, layerCanvas, layer);
             }
         });
 
@@ -597,6 +673,7 @@
             id: mergedLayerId,
             label: "Layer " + number,
             visible: true,
+            opacity: 100,
             blocked: false,
             "order-from-the-bottom": topSelectedOrder,
             active: true,
@@ -633,6 +710,7 @@
         );
         mergedCanvas = mergedElement.querySelector("canvas");
         mergedCanvas.getContext("2d").drawImage(compositeCanvas, 0, 0);
+        applyLayerOpacityToElement(mergedElement, mergedLayer.opacity);
         syncLayerOrderInDom(board);
         setActiveLayer(board, mergedLayerId);
         return cloneLayer(mergedLayer);
@@ -682,7 +760,7 @@
             layerElement = getLayerElement(board, layer.id);
             layerCanvas = layerElement && layerElement.querySelector("canvas");
             if (layerCanvas) {
-                compositeContext.drawImage(layerCanvas, 0, 0);
+                drawLayerWithOpacity(compositeContext, layerCanvas, layer);
             }
         });
 
@@ -732,6 +810,7 @@
 
         targetLayer.label = "Background";
         targetLayer.visible = true;
+        targetLayer.opacity = 100;
         targetLayer.blocked = true;
         targetLayer["order-from-the-bottom"] = 0;
         targetLayer.active = true;
@@ -741,6 +820,7 @@
         board.layers = [targetLayer];
 
         targetElement.style.display = "";
+        targetElement.style.opacity = "1";
         targetElement.style.zIndex = "0";
         setActiveLayer(board, targetLayer.id);
         return true;
@@ -759,6 +839,7 @@
         setActiveLayer: setActiveLayer,
         setLayerSelection: setLayerSelection,
         setLayerBlocked: setLayerBlocked,
+        setLayerOpacity: setLayerOpacity,
         setLayerMask: setLayerMask,
         setLayerVisibility: setLayerVisibility,
         setLayersOrder: setLayersOrder
