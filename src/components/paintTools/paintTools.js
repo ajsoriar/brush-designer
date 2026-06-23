@@ -15,7 +15,7 @@
         "ROUND-POINTS": new URL("./icons/paint-tools_05.png", import.meta.url).href,
         "SQUARED-LINES": new URL("./icons/paint-tools_07.png", import.meta.url).href,
         "ROUND-LINES": new URL("./icons/paint-tools_09.png", import.meta.url).href,
-        "STRAIGHT-LINE": new URL("./icons/paint-tools_07.png", import.meta.url).href,
+        "STRAIGHT-LINE": new URL("./icons/paint-tools_lines.png", import.meta.url).href,
         "FILLED-SQUARES": new URL("./icons/paint-tools_12.png", import.meta.url).href,
         "FILLED-RECTANGLES": new URL("./icons/paint-tools_14.png", import.meta.url).href,
         "FILLED-CIRCLES": new URL("./icons/paint-tools_16.png", import.meta.url).href,
@@ -28,7 +28,19 @@
         "PATTERN-BUCKET": new URL("./icons/paint-tools_40.png", import.meta.url).href,
         "INK-DROPPER": new URL("./icons/paint-tools_29.png", import.meta.url).href,
         "DESIGNED-BRUSH": new URL("./icons/paint-tools_31.png", import.meta.url).href,
-        "DESIGNED-BRUSH-2": new URL("./icons/paint-tools_31.png", import.meta.url).href
+        "DESIGNED-BRUSH-2": new URL("./icons/paint-tools_31.png", import.meta.url).href,
+        "MAGIC-WAND": new URL("./icons/paint-tools_magic-wand.png", import.meta.url).href,
+        "GRADIENT": new URL("./icons/paint-tools_gradient.png", import.meta.url).href,
+        "STAR-GENERATOR": new URL("./icons/paint-tools_poligon-star.png", import.meta.url).href,
+        "CROP-BOARD": new URL("./icons/paint-tools_crop.png", import.meta.url).href
+    };
+
+    var TOOL_ACTIONS = {
+        "STAR-GENERATOR": function() {
+            if (global.openStarGeneratorWindow) {
+                global.openStarGeneratorWindow();
+            }
+        }
     };
 
     var SELECTION_TOOLS_SPRITE = new URL("./sprites/sprite-selection-tools.png", import.meta.url).href;
@@ -62,7 +74,9 @@
         "GRADIENT": "Gradient",
         "STRAIGHT-LINE": "Line",
         "LASSO-SELECTION": "Lasso Selection",
-        "MAGIC-WAND": "Magic Wand"
+        "MAGIC-WAND": "Magic Wand",
+        "STAR-GENERATOR": "Star",
+        "CROP-BOARD": "Crop Board"
     };
 
     var HIDDEN_TOOLS = {
@@ -139,6 +153,9 @@
             var icon = TOOL_ICONS[tool];
 
             button.className = "paint-tools-button" + (icon ? "" : " paint-tools-button-no-icon");
+            if (tool === "CROP-BOARD") {
+                button.className += " paint-tools-button-crop-board";
+            }
             button.setAttribute("data-paint-tool", tool);
             button.style.width = component.btnSize + "px";
             button.style.height = component.btnSize + "px";
@@ -146,6 +163,10 @@
             button.innerHTML = getToolButtonHtml(tool, icon);
             bindSelectionToolButtons(button, tool);
             button.addEventListener("click", function() {
+                if (TOOL_ACTIONS[tool]) {
+                    TOOL_ACTIONS[tool]();
+                    return;
+                }
                 if (global.PaintTools) {
                     global.PaintTools.use(tool);
                 }

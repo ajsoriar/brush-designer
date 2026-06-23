@@ -40,6 +40,7 @@
                 visible: true,
                 blocked: true,
                 "order-from-the-bottom": 0,
+                active: true,
                 selected: true,
                 background: true
             }
@@ -153,14 +154,33 @@
     // canvas/context are redirected to that layer's own canvas, so painting goes
     // to the selected layer even when other layers are stacked on top of it
     // (Photoshop-style layers). Returns true when the layer was activated.
-    function setActiveLayer(board, layerId) {
+    function setLayerSelection(board, selectedLayerIds, activeLayerId) {
         var listItem = null;
         var canvas;
+        var validSelectedIds = [];
 
-        listItem = getLayerElement(board, layerId);
+        selectedLayerIds = selectedLayerIds || [];
+        board.layers.forEach(function(layer) {
+            if (selectedLayerIds.indexOf(layer.id) >= 0) {
+                validSelectedIds.push(layer.id);
+            }
+        });
+
+        if (!activeLayerId || !getLayerElement(board, activeLayerId)) {
+            activeLayerId = validSelectedIds[validSelectedIds.length - 1] ||
+                (board.layers[0] && board.layers[0].id);
+        }
+        if (!activeLayerId) {
+            return false;
+        }
+        if (validSelectedIds.indexOf(activeLayerId) < 0) {
+            validSelectedIds.push(activeLayerId);
+        }
+
+        listItem = getLayerElement(board, activeLayerId);
 
         if (!listItem) {
-            listItem = document.getElementById(layerId);
+            listItem = document.getElementById(activeLayerId);
         }
 
         canvas = listItem && listItem.querySelector("canvas");
@@ -170,12 +190,14 @@
         }
 
         board.activeLayerElement = listItem;
-        board.activeLayerId = layerId;
+        board.activeLayerId = activeLayerId;
+        board.selectedLayerIds = validSelectedIds.slice();
         board.canvas = canvas;
         board.context = canvas.getContext("2d");
 
         board.layers.forEach(function(layer) {
-            layer.selected = layer.id === layerId;
+            layer.active = layer.id === activeLayerId;
+            layer.selected = validSelectedIds.indexOf(layer.id) >= 0;
         });
 
         // Debug-only marker: tag the active layer element with the ACTIVE-LAYER
@@ -305,6 +327,7 @@
             visible: true,
             blocked: false,
             "order-from-the-bottom": 0,
+            active: false,
             selected: false
         };
 
@@ -327,6 +350,73 @@
         syncLayerOrderInDom(board);
 
         return cloneLayer(layerData);
+    }
+
+    // Duplicates the active layer immediately above itself. Pixel data and the
+    // layer's editable metadata are copied, but a duplicated Background always
+    // becomes a normal, unlocked layer.
+    function duplicateActiveLayer(board) {
+        var sourceLayer;
+        var duplicatedLayer;
+        var duplicatedLayerData;
+        var sourceElement;
+        var duplicatedElement;
+        var sourceCanvas;
+        var duplicatedCanvas;
+
+        if (!board || !board.activeLayerId) {
+            return null;
+        }
+
+        sourceLayer = board.layers.filter(function(layer) {
+            return layer.id === board.activeLayerId;
+        })[0] || null;
+        if (!sourceLayer) {
+            return null;
+        }
+
+        duplicatedLayer = addLayer(board, {
+            label: (sourceLayer.label || "Layer") + " Copy"
+        });
+        if (!duplicatedLayer) {
+            return null;
+        }
+
+        duplicatedLayerData = board.layers.filter(function(layer) {
+            return layer.id === duplicatedLayer.id;
+        })[0] || null;
+        if (!duplicatedLayerData) {
+            return null;
+        }
+
+        duplicatedLayerData.visible = sourceLayer.visible !== false;
+        duplicatedLayerData.blocked = sourceLayer.background ?
+            false :
+            sourceLayer.blocked === true;
+        duplicatedLayerData.background = false;
+
+        if (sourceLayer.mask) {
+            duplicatedLayerData.mask = cloneLayer(sourceLayer.mask);
+            duplicatedLayerData.mask.id = duplicatedLayerData.id + "-mask";
+        }
+
+        sourceElement = getLayerElement(board, sourceLayer.id);
+        duplicatedElement = getLayerElement(board, duplicatedLayerData.id);
+        sourceCanvas = sourceElement && sourceElement.querySelector("canvas");
+        duplicatedCanvas = duplicatedElement &&
+            duplicatedElement.querySelector("canvas");
+
+        if (sourceCanvas && duplicatedCanvas) {
+            duplicatedCanvas.getContext("2d").drawImage(sourceCanvas, 0, 0);
+        }
+        if (duplicatedElement) {
+            duplicatedElement.style.display = duplicatedLayerData.visible ?
+                "" :
+                "none";
+        }
+
+        setActiveLayer(board, duplicatedLayerData.id);
+        return cloneLayer(duplicatedLayerData);
     }
 
     // Removes a layer from a board: deletes its entry from the board's layers data
@@ -376,12 +466,297 @@
         return true;
     }
 
+    function removeLayers(board, layerIds) {
+        var selectedIds = layerIds || [];
+        var removableLayers;
+        var activeOrder;
+        var nextLayer;
+        var remainingSelectedIds;
+
+        if (!board || !board.layers || board.layers.length <= 1) {
+            return false;
+        }
+
+        removableLayers = board.layers.filter(function(layer) {
+            return selectedIds.indexOf(layer.id) >= 0 &&
+                (!layer.blocked || layer.background);
+        });
+        if (!removableLayers.length) {
+            return false;
+        }
+
+        if (removableLayers.length >= board.layers.length) {
+            removableLayers.pop();
+        }
+        if (!removableLayers.length) {
+            return false;
+        }
+
+        activeOrder = getOrderFromBottom(
+            removableLayers.filter(function(layer) {
+                return layer.id === board.activeLayerId;
+            })[0] || removableLayers[0]
+        );
+
+        removableLayers.forEach(function(layer) {
+            removeLayerElement(board, layer.id);
+        });
+        board.layers = board.layers.filter(function(layer) {
+            return removableLayers.indexOf(layer) < 0;
+        });
+        normalizeOrders(board.layers);
+        syncLayerOrderInDom(board);
+
+        nextLayer = board.layers.filter(function(layer) {
+            return layer.id === board.activeLayerId;
+        })[0] ||
+            findLayerByOrder(board.layers, activeOrder - 1) ||
+            findLayerByOrder(board.layers, activeOrder) ||
+            board.layers[0] || null;
+        remainingSelectedIds = (board.selectedLayerIds || []).filter(function(layerId) {
+            return board.layers.some(function(layer) {
+                return layer.id === layerId;
+            });
+        });
+        if (nextLayer && remainingSelectedIds.indexOf(nextLayer.id) < 0) {
+            remainingSelectedIds.push(nextLayer.id);
+        }
+
+        return nextLayer ?
+            setLayerSelection(board, remainingSelectedIds, nextLayer.id) :
+            false;
+    }
+
+    function setActiveLayer(board, layerId) {
+        return setLayerSelection(board, [layerId], layerId);
+    }
+
+    function mergeSelectedLayers(board) {
+        var selectedIds = board && board.selectedLayerIds || [];
+        var selectedLayers;
+        var topSelectedOrder;
+        var referenceCanvas;
+        var compositeCanvas;
+        var compositeContext;
+        var number;
+        var mergedLayerId;
+        var mergedLayer;
+        var mergedElement;
+        var mergedCanvas;
+        var orderedResult;
+
+        if (!board || !board.layersElement) {
+            return false;
+        }
+
+        selectedLayers = board.layers.filter(function(layer) {
+            return selectedIds.indexOf(layer.id) >= 0;
+        }).sort(function(a, b) {
+            return getOrderFromBottom(a) - getOrderFromBottom(b);
+        });
+        if (selectedLayers.length < 2) {
+            return false;
+        }
+
+        topSelectedOrder = getOrderFromBottom(
+            selectedLayers[selectedLayers.length - 1]
+        );
+        selectedLayers.some(function(layer) {
+            var layerElement = getLayerElement(board, layer.id);
+
+            referenceCanvas = layerElement && layerElement.querySelector("canvas");
+            return !!referenceCanvas;
+        });
+        if (!referenceCanvas) {
+            return false;
+        }
+
+        compositeCanvas = referenceCanvas.ownerDocument.createElement("canvas");
+        compositeCanvas.width = referenceCanvas.width;
+        compositeCanvas.height = referenceCanvas.height;
+        compositeContext = compositeCanvas.getContext("2d");
+        selectedLayers.forEach(function(layer) {
+            var layerElement;
+            var layerCanvas;
+
+            if (layer.visible === false) {
+                return;
+            }
+
+            layerElement = getLayerElement(board, layer.id);
+            layerCanvas = layerElement && layerElement.querySelector("canvas");
+            if (layerCanvas) {
+                compositeContext.drawImage(layerCanvas, 0, 0);
+            }
+        });
+
+        number = getNextLayerNumber(board);
+        mergedLayerId = board.id + "-layer-" + number;
+        mergedLayer = {
+            id: mergedLayerId,
+            label: "Layer " + number,
+            visible: true,
+            blocked: false,
+            "order-from-the-bottom": topSelectedOrder,
+            active: true,
+            selected: true
+        };
+
+        selectedLayers.forEach(function(layer) {
+            removeLayerElement(board, layer.id);
+        });
+        orderedResult = board.layers.filter(function(layer) {
+            return selectedIds.indexOf(layer.id) < 0;
+        }).map(function(layer) {
+            return {
+                layer: layer,
+                order: getOrderFromBottom(layer)
+            };
+        });
+        orderedResult.push({
+            layer: mergedLayer,
+            order: topSelectedOrder
+        });
+        orderedResult.sort(function(a, b) {
+            return a.order - b.order;
+        });
+        board.layers = orderedResult.map(function(item, index) {
+            item.layer["order-from-the-bottom"] = index;
+            return item.layer;
+        });
+
+        mergedElement = createLayerElement(
+            board,
+            mergedLayerId,
+            mergedLayer["order-from-the-bottom"]
+        );
+        mergedCanvas = mergedElement.querySelector("canvas");
+        mergedCanvas.getContext("2d").drawImage(compositeCanvas, 0, 0);
+        syncLayerOrderInDom(board);
+        setActiveLayer(board, mergedLayerId);
+        return cloneLayer(mergedLayer);
+    }
+
+    // Creates a non-destructive composite of every visible layer from bottom to
+    // top. The returned canvas is detached and does not change the board state.
+    function createFlattenedCanvas(board) {
+        var orderedLayers;
+        var compositeCanvas;
+        var compositeContext;
+        var referenceCanvas;
+
+        if (!board ||
+            !board.layersElement ||
+            !board.layers ||
+            !board.layers.length) {
+            return null;
+        }
+
+        orderedLayers = board.layers.slice().sort(function(a, b) {
+            return getOrderFromBottom(a) - getOrderFromBottom(b);
+        });
+        orderedLayers.some(function(layer) {
+            var layerElement = getLayerElement(board, layer.id);
+
+            referenceCanvas = layerElement && layerElement.querySelector("canvas");
+            return !!referenceCanvas;
+        });
+        if (!referenceCanvas) {
+            return null;
+        }
+
+        compositeCanvas = referenceCanvas.ownerDocument.createElement("canvas");
+        compositeCanvas.width = referenceCanvas.width;
+        compositeCanvas.height = referenceCanvas.height;
+        compositeContext = compositeCanvas.getContext("2d");
+
+        orderedLayers.forEach(function(layer) {
+            var layerElement;
+            var layerCanvas;
+
+            if (layer.visible === false) {
+                return;
+            }
+
+            layerElement = getLayerElement(board, layer.id);
+            layerCanvas = layerElement && layerElement.querySelector("canvas");
+            if (layerCanvas) {
+                compositeContext.drawImage(layerCanvas, 0, 0);
+            }
+        });
+
+        return compositeCanvas;
+    }
+
+    // Composites every visible layer from bottom to top and replaces the board's
+    // stack with one locked Background layer. Hidden layers are discarded.
+    function flattenImage(board) {
+        var orderedLayers;
+        var targetLayer;
+        var targetElement;
+        var targetCanvas;
+        var compositeCanvas;
+        var targetContext;
+
+        if (!board ||
+            !board.layersElement ||
+            !board.layers ||
+            board.layers.length <= 1) {
+            return false;
+        }
+
+        orderedLayers = board.layers.slice().sort(function(a, b) {
+            return getOrderFromBottom(a) - getOrderFromBottom(b);
+        });
+        targetLayer = orderedLayers.filter(function(layer) {
+            return layer.background;
+        })[0] || orderedLayers[0];
+        targetElement = getLayerElement(board, targetLayer.id);
+        targetCanvas = targetElement && targetElement.querySelector("canvas");
+        compositeCanvas = createFlattenedCanvas(board);
+
+        if (!targetElement || !targetCanvas || !compositeCanvas) {
+            return false;
+        }
+
+        targetContext = targetCanvas.getContext("2d");
+        targetContext.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+        targetContext.drawImage(compositeCanvas, 0, 0);
+
+        orderedLayers.forEach(function(layer) {
+            if (layer.id !== targetLayer.id) {
+                removeLayerElement(board, layer.id);
+            }
+        });
+
+        targetLayer.label = "Background";
+        targetLayer.visible = true;
+        targetLayer.blocked = true;
+        targetLayer["order-from-the-bottom"] = 0;
+        targetLayer.active = true;
+        targetLayer.selected = true;
+        targetLayer.background = true;
+        delete targetLayer.mask;
+        board.layers = [targetLayer];
+
+        targetElement.style.display = "";
+        targetElement.style.zIndex = "0";
+        setActiveLayer(board, targetLayer.id);
+        return true;
+    }
+
     global.PaintBoardLayersManager = {
         cloneLayer: cloneLayer,
         createInitialLayers: createInitialLayers,
+        createFlattenedCanvas: createFlattenedCanvas,
         addLayer: addLayer,
+        duplicateActiveLayer: duplicateActiveLayer,
+        flattenImage: flattenImage,
+        mergeSelectedLayers: mergeSelectedLayers,
         removeLayer: removeLayer,
+        removeLayers: removeLayers,
         setActiveLayer: setActiveLayer,
+        setLayerSelection: setLayerSelection,
         setLayerBlocked: setLayerBlocked,
         setLayerMask: setLayerMask,
         setLayerVisibility: setLayerVisibility,

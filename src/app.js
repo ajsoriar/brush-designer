@@ -162,6 +162,9 @@
         }
 
         syncToolsTransformOptionsVisibility();
+        if (!event.detail.active) {
+            refreshLayersPanel(activePaintBoard);
+        }
     });
 
     global.addEventListener("paint-board-floating-paste-transform-change", function(event) {
@@ -308,8 +311,8 @@
             onCancel: function() {
                 var activePaintBoard = global.AppOpenWindows.getActivePaintBoard();
 
-                if (activePaintBoard && activePaintBoard.cancelFloatingPasteDistortion) {
-                    activePaintBoard.cancelFloatingPasteDistortion();
+                if (activePaintBoard && activePaintBoard.cancelFloatingPaste) {
+                    activePaintBoard.cancelFloatingPaste();
                 }
             },
             onAccept: function() {
@@ -423,13 +426,22 @@
                 },
                 openImage: openImage,
                 saveImage: saveImage,
+                downloadFlattenImage: downloadFlattenImage,
+                saveImageAs: saveImageAs,
                 copyToClipboard: copyToClipboard,
                 pasteFromClipboard: pasteFromClipboard,
+                pasteAsNewLayer: pasteAsNewLayer,
                 openMultiPaste: global.AppOpenWindows.openMultiPaste,
                 openFillBigColorPicker: openFillBigColorPicker,
+                transformLayer: transformActiveLayer,
+                duplicateLayer: duplicateActiveLayer,
                 clearBoard: clearBoard,
+                clearSelectionContent: deleteActiveSelection,
+                selectAll: selectAll,
                 fillSelectionWithFrontColor: fillSelectionWithFrontColor,
                 reverseSelection: reverseSelection,
+                flattenImage: global.AppOpenWindows.flattenImage,
+                mergeSelectedLayers: global.AppOpenWindows.mergeSelectedLayers,
                 openBrushDesigner: global.AppOpenWindows.openBrushDesignerInWindow,
                 openBrushDesigner2: global.AppOpenWindows.openBrushDesigner2InWindow,
                 openLinesDesigner: global.AppOpenWindows.openLinesDesignerWindow,
@@ -507,6 +519,112 @@
         });
     }
 
+    function pasteAsNewLayer() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+        var previousActiveLayerId;
+        var previousSelectedLayerIds;
+        var newLayer;
+
+        if (!targetBoard ||
+            !targetBoard.addLayer ||
+            !targetBoard.setActiveLayer) {
+            return;
+        }
+
+        if (targetBoard.floatingPaste && targetBoard.commitFloatingPaste) {
+            targetBoard.commitFloatingPaste();
+        }
+
+        previousActiveLayerId = targetBoard.activeLayerId;
+        previousSelectedLayerIds = (targetBoard.selectedLayerIds || []).slice();
+        newLayer = targetBoard.addLayer();
+        if (!newLayer || !targetBoard.setActiveLayer(newLayer.id)) {
+            return;
+        }
+
+        refreshLayersPanel(targetBoard);
+        global.AppClipboard.pasteImageFromClipboard(targetBoard, {
+            floatingPasteMetadata: {
+                createdLayerId: newLayer.id,
+                previousActiveLayerId: previousActiveLayerId,
+                previousSelectedLayerIds: previousSelectedLayerIds
+            },
+            beforePaste: function() {
+                if (!targetBoard.getLayers().some(function(layer) {
+                    return layer.id === newLayer.id;
+                })) {
+                    return false;
+                }
+
+                targetBoard.setActiveLayer(newLayer.id);
+                refreshLayersPanel(targetBoard);
+                return true;
+            }
+        }).then(function(pasted) {
+            if (!pasted) {
+                rollbackNewPasteLayer();
+                return;
+            }
+
+            showNotify("Pasted as new layer");
+        }).catch(function(error) {
+            rollbackNewPasteLayer();
+            console.log("Paste as new layer failed:", error);
+        });
+
+        function rollbackNewPasteLayer() {
+            if (targetBoard.removeLayer) {
+                targetBoard.removeLayer(newLayer.id);
+            }
+            if (targetBoard.setLayerSelection && previousActiveLayerId) {
+                targetBoard.setLayerSelection(
+                    previousSelectedLayerIds,
+                    previousActiveLayerId
+                );
+            }
+            refreshLayersPanel(targetBoard);
+        }
+    }
+
+    function refreshLayersPanel(targetBoard) {
+        if (global.AppOpenWindows.refreshLayersPanel) {
+            global.AppOpenWindows.refreshLayersPanel(targetBoard);
+        }
+    }
+
+    function transformActiveLayer() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (!targetBoard || typeof targetBoard.transformActiveLayer !== "function") {
+            return;
+        }
+
+        if (!targetBoard.transformActiveLayer()) {
+            showNotify("Select a layer other than the background to transform");
+        }
+    }
+
+    function duplicateActiveLayer() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+        var duplicatedLayer;
+
+        if (!targetBoard ||
+            typeof targetBoard.duplicateActiveLayer !== "function") {
+            return null;
+        }
+
+        if (targetBoard.floatingPaste && targetBoard.commitFloatingPaste) {
+            targetBoard.commitFloatingPaste();
+        }
+
+        duplicatedLayer = targetBoard.duplicateActiveLayer();
+        if (duplicatedLayer) {
+            refreshLayersPanel(targetBoard);
+        }
+
+        return duplicatedLayer;
+    }
+
     function copyToClipboard() {
         var targetBoard = global.AppOpenWindows.getActivePaintBoard();
 
@@ -546,15 +664,63 @@
         downloadBoardImage(targetBoard);
     }
 
-    function downloadBoardImage(targetBoard) {
+    function downloadBoardImage(targetBoard, fileName) {
         var link;
 
         link = document.createElement("a");
         link.href = targetBoard.save();
-        link.download = targetBoard.id + ".png";
+        link.download = fileName || (targetBoard.id + ".png");
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    }
+
+    function downloadFlattenImage() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+        var flattenedCanvas;
+
+        if (!targetBoard || !targetBoard.createFlattenedCanvas) {
+            return;
+        }
+
+        flattenedCanvas = targetBoard.createFlattenedCanvas();
+        if (!flattenedCanvas) {
+            return;
+        }
+
+        downloadCanvasImage(
+            flattenedCanvas,
+            targetBoard.id + "-flatten.png"
+        );
+    }
+
+    function downloadCanvasImage(canvas, fileName) {
+        var link = document.createElement("a");
+
+        link.href = canvas.toDataURL("image/png");
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function saveImageAs() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+        var fileName;
+
+        if (!targetBoard) {
+            return;
+        }
+
+        fileName = window.prompt("Save image as:", targetBoard.id + ".png");
+        if (!fileName) {
+            return;
+        }
+        if (!/\.png$/i.test(fileName)) {
+            fileName += ".png";
+        }
+
+        downloadBoardImage(targetBoard, fileName);
     }
 
     function clearBoard() {
@@ -613,9 +779,20 @@
         }
 
         if (appMenuComponent && appMenuComponent.setItemEnabled) {
+            appMenuComponent.setItemEnabled("clearSelectionContent", hasSelection);
             appMenuComponent.setItemEnabled("fillSelectionWithFrontColor", hasSelection);
             appMenuComponent.setItemEnabled("reverseSelection", hasSelection);
         }
+    }
+
+    function selectAll() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (!targetBoard || typeof targetBoard.selectAll !== "function") {
+            return false;
+        }
+
+        return targetBoard.selectAll();
     }
 
     function reverseSelection() {
@@ -711,6 +888,7 @@
     global.newDocument = global.AppOpenWindows.newDocument;
     global.openMultiPaste = global.AppOpenWindows.openMultiPaste;
     global.pasteFromClipboard = pasteFromClipboard;
+    global.pasteAsNewLayer = pasteAsNewLayer;
     global.copyToClipboard = copyToClipboard;
     global.saveImage = saveImage;
     global.clearBoard = clearBoard;

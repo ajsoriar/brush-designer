@@ -31,7 +31,7 @@
         });
     }
 
-    function pasteImageFromClipboard(board) {
+    function pasteImageFromClipboard(board, options) {
         if (!board || !canReadClipboard()) {
             return Promise.resolve(false);
         }
@@ -43,8 +43,8 @@
                 return false;
             }
 
-            return pasteImageBlob(board, imageBlob).then(function() {
-                return true;
+            return pasteImageBlob(board, imageBlob, options).then(function(pasted) {
+                return pasted !== false;
             });
         });
     }
@@ -185,34 +185,41 @@
         });
     }
 
-    function pasteImageBlob(board, imageBlobPromise) {
+    function pasteImageBlob(board, imageBlobPromise, options) {
         return imageBlobPromise.then(function(blob) {
             if (global.createImageBitmap) {
                 return global.createImageBitmap(blob).then(function(imageBitmap) {
-                    pasteImageOnBoard(board, imageBitmap);
+                    return pasteImageOnBoard(board, imageBitmap, options);
                 });
             }
 
-            return pasteImageWithElement(board, blob);
+            return pasteImageWithElement(board, blob, options);
         });
     }
 
-    function pasteImageWithElement(board, blob) {
+    function pasteImageWithElement(board, blob, options) {
         return new Promise(function(resolve) {
             var image = new global.Image();
             var objectUrl = global.URL.createObjectURL(blob);
 
             image.onload = function() {
-                pasteImageOnBoard(board, image);
+                var pasted = pasteImageOnBoard(board, image, options);
+
                 global.URL.revokeObjectURL(objectUrl);
-                resolve();
+                resolve(pasted);
             };
 
             image.src = objectUrl;
         });
     }
 
-    function pasteImageOnBoard(board, image) {
+    function pasteImageOnBoard(board, image, options) {
+        if (options &&
+            typeof options.beforePaste === "function" &&
+            options.beforePaste(board, image) === false) {
+            return false;
+        }
+
         if (board && typeof board.hasSelection === "function" &&
             board.hasSelection() &&
             typeof board.clearSelection === "function") {
@@ -225,11 +232,15 @@
         }
 
         if (board && typeof board.startFloatingPaste === "function") {
-            board.startFloatingPaste(image);
-            return;
+            board.startFloatingPaste(
+                image,
+                options && options.floatingPasteMetadata
+            );
+            return true;
         }
 
         board.drawImage(image, 0, 0);
+        return true;
     }
 
     function getBoardClipboardEntry(board) {

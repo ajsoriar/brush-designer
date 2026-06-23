@@ -39,7 +39,9 @@
         "GRADIENT",
         "OLD-BRUSH",
         "DESIGNED-BRUSH",
-        "DESIGNED-BRUSH-2"
+        "DESIGNED-BRUSH-2",
+        "STAR-GENERATOR",
+        "CROP-BOARD"
     ];
 
     function extend(target, source) {
@@ -438,14 +440,24 @@
 
         if (!paintBoard || !paintBoard.getLayers) {
             appLayersPanel.setLayers([]);
+            updateLayersPanelFooterState(appLayersPanel);
             return;
         }
 
         layers = paintBoard.getLayers();
         appLayersPanel.setLayers(layers);
+        updateLayersPanelFooterState(appLayersPanel);
         layers.forEach(function(layer) {
             updateLayersPanelThumbnail(paintBoard, layer.id);
         });
+    }
+
+    function refreshLayersPanel(paintBoard) {
+        var targetBoard = paintBoard || activePaintBoard;
+
+        syncLayersPanelBoardSize(targetBoard);
+        syncLayersPanelLayers(targetBoard);
+        syncLayersPanelWindowTitle(targetBoard);
     }
 
     function updateLayersPanelThumbnail(paintBoard, layerId) {
@@ -1587,8 +1599,18 @@
             boardHeight: activePaintBoard && activePaintBoard.canvas ?
                 activePaintBoard.canvas.height : 600,
             onActiveLayerChange: function(layer) {
-                if (activePaintBoard && activePaintBoard.setActiveLayer && layer) {
-                    activePaintBoard.setActiveLayer(layer.id);
+                updateLayersPanelFooterState(appLayersPanel);
+            },
+            onSelectionChange: function(layers, activeLayer) {
+                if (activePaintBoard &&
+                    activePaintBoard.setLayerSelection &&
+                    activeLayer) {
+                    activePaintBoard.setLayerSelection(
+                        layers.map(function(layer) {
+                            return layer.id;
+                        }),
+                        activeLayer.id
+                    );
                 }
                 updateLayersPanelFooterState(appLayersPanel);
             },
@@ -1677,8 +1699,8 @@
             layersPanel.addLayer();
         });
         removeButton.addEventListener("click", function() {
-            if (activePaintBoard && activePaintBoard.removeLayer) {
-                if (activePaintBoard.removeLayer(layersPanel.getActiveLayerId())) {
+            if (activePaintBoard && activePaintBoard.removeLayers) {
+                if (activePaintBoard.removeLayers(layersPanel.getSelectedLayerIds())) {
                     syncLayersPanelLayers(activePaintBoard);
                     updateLayersPanelFooterState(layersPanel);
                 }
@@ -1705,6 +1727,8 @@
         var removeMaskButton;
         var blockButton;
         var activeLayer;
+        var selectedLayers;
+        var removableSelectedCount;
         var hasMask;
         var layers;
 
@@ -1722,13 +1746,18 @@
         blockButton = footerElement &&
             footerElement.querySelector(".layers-panel-block-btn");
         activeLayer = layersPanel.getActiveLayer && layersPanel.getActiveLayer();
+        selectedLayers = layersPanel.getSelectedLayers ?
+            layersPanel.getSelectedLayers() :
+            [];
         layers = layersPanel.getLayers ? layersPanel.getLayers() : [];
         hasMask = !!(activeLayer && activeLayer.mask);
+        removableSelectedCount = selectedLayers.filter(function(layer) {
+            return !layer.blocked || layer.background;
+        }).length;
 
         if (removeButton) {
-            removeButton.disabled = !activeLayer ||
-                layers.length <= 1 ||
-                (activeLayer.blocked && !activeLayer.background);
+            removeButton.disabled = !removableSelectedCount ||
+                layers.length <= 1;
             removeButton.setAttribute(
                 "aria-disabled",
                 removeButton.disabled ? "true" : "false"
@@ -1833,6 +1862,32 @@
         activePaintBoard.clear();
     }
 
+    function flattenImage() {
+        if (!activePaintBoard || !activePaintBoard.flattenImage) {
+            return false;
+        }
+
+        if (!activePaintBoard.flattenImage()) {
+            return false;
+        }
+
+        syncLayersPanelLayers(activePaintBoard);
+        return true;
+    }
+
+    function mergeSelectedLayers() {
+        if (!activePaintBoard || !activePaintBoard.mergeSelectedLayers) {
+            return false;
+        }
+
+        if (!activePaintBoard.mergeSelectedLayers()) {
+            return false;
+        }
+
+        syncLayersPanelLayers(activePaintBoard);
+        return true;
+    }
+
     function setActiveColor(color) {
         global.App.memory.currentColor = color;
 
@@ -1879,8 +1934,11 @@
         updatePaintBoardWindowTitle: updatePaintBoardWindowTitle,
         updatePaintBoardToolbarState: updatePaintBoardToolbarState,
         updateLayersPanelThumbnail: updateLayersPanelThumbnail,
+        refreshLayersPanel: refreshLayersPanel,
         getActivePaintBoard: getActivePaintBoard,
         clearBoard: clearBoard,
+        flattenImage: flattenImage,
+        mergeSelectedLayers: mergeSelectedLayers,
         setActiveColor: setActiveColor
     };
 

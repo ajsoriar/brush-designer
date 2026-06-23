@@ -7,7 +7,9 @@
         { "label": "New Paint Board", "action": "createPaintBoard" },
         { "label": "Open", "action": "openImage" },
         { "type": "separator" },
-        { "label": "Save", "action": "saveImage" }
+        { "label": "Save", "action": "saveImage" },
+        { "label": "Download Flatten Image", "action": "downloadFlattenImage" },
+        { "label": "Save As...", "action": "saveImageAs" }
       ]
     },
     {
@@ -15,15 +17,36 @@
       "items": [
         { "label": "Copy", "action": "copyToClipboard" },
         { "label": "Paste", "action": "pasteFromClipboard" },
+        { "label": "Paste as New Layer", "action": "pasteAsNewLayer" },
         { "label": "Multi Paste", "action": "openMultiPaste" },
         { "label": "Fill", "action": "openFillBigColorPicker" },
+        { "label": "Transform", "action": "transformLayer" },
         { "type": "separator" },
+        { "label": "Clear", "action": "clearSelectionContent", "enabled": false },
         { "label": "Clear Board", "action": "clearBoard" }
       ]
     },
     {
-      "label": "Selection",
+      "label": "Image",
+      "items": []
+    },
+    {
+      "label": "Layer",
       "items": [
+        { "label": "Add", "action": "addLayer" },
+        { "label": "Duplicate", "action": "duplicateLayer" },
+        { "label": "Delete", "action": "deleteLayer" },
+        { "type": "separator" },
+        { "label": "Merge Selected Layers", "action": "mergeSelectedLayers" },
+        { "label": "Merge Visible", "action": "mergeVisibleLayers" },
+        { "label": "Flatten Image", "action": "flattenImage" }
+      ]
+    },
+    {
+      "label": "Select",
+      "items": [
+        { "label": "All", "action": "selectAll" },
+        { "type": "separator" },
         { "label": "Fill Selection", "action": "fillSelectionWithFrontColor", "enabled": false },
         { "label": "Reverse Selection", "action": "reverseSelection", "enabled": false }
       ]

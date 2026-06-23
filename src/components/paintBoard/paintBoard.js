@@ -50,7 +50,8 @@
         INK_DROPPER: "INK-DROPPER",
         OLD_BRUSH: "OLD-BRUSH",
         DESIGNED_BRUSH: "DESIGNED-BRUSH",
-        DESIGNED_BRUSH_2: "DESIGNED-BRUSH-2"
+        DESIGNED_BRUSH_2: "DESIGNED-BRUSH-2",
+        CROP_BOARD: "CROP-BOARD"
     };
 
     var SELECTION_TOOL_TYPES = {
@@ -734,6 +735,7 @@
             brushSize: config.brushSize,
             useLayers: config.useLayers,
             layers: config.layers || (config.useLayers ? createInitialLayers(boardId) : []),
+            selectedLayerIds: [baseLayerId],
             layerSequence: 1,
             getLayers: function() {
                 return board.layers;
@@ -760,12 +762,61 @@
 
                 return null;
             },
+            duplicateActiveLayer: function() {
+                var previousCanvas = board.canvas;
+                var duplicatedLayer;
+
+                if (global.PaintBoardLayersManager &&
+                    global.PaintBoardLayersManager.duplicateActiveLayer) {
+                    duplicatedLayer =
+                        global.PaintBoardLayersManager.duplicateActiveLayer(board);
+
+                    if (config.paintOnPointer && duplicatedLayer) {
+                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                            startPainting: startPainting,
+                            continuePainting: continuePainting,
+                            leaveCanvas: leaveCanvas,
+                            rememberHoverGuidePointer: rememberHoverGuidePointer,
+                            finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                        }, supportsPointerEvents);
+                    }
+                    if (duplicatedLayer) {
+                        notifyContentChange(board);
+                    }
+
+                    return duplicatedLayer;
+                }
+
+                return null;
+            },
             removeLayer: function(layerId) {
                 var previousCanvas = board.canvas;
                 var removed;
 
                 if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.removeLayer) {
                     removed = global.PaintBoardLayersManager.removeLayer(board, layerId);
+
+                    if (config.paintOnPointer && removed) {
+                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                            startPainting: startPainting,
+                            continuePainting: continuePainting,
+                            leaveCanvas: leaveCanvas,
+                            rememberHoverGuidePointer: rememberHoverGuidePointer,
+                            finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                        }, supportsPointerEvents);
+                    }
+
+                    return removed;
+                }
+
+                return false;
+            },
+            removeLayers: function(layerIds) {
+                var previousCanvas = board.canvas;
+                var removed;
+
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.removeLayers) {
+                    removed = global.PaintBoardLayersManager.removeLayers(board, layerIds);
 
                     if (config.paintOnPointer && removed) {
                         rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
@@ -804,6 +855,32 @@
 
                 return false;
             },
+            setLayerSelection: function(layerIds, activeLayerId) {
+                var previousCanvas = board.canvas;
+                var selected;
+
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayerSelection) {
+                    selected = global.PaintBoardLayersManager.setLayerSelection(
+                        board,
+                        layerIds,
+                        activeLayerId
+                    );
+
+                    if (config.paintOnPointer && selected) {
+                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                            startPainting: startPainting,
+                            continuePainting: continuePainting,
+                            leaveCanvas: leaveCanvas,
+                            rememberHoverGuidePointer: rememberHoverGuidePointer,
+                            finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                        }, supportsPointerEvents);
+                    }
+
+                    return selected;
+                }
+
+                return false;
+            },
             setLayerVisibility: function(layerId, visible) {
                 if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayerVisibility) {
                     return global.PaintBoardLayersManager.setLayerVisibility(board, layerId, visible);
@@ -832,6 +909,65 @@
 
                 return false;
             },
+            mergeSelectedLayers: function() {
+                var previousCanvas = board.canvas;
+                var mergedLayer;
+
+                if (global.PaintBoardLayersManager &&
+                    global.PaintBoardLayersManager.mergeSelectedLayers) {
+                    mergedLayer = global.PaintBoardLayersManager.mergeSelectedLayers(board);
+
+                    if (config.paintOnPointer && mergedLayer) {
+                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                            startPainting: startPainting,
+                            continuePainting: continuePainting,
+                            leaveCanvas: leaveCanvas,
+                            rememberHoverGuidePointer: rememberHoverGuidePointer,
+                            finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                        }, supportsPointerEvents);
+                    }
+                    if (mergedLayer) {
+                        notifyContentChange(board);
+                    }
+
+                    return mergedLayer;
+                }
+
+                return false;
+            },
+            createFlattenedCanvas: function() {
+                if (global.PaintBoardLayersManager &&
+                    global.PaintBoardLayersManager.createFlattenedCanvas) {
+                    return global.PaintBoardLayersManager.createFlattenedCanvas(board);
+                }
+
+                return null;
+            },
+            flattenImage: function() {
+                var previousCanvas = board.canvas;
+                var flattened;
+
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.flattenImage) {
+                    flattened = global.PaintBoardLayersManager.flattenImage(board);
+
+                    if (config.paintOnPointer && flattened) {
+                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                            startPainting: startPainting,
+                            continuePainting: continuePainting,
+                            leaveCanvas: leaveCanvas,
+                            rememberHoverGuidePointer: rememberHoverGuidePointer,
+                            finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                        }, supportsPointerEvents);
+                    }
+                    if (flattened) {
+                        notifyContentChange(board);
+                    }
+
+                    return flattened;
+                }
+
+                return false;
+            },
             lastPointerPosition: null,
             previewPointerPosition: null,
             previewModifierState: null,
@@ -855,6 +991,9 @@
             hasSelection: function() {
                 return hasActiveSelection(board);
             },
+            selectAll: function() {
+                return selectAll(board);
+            },
             reverseSelection: function() {
                 return reverseSelection(board);
             },
@@ -876,14 +1015,17 @@
             drawImage: function(image, x, y) {
                 drawImage(board, image, x, y);
             },
-            startFloatingPaste: function(image) {
-                startFloatingPaste(board, image);
+            startFloatingPaste: function(image, metadata) {
+                startFloatingPaste(board, image, metadata);
+            },
+            transformActiveLayer: function() {
+                return transformActiveLayer(board);
             },
             commitFloatingPaste: function() {
                 return commitFloatingPaste(board);
             },
             cancelFloatingPaste: function() {
-                cancelFloatingPaste(board);
+                return cancelFloatingPaste(board);
             },
             cancelFloatingPasteDistortion: function() {
                 return cancelFloatingPasteDistortion(board);
@@ -2204,6 +2346,40 @@
         notifySelectionStateChange(board);
     }
 
+    function selectAll(board) {
+        var maskCanvas;
+        var maskContext;
+        var bounds;
+
+        if (!board || !board.canvas ||
+            board.canvas.width <= 0 || board.canvas.height <= 0) {
+            return false;
+        }
+
+        maskCanvas = createSelectionMaskCanvas(board);
+        maskContext = maskCanvas.getContext("2d");
+        maskContext.fillStyle = "#ffffff";
+        maskContext.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+        bounds = {
+            left: 0,
+            top: 0,
+            right: maskCanvas.width,
+            bottom: maskCanvas.height,
+            width: maskCanvas.width,
+            height: maskCanvas.height
+        };
+
+        board.selection = {
+            type: "rectangle",
+            bounds: bounds,
+            maskCanvas: maskCanvas
+        };
+        clearSelectionDraft(board);
+        renderLassoSelection(board);
+        notifySelectionStateChange(board);
+        return true;
+    }
+
     function reverseSelection(board) {
         var reversedMask;
         var reversedContext;
@@ -2877,6 +3053,11 @@
     }
 
     function startPointerAction(board, event) {
+        if (currentPaintToolMode === PAINT_TOOL_MODES.CROP_BOARD) {
+            event.preventDefault();
+            return;
+        }
+
         if (currentPaintToolMode === PAINT_TOOL_MODES.INK_DROPPER) {
             event.preventDefault();
             inkDropperPointerEvent(board, event);
@@ -2934,6 +3115,10 @@
     }
 
     function continuePointerAction(board, event) {
+        if (currentPaintToolMode === PAINT_TOOL_MODES.CROP_BOARD) {
+            return;
+        }
+
         if (currentPaintToolMode === PAINT_TOOL_MODES.INK_DROPPER) {
             return;
         }
@@ -4770,7 +4955,61 @@
         commitUndoableAction(board);
     }
 
-    function startFloatingPaste(board, image) {
+    function transformActiveLayer(board) {
+        var activeLayer = null;
+        var sourceCanvas;
+        var snapshot;
+        var snapshotContext;
+        var i;
+
+        if (!board || !board.layers) {
+            return false;
+        }
+
+        for (i = 0; i < board.layers.length; i++) {
+            if (board.layers[i].id === board.activeLayerId) {
+                activeLayer = board.layers[i];
+                break;
+            }
+        }
+
+        if (!activeLayer || activeLayer.background) {
+            return false;
+        }
+
+        sourceCanvas = board.canvas;
+        if (!sourceCanvas) {
+            return false;
+        }
+
+        if (board.floatingPaste) {
+            commitFloatingPaste(board);
+        }
+
+        snapshot = document.createElement("canvas");
+        snapshot.width = sourceCanvas.width;
+        snapshot.height = sourceCanvas.height;
+        snapshotContext = snapshot.getContext("2d");
+        snapshotContext.drawImage(sourceCanvas, 0, 0);
+
+        // Lift the active layer content into a floating paste so it can be
+        // transformed with the same tools used when pasting a bitmap. The undo
+        // snapshot is captured before clearing the layer so committing or
+        // undoing the transform restores the original pixels.
+        beginUndoableAction(board);
+        markUndoableChange(board);
+        board.context.clearRect(0, 0, sourceCanvas.width, sourceCanvas.height);
+
+        startFloatingPaste(board, snapshot, {
+            liftedLayerId: activeLayer.id,
+            liftedCanvas: sourceCanvas,
+            liftedSnapshot: snapshot
+        });
+
+        return true;
+    }
+
+    function startFloatingPaste(board, image, metadata) {
         var size;
         var layer;
         var canvas;
@@ -4806,6 +5045,7 @@
 
         floatingPaste = {
             image: image,
+            metadata: metadata || null,
             layer: layer,
             canvas: canvas,
             context: context,
@@ -5940,14 +6180,48 @@
     }
 
     function cancelFloatingPaste(board) {
+        var paste;
+        var metadata;
+        var liftedContext;
+
         if (!board || !board.floatingPaste) {
-            return;
+            return false;
         }
 
-        removeFloatingPaste(board);
+        paste = board.floatingPaste;
+        metadata = paste.metadata;
+        removeFloatingPaste(board, false);
+
+        if (metadata && metadata.liftedSnapshot && metadata.liftedCanvas) {
+            liftedContext = metadata.liftedCanvas.getContext("2d");
+            liftedContext.clearRect(
+                0, 0,
+                metadata.liftedCanvas.width,
+                metadata.liftedCanvas.height
+            );
+            liftedContext.drawImage(metadata.liftedSnapshot, 0, 0);
+            board.pendingUndoSnapshot = null;
+            board.actionHasChanges = false;
+        }
+
+        if (metadata &&
+            metadata.createdLayerId &&
+            board.removeLayer) {
+            board.removeLayer(metadata.createdLayerId);
+            if (metadata.previousActiveLayerId &&
+                board.setLayerSelection) {
+                board.setLayerSelection(
+                    metadata.previousSelectedLayerIds || [],
+                    metadata.previousActiveLayerId
+                );
+            }
+        }
+
+        notifyFloatingPasteChange(board, false);
+        return true;
     }
 
-    function removeFloatingPaste(board) {
+    function removeFloatingPaste(board, suppressNotification) {
         var paste = board && board.floatingPaste;
 
         if (!paste) {
@@ -5971,7 +6245,9 @@
         }
 
         board.floatingPaste = null;
-        notifyFloatingPasteChange(board, false);
+        if (!suppressNotification) {
+            notifyFloatingPasteChange(board, false);
+        }
     }
 
     function notifyFloatingPasteChange(board, active) {

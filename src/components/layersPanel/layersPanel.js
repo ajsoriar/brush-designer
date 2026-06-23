@@ -12,6 +12,7 @@
         thumbnailMaxSize: 75,
         activeLayerId: null,
         onActiveLayerChange: null,
+        onSelectionChange: null,
         onLayerBlockedChange: null,
         onLayerMaskChange: null,
         onLayerVisibilityChange: null,
@@ -45,6 +46,7 @@
         var list = document.createElement("ul");
         var component;
         var activeLayerId;
+        var selectedLayerIds;
         var activePreview = "board";
         var thumbnailSources = {};
 
@@ -59,8 +61,19 @@
         });
         activeLayerId = config.activeLayerId ||
             ((config.layers.filter(function(layer) {
+                return layer.active;
+            })[0] || {}).id || null) ||
+            ((config.layers.filter(function(layer) {
                 return layer.selected;
             })[0] || config.layers[0] || {}).id || null);
+        selectedLayerIds = config.layers.filter(function(layer) {
+            return layer.selected;
+        }).map(function(layer) {
+            return layer.id;
+        });
+        if (activeLayerId && selectedLayerIds.indexOf(activeLayerId) < 0) {
+            selectedLayerIds.push(activeLayerId);
+        }
 
         element.id = config.id || ("layers-panel-" + Date.now());
         element.className = "layers-panel";
@@ -104,8 +117,18 @@
                     return copy;
                 });
                 activeLayerId = (config.layers.filter(function(layer) {
+                    return layer.active;
+                })[0] || config.layers.filter(function(layer) {
                     return layer.selected;
                 })[0] || config.layers[0] || {}).id || null;
+                selectedLayerIds = config.layers.filter(function(layer) {
+                    return layer.selected;
+                }).map(function(layer) {
+                    return layer.id;
+                });
+                if (activeLayerId && selectedLayerIds.indexOf(activeLayerId) < 0) {
+                    selectedLayerIds.push(activeLayerId);
+                }
                 activePreview = "board";
                 renderLayers();
                 return true;
@@ -116,11 +139,21 @@
             getActiveLayer: function() {
                 return getLayerById(config.layers, activeLayerId);
             },
+            getSelectedLayerIds: function() {
+                return selectedLayerIds.slice();
+            },
+            getSelectedLayers: function() {
+                return selectedLayerIds.map(function(layerId) {
+                    return getLayerById(config.layers, layerId);
+                }).filter(function(layer) {
+                    return !!layer;
+                });
+            },
             getActivePreview: function() {
                 return activePreview;
             },
-            setActiveLayer: function(layerId) {
-                return setActiveLayer(layerId, "board");
+            setActiveLayer: function(layerId, additive) {
+                return setActiveLayer(layerId, "board", additive === true);
             },
             updateThumbnail: function(layerId, sourceCanvas, previewType) {
                 var type = previewType === "mask" ? "mask" : "board";
@@ -191,26 +224,58 @@
             syncThumbnailSizes();
         }
 
-        function setActiveLayer(layerId, preview) {
+        function setActiveLayer(layerId, preview, additive) {
             var layer = getLayerById(config.layers, layerId);
-            var layerChanged = activeLayerId !== layerId;
+            var previousActiveLayerId = activeLayerId;
+            var layerChanged;
+            var selectionChanged = false;
+            var selectedIndex;
 
             if (!layer) {
                 return false;
             }
 
-            activeLayerId = layerId;
+            if (additive) {
+                selectedIndex = selectedLayerIds.indexOf(layerId);
+                if (selectedIndex >= 0 && selectedLayerIds.length > 1) {
+                    selectedLayerIds.splice(selectedIndex, 1);
+                    selectionChanged = true;
+                    if (activeLayerId === layerId) {
+                        activeLayerId = selectedLayerIds[selectedLayerIds.length - 1];
+                    }
+                } else if (selectedIndex < 0) {
+                    selectedLayerIds.push(layerId);
+                    activeLayerId = layerId;
+                    selectionChanged = true;
+                }
+            } else {
+                selectionChanged = selectedLayerIds.length !== 1 ||
+                    selectedLayerIds[0] !== layerId;
+                selectedLayerIds = [layerId];
+                activeLayerId = layerId;
+            }
+
+            layerChanged = previousActiveLayerId !== activeLayerId;
+            layer = getLayerById(config.layers, activeLayerId);
             activePreview = preview === "mask" && layer.mask ? "mask" : "board";
             syncActiveLayer();
             syncActivePreview();
             if (layerChanged && typeof config.onActiveLayerChange === "function") {
                 config.onActiveLayerChange(layer, component);
             }
+            if ((selectionChanged || layerChanged) &&
+                typeof config.onSelectionChange === "function") {
+                config.onSelectionChange(
+                    component.getSelectedLayers(),
+                    layer,
+                    component
+                );
+            }
             return true;
         }
 
-        function setActivePreview(layerId, preview) {
-            return setActiveLayer(layerId, preview);
+        function setActivePreview(layerId, preview, additive) {
+            return setActiveLayer(layerId, preview, additive);
         }
 
         function toggleLayerVisibility(layerId) {
@@ -287,6 +352,7 @@
                 findLayerByOrder(activeOrder) ||
                 config.layers[0] || null;
             activeLayerId = nextLayer ? nextLayer.id : null;
+            selectedLayerIds = nextLayer ? [nextLayer.id] : [];
             activePreview = "board";
             renderLayers();
             if (nextLayer && typeof config.onActiveLayerChange === "function") {
@@ -296,9 +362,7 @@
         }
 
         function addMaskToActiveLayer() {
-            var activeLayer = config.layers.filter(function(layer) {
-                return layer.selected;
-            })[0] || getLayerById(config.layers, activeLayerId);
+            var activeLayer = getLayerById(config.layers, activeLayerId);
 
             if (!activeLayer || activeLayer.background || activeLayer.mask) {
                 return false;
@@ -572,15 +636,19 @@
             var rows = list.querySelectorAll(".layers-panel-row");
 
             config.layers.forEach(function(layer) {
-                layer.selected = layer.id === activeLayerId;
+                layer.active = layer.id === activeLayerId;
+                layer.selected = selectedLayerIds.indexOf(layer.id) >= 0;
             });
 
             Array.prototype.forEach.call(rows, function(row) {
-                var selected = row.getAttribute("data-layer-id") === activeLayerId;
+                var layerId = row.getAttribute("data-layer-id");
+                var selected = selectedLayerIds.indexOf(layerId) >= 0;
+                var active = layerId === activeLayerId;
 
                 row.classList.toggle("layers-panel-row-selected", selected);
+                row.classList.toggle("layers-panel-row-active", active);
                 row.setAttribute("aria-selected", selected ? "true" : "false");
-                row.tabIndex = selected ? 0 : -1;
+                row.tabIndex = active ? 0 : -1;
             });
         }
 
@@ -666,7 +734,7 @@
         }
         item.addEventListener("click", function(event) {
             if (!event.target.closest(".layers-panel-thumbnail")) {
-                onSelect(layer.id, "board");
+                onSelect(layer.id, "board", event.shiftKey);
             }
         });
         item.addEventListener("keydown", function(event) {
@@ -697,7 +765,7 @@
         thumbnail.setAttribute("data-preview-type", "board");
         thumbnail.addEventListener("click", function(event) {
             event.stopPropagation();
-            onPreviewSelect(layer.id, "board");
+            onPreviewSelect(layer.id, "board", event.shiftKey);
         });
         thumbnail.appendChild(createThumbnailCanvas());
         if (layer.background) {
@@ -719,7 +787,7 @@
             maskThumbnail.setAttribute("data-mask-id", layer.mask.id || "");
             maskThumbnail.addEventListener("click", function(event) {
                 event.stopPropagation();
-                onPreviewSelect(layer.id, "mask");
+                onPreviewSelect(layer.id, "mask", event.shiftKey);
             });
             maskThumbnail.appendChild(createThumbnailCanvas());
 
