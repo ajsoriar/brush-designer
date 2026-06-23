@@ -378,9 +378,10 @@
         global.dispatchEvent(event);
     }
 
-    function notifyContentChange(board) {
+    function notifyContentChange(board, options) {
         var event;
         var detail;
+        var eventOptions = options || {};
 
         if (!board) {
             return;
@@ -392,6 +393,10 @@
             layerId: board.activeLayerId,
             canvas: board.canvas
         };
+
+        if (eventOptions.refreshLayersPanel) {
+            detail.refreshLayersPanel = true;
+        }
 
         if (typeof global.CustomEvent === "function") {
             event = new global.CustomEvent("paint-board-content-change", {
@@ -446,6 +451,10 @@
             if (mode !== PAINT_TOOL_MODES.LASSO_SELECTION) {
                 clearSelectionDraft(board);
             }
+
+            if (mode !== PAINT_TOOL_MODES.CROP_BOARD) {
+                cancelCropSession(board);
+            }
         };
         var clearSelectionDraftOnSelectionToolChange = function() {
             clearSelectionDraft(board);
@@ -462,6 +471,17 @@
             clearHoverGuide(board);
         };
         var stopPainting = function(event) {
+            if (board.selectionMove) {
+                finishSelectionMove(board, event);
+                isPainting = false;
+                board.lastPointerPosition = null;
+                board.designedBrush2Stroke = null;
+                board.pointerStartPosition = null;
+                board.previewPointerPosition = null;
+                board.previewModifierState = null;
+                return;
+            }
+
             if (isPainting && isLassoSelectionToolMode() && isFreehandSelectionTool() && board.lassoSelectionStroke) {
                 finishFreehandSelection(board, event);
                 commitUndoableAction(board);
@@ -604,10 +624,22 @@
         };
         var updatePreviewModifier = function(event) {
             var isPreviewModifier;
+            var arrowDelta;
 
             if (isEscapeKey(event) && event.type === "keydown") {
                 event.preventDefault();
                 clearSelection(board);
+                return;
+            }
+
+            if (event && event.type === "keydown" && isArrowKey(event) &&
+                !isEditableEventTarget(event.target) && hasActiveSelection(board)) {
+                arrowDelta = getArrowKeyDelta(event);
+
+                if (nudgeSelection(board, arrowDelta.dx, arrowDelta.dy)) {
+                    event.preventDefault();
+                }
+
                 return;
             }
 
@@ -648,6 +680,10 @@
             activePointerId = null;
         };
         var leaveCanvas = function() {
+            if (!board.selectionMove) {
+                clearSelectionMoveCursor(board);
+            }
+
             board.hoverGuidePointerPosition = null;
             board.hoverGuideControlActive = false;
             clearHoverGuide(board);
@@ -726,6 +762,7 @@
             activeLayerElement: baseLayer,
             activeLayerId: baseLayerId,
             floatingPaste: null,
+            cropSession: null,
             canvas: canvas,
             context: context,
             width: config.width,
@@ -1045,6 +1082,21 @@
             setSize: function(width, height) {
                 setSize(board, width, height);
             },
+            resizeTo: function(width, height) {
+                return resizeTo(board, width, height);
+            },
+            startCrop: function() {
+                return startCropSession(board);
+            },
+            commitCrop: function() {
+                return commitCropSession(board);
+            },
+            cancelCrop: function() {
+                return cancelCropSession(board);
+            },
+            isCropping: function() {
+                return !!board.cropSession;
+            },
             setBackgroundColor: function(backgroundColor) {
                 setBackgroundColor(board, backgroundColor);
             },
@@ -1167,6 +1219,7 @@
 
     function setSize(board, width, height) {
         cancelFloatingPaste(board);
+        cancelCropSession(board);
         board.width = width;
         board.height = height;
         board.element.style.width = width + "px";
@@ -1211,6 +1264,307 @@
         selectionLayer.style.height = height + "px";
     }
 
+    var MAX_CANVAS_PIXELS = 9000000;
+
+    function isCanvasSizeAllowed(width, height) {
+        return width > 0 &&
+            height > 0 &&
+            (width * height) <= MAX_CANVAS_PIXELS;
+    }
+
+    // Resizes the board to the given pixel size while keeping the painted image
+    // of every layer (anchored at the top-left corner). Throwaway, non-document
+    // state (the active selection, any floating paste and the temp preview layer)
+    // is discarded on purpose, since it must not survive a resize. Returns true
+    // when the resize was applied, or false when the requested size is rejected
+    // (non-positive or above MAX_CANVAS_PIXELS).
+    function resizeTo(board, width, height) {
+        width = Math.floor(width);
+        height = Math.floor(height);
+
+        if (!board || !isCanvasSizeAllowed(width, height)) {
+            return false;
+        }
+
+        // Drop temporary, non-document state before changing dimensions.
+        cancelFloatingPaste(board);
+        cancelCropSession(board);
+        clearSelection(board);
+        clearTempSquare(board);
+
+        applyBoardResize(board, width, height, 0, 0);
+        return true;
+    }
+
+    // Crops (or extends) the board so its new top-left origin is (cropX, cropY)
+    // and its new size is width x height, all measured in current board pixels.
+    // The painted image of every layer is kept and shifted by (-cropX, -cropY):
+    // pixels outside the crop rectangle are discarded and any area beyond the old
+    // board edges is expanded according to the selected crop fill mode
+    // (transparent/white/black/front/background). cropX/cropY may be negative (the board
+    // grows on the top/left) and the rectangle may reach past the old board edges
+    // (the board grows on the right/bottom). Returns true when applied, or false
+    // when the requested size is rejected (non-positive or above MAX_CANVAS_PIXELS).
+    function cropBoardTo(board, cropX, cropY, width, height) {
+        var fillColor;
+
+        cropX = Math.round(cropX);
+        cropY = Math.round(cropY);
+        width = Math.floor(width);
+        height = Math.floor(height);
+
+        if (!board || !isCanvasSizeAllowed(width, height)) {
+            return false;
+        }
+
+        // Drop temporary, non-document state before changing dimensions.
+        cancelFloatingPaste(board);
+        clearSelection(board);
+        clearTempSquare(board);
+
+        fillColor = getCropExpansionBackgroundColor(board);
+
+        applyBoardResize(board, width, height, -cropX, -cropY, {
+            fillExpansionWithBackground: fillColor !== null,
+            fillColor: fillColor
+        });
+        return true;
+    }
+
+    function getCropExpansionBackgroundColor(board) {
+        var fillMode = getCropExpansionFillMode();
+
+        if (fillMode === "transparent") {
+            return null;
+        }
+
+        if (fillMode === "white") {
+            return "#ffffff";
+        }
+
+        if (fillMode === "black") {
+            return "#000000";
+        }
+
+        if (fillMode === "front-color") {
+            if (global.AppOpenWindows &&
+                typeof global.AppOpenWindows.getFrontColor === "function") {
+                return global.AppOpenWindows.getFrontColor();
+            }
+
+            if (global.App && global.App.memory && global.App.memory.currentColor) {
+                return global.App.memory.currentColor;
+            }
+        }
+
+        if (global.AppOpenWindows &&
+            typeof global.AppOpenWindows.getBackgroundColor === "function") {
+            return global.AppOpenWindows.getBackgroundColor();
+        }
+
+        return board && board.backgroundColor ? board.backgroundColor : "#ffffff";
+    }
+
+    function getCropExpansionFillMode() {
+        var mode = global.App && global.App.memory ?
+            String(global.App.memory.cropExpansionFillMode || "") : "";
+
+        if (mode === "transparent" ||
+            mode === "white" ||
+            mode === "black" ||
+            mode === "front-color" ||
+            mode === "background-color") {
+            return mode;
+        }
+
+        return "background-color";
+    }
+
+    // Shared core that resizes the board element, every layer canvas and the
+    // overlay layers to the new size, keeping each layer's pixels anchored at the
+    // given offset, then updates the rulers, the containing window and the zoom
+    // layout.
+    function applyBoardResize(board, width, height, offsetX, offsetY, options) {
+        var layerCanvases;
+        var backgroundCanvas;
+        var fillColor;
+        var i;
+
+        // Preserve each layer's pixels while its backing canvas is resized.
+        layerCanvases = board.layersElement ?
+            board.layersElement.querySelectorAll(".paint-board-canvas") : [];
+        backgroundCanvas = getBoardBackgroundCanvas(board, layerCanvases);
+        fillColor = options && options.fillExpansionWithBackground ?
+            (options.fillColor || board.backgroundColor) : null;
+        for (i = 0; i < layerCanvases.length; i++) {
+            resizeCanvasPreservingContent(
+                layerCanvases[i],
+                width,
+                height,
+                offsetX,
+                offsetY,
+                layerCanvases[i] === backgroundCanvas ? fillColor : null
+            );
+        }
+
+        board.width = width;
+        board.height = height;
+        board.element.style.width = width + "px";
+        board.element.style.height = height + "px";
+        board.layersElement.style.width = width + "px";
+        board.layersElement.style.height = height + "px";
+        board.overlaysElement.style.width = width + "px";
+        board.overlaysElement.style.height = height + "px";
+        setSelectionLayerSize(board.selectionLayerElement, width, height);
+        setTempLayerSize(board.tempLayerElement, width, height);
+        resizeLayerElements(board, width, height);
+        updateBoardRulesSize(board, width, height);
+        resizeBoardWindowToContent(board, width, height);
+
+        if (global.Zoom && global.Zoom.updateBoardLayout) {
+            global.Zoom.updateBoardLayout(board.element);
+        }
+    }
+
+    // Grows/shrinks the containing window so the new board (plus its rulers) fits
+    // its content area, mirroring how the window is sized when first created.
+    // No-op for boards that are not hosted inside a window.
+    function resizeBoardWindowToContent(board, width, height) {
+        var ruleSize;
+
+        if (!board.window || typeof board.window.scaleToContent !== "function") {
+            return;
+        }
+
+        ruleSize = (board.rules && typeof board.rules.ruleSize === "number") ?
+            board.rules.ruleSize : 0;
+        board.window.scaleToContent(width + ruleSize, height + ruleSize);
+    }
+
+    function getBoardBackgroundCanvas(board, layerCanvases) {
+        var layers = board && board.layers ? board.layers : [];
+        var layerElement;
+        var backgroundLayerId = null;
+        var i;
+
+        for (i = 0; i < layers.length; i++) {
+            if (layers[i] && layers[i].background) {
+                backgroundLayerId = layers[i].id;
+                break;
+            }
+        }
+
+        if (backgroundLayerId && board && board.layersElement) {
+            layerElement = board.layersElement.querySelector('[data-layer="' + backgroundLayerId + '"]');
+            if (layerElement) {
+                return layerElement.querySelector(".paint-board-canvas") || null;
+            }
+        }
+
+        return layerCanvases && layerCanvases.length ? layerCanvases[0] : null;
+    }
+
+    // Resizes a single canvas, keeping its current content anchored at the given
+    // offset (defaults to the top-left corner). Shrinking clips the overflow.
+    // When fillColor is provided, only the newly exposed area is filled with that
+    // color before the previous image is drawn back (used by crop expansion on
+    // the background layer).
+    function resizeCanvasPreservingContent(canvas, width, height, offsetX, offsetY, fillColor) {
+        var snapshot = null;
+        var snapshotContext;
+        var context;
+        var previousWidth;
+        var previousHeight;
+
+        if (!canvas) {
+            return;
+        }
+
+        offsetX = offsetX || 0;
+        offsetY = offsetY || 0;
+        previousWidth = canvas.width;
+        previousHeight = canvas.height;
+
+        if (previousWidth > 0 && previousHeight > 0) {
+            snapshot = document.createElement("canvas");
+            snapshot.width = previousWidth;
+            snapshot.height = previousHeight;
+            snapshotContext = snapshot.getContext("2d");
+            snapshotContext.drawImage(canvas, 0, 0);
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+
+        context = canvas.getContext("2d");
+
+        if (fillColor) {
+            fillExpandedArea(context, width, height, previousWidth, previousHeight, offsetX, offsetY, fillColor);
+        }
+
+        if (snapshot) {
+            context.drawImage(snapshot, offsetX, offsetY);
+        }
+    }
+
+    function fillExpandedArea(context, width, height, previousWidth, previousHeight, offsetX, offsetY, fillColor) {
+        var overlapLeft;
+        var overlapTop;
+        var overlapRight;
+        var overlapBottom;
+
+        if (!context || !fillColor || width <= 0 || height <= 0) {
+            return;
+        }
+
+        overlapLeft = clamp(offsetX, 0, width);
+        overlapTop = clamp(offsetY, 0, height);
+        overlapRight = clamp(offsetX + previousWidth, 0, width);
+        overlapBottom = clamp(offsetY + previousHeight, 0, height);
+
+        context.save();
+        context.fillStyle = fillColor;
+
+        // No overlap means the previous image sits fully outside the new canvas.
+        if (overlapRight <= overlapLeft || overlapBottom <= overlapTop) {
+            context.fillRect(0, 0, width, height);
+            context.restore();
+            return;
+        }
+
+        if (overlapTop > 0) {
+            context.fillRect(0, 0, width, overlapTop);
+        }
+        if (overlapBottom < height) {
+            context.fillRect(0, overlapBottom, width, height - overlapBottom);
+        }
+        if (overlapLeft > 0) {
+            context.fillRect(0, overlapTop, overlapLeft, overlapBottom - overlapTop);
+        }
+        if (overlapRight < width) {
+            context.fillRect(overlapRight, overlapTop, width - overlapRight, overlapBottom - overlapTop);
+        }
+
+        context.restore();
+    }
+
+    function resizeLayerElements(board, width, height) {
+        var layerItems;
+        var i;
+
+        if (!board || !board.layersElement) {
+            return;
+        }
+
+        layerItems = board.layersElement.querySelectorAll(".paint-board-layer");
+        for (i = 0; i < layerItems.length; i++) {
+            layerItems[i].style.width = width + "px";
+            layerItems[i].style.height = height + "px";
+        }
+    }
+
     function setBackgroundColor(board, backgroundColor) {
         beginUndoableAction(board);
         markUndoableChange(board);
@@ -1236,6 +1590,7 @@
         }
 
         cancelFloatingPaste(board);
+        cancelCropSession(board);
         board.width = snapshot.width;
         board.height = snapshot.height;
         board.backgroundColor = snapshot.backgroundColor;
@@ -1318,7 +1673,9 @@
         if (!restoreBoardSnapshot(board, snapshot)) {
             return false;
         }
-        notifyContentChange(board);
+        notifyContentChange(board, {
+            refreshLayersPanel: true
+        });
         return true;
     }
 
@@ -1808,6 +2165,10 @@
     }
 
     function clearTempSquare(board) {
+        if (board && board.cropSession) {
+            return;
+        }
+
         if (!global.PaintBoardTempLayer || !global.PaintBoardTempLayer.clear) {
             return;
         }
@@ -2012,6 +2373,11 @@
     }
 
     function startLassoSelection(board, event) {
+        if (canMoveSelectionWithPointer(board, event)) {
+            startSelectionMove(board, event);
+            return;
+        }
+
         if (isPolygonalSelectionTool()) {
             addPolygonalSelectionPoint(board, event);
             return;
@@ -2026,6 +2392,11 @@
     }
 
     function updateLassoSelection(board, event) {
+        if (board.selectionMove) {
+            updateSelectionMove(board, event);
+            return;
+        }
+
         if (isPolygonalSelectionTool()) {
             updatePolygonalSelectionPreview(board, event);
             return;
@@ -2337,12 +2708,14 @@
         board.selection = null;
         board.lassoSelectionStroke = null;
         board.polygonalSelectionPath = null;
+        board.selectionMove = null;
 
         if (board.selectionLayerElement) {
             board.selectionLayerElement.innerHTML = "";
         }
 
         clearTempSquare(board);
+        clearSelectionMoveCursor(board);
         notifySelectionStateChange(board);
     }
 
@@ -2422,6 +2795,202 @@
         board.pointerStartPosition = null;
         board.previewPointerPosition = null;
         clearTempSquare(board);
+    }
+
+    function offsetBounds(bounds, dx, dy) {
+        if (!bounds) {
+            return bounds;
+        }
+
+        return {
+            left: bounds.left + dx,
+            top: bounds.top + dy,
+            right: bounds.right + dx,
+            bottom: bounds.bottom + dy,
+            width: bounds.width,
+            height: bounds.height
+        };
+    }
+
+    function buildTranslatedSelection(board, baseSelection, dx, dy) {
+        var movedMask;
+        var movedContext;
+        var moved;
+
+        if (!baseSelection || !baseSelection.maskCanvas) {
+            return null;
+        }
+
+        movedMask = createSelectionMaskCanvas(board);
+        movedContext = movedMask.getContext("2d");
+        movedContext.drawImage(baseSelection.maskCanvas, dx, dy);
+
+        if (isSelectionMaskEmpty(movedMask)) {
+            return null;
+        }
+
+        moved = {
+            type: baseSelection.type,
+            maskCanvas: movedMask,
+            bounds: baseSelection.bounds ?
+                offsetBounds(baseSelection.bounds, dx, dy) :
+                getSelectionMaskBounds(movedMask)
+        };
+
+        if (baseSelection.points) {
+            moved.points = baseSelection.points.map(function(point) {
+                return {
+                    x: point.x + dx,
+                    y: point.y + dy
+                };
+            });
+        }
+
+        return moved;
+    }
+
+    function nudgeSelection(board, dx, dy) {
+        var moved;
+
+        if (!hasActiveSelection(board) || (!dx && !dy)) {
+            return false;
+        }
+
+        moved = buildTranslatedSelection(board, board.selection, dx, dy);
+
+        if (!moved) {
+            return false;
+        }
+
+        board.selection = moved;
+        renderLassoSelection(board);
+        notifySelectionStateChange(board);
+        return true;
+    }
+
+    function canMoveSelectionWithPointer(board, event) {
+        return isLassoSelectionToolMode() &&
+            currentSelectionBehavior === SELECTION_BEHAVIORS.NORMAL &&
+            hasActiveSelection(board) &&
+            isPointInSelection(board, getSelectionPointerPosition(board, event));
+    }
+
+    function startSelectionMove(board, event) {
+        clearSelectionDraft(board);
+        board.selectionMove = {
+            startPoint: getSelectionPointerPosition(board, event),
+            originSelection: board.selection
+        };
+        setSelectionMoveCursor(board, true);
+    }
+
+    function updateSelectionMove(board, event) {
+        var move = board.selectionMove;
+        var point;
+        var moved;
+
+        if (!move) {
+            return;
+        }
+
+        point = getSelectionPointerPosition(board, event);
+        moved = buildTranslatedSelection(
+            board,
+            move.originSelection,
+            point.x - move.startPoint.x,
+            point.y - move.startPoint.y
+        );
+
+        if (moved) {
+            board.selection = moved;
+            renderLassoSelection(board);
+            notifySelectionStateChange(board);
+        }
+    }
+
+    function finishSelectionMove(board, event) {
+        if (!board.selectionMove) {
+            return;
+        }
+
+        updateSelectionMove(board, event);
+        board.selectionMove = null;
+        setSelectionMoveCursor(board, false);
+    }
+
+    function setSelectionMoveCursor(board, grabbing) {
+        if (!board || !board.canvas) {
+            return;
+        }
+
+        board.canvas.style.cursor = grabbing ? "grabbing" : "grab";
+    }
+
+    function clearSelectionMoveCursor(board) {
+        if (!board || !board.canvas) {
+            return;
+        }
+
+        board.canvas.style.cursor = "";
+    }
+
+    function updateSelectionHoverCursor(board, event) {
+        if (board.selectionMove) {
+            setSelectionMoveCursor(board, true);
+            return;
+        }
+
+        if (canMoveSelectionWithPointer(board, event)) {
+            setSelectionMoveCursor(board, false);
+            return;
+        }
+
+        clearSelectionMoveCursor(board);
+    }
+
+    function isArrowKey(event) {
+        return !!(event && (
+            event.key === "ArrowLeft" ||
+            event.key === "ArrowRight" ||
+            event.key === "ArrowUp" ||
+            event.key === "ArrowDown"
+        ));
+    }
+
+    function getArrowKeyDelta(event) {
+        if (event.key === "ArrowLeft") {
+            return { dx: -1, dy: 0 };
+        }
+
+        if (event.key === "ArrowRight") {
+            return { dx: 1, dy: 0 };
+        }
+
+        if (event.key === "ArrowUp") {
+            return { dx: 0, dy: -1 };
+        }
+
+        if (event.key === "ArrowDown") {
+            return { dx: 0, dy: 1 };
+        }
+
+        return { dx: 0, dy: 0 };
+    }
+
+    function isEditableEventTarget(target) {
+        var tagName;
+
+        if (!target) {
+            return false;
+        }
+
+        if (target.isContentEditable) {
+            return true;
+        }
+
+        tagName = target.tagName ? target.tagName.toLowerCase() : "";
+
+        return tagName === "input" || tagName === "textarea" || tagName === "select";
     }
 
     function renderLassoSelectionPreview(board, points) {
@@ -5014,17 +5583,20 @@
         var layer;
         var canvas;
         var context;
+        var handlesLayer;
         var floatingPaste;
 
         if (!board || !image) {
             return;
         }
 
+        cancelCropSession(board);
         cancelFloatingPaste(board);
         size = getImageDrawSize(image);
         layer = document.createElement("div");
         canvas = document.createElement("canvas");
         context = canvas.getContext("2d");
+        handlesLayer = document.createElement("div");
 
         layer.id = board.id + "-floating-paste-layer";
         layer.className = "paint-board-floating-paste-layer";
@@ -5032,7 +5604,6 @@
         layer.setAttribute("data-type", "TEMP");
         layer.style.width = board.canvas.width + "px";
         layer.style.height = board.canvas.height + "px";
-        layer.title = "Scale mode: press T to distort corners independently.";
 
         canvas.className = "paint-board-floating-paste-canvas";
         canvas.width = board.canvas.width;
@@ -5040,8 +5611,23 @@
         canvas.style.width = board.canvas.width + "px";
         canvas.style.height = board.canvas.height + "px";
 
+        // Handles and the dashed outline live on a separate SVG overlay (like the
+        // lasso selection) so they can extend outside the official board area, up
+        // to the window content area. This is also the interactive surface.
+        handlesLayer.id = board.id + "-floating-paste-handles";
+        handlesLayer.className = "paint-board-floating-paste-handles";
+        handlesLayer.setAttribute("data-layer", handlesLayer.id);
+        handlesLayer.setAttribute("data-type", "TEMP");
+        handlesLayer.style.width = board.canvas.width + "px";
+        handlesLayer.style.height = board.canvas.height + "px";
+        handlesLayer.title = "Scale mode: press T to distort corners independently.";
+
         layer.appendChild(canvas);
         board.overlaysElement.insertBefore(layer, board.tempLayerElement);
+        board.overlaysElement.insertBefore(handlesLayer, board.tempLayerElement);
+        if (board.element && board.element.classList) {
+            board.element.classList.add("paint-board-has-floating-paste");
+        }
 
         floatingPaste = {
             image: image,
@@ -5049,6 +5635,7 @@
             layer: layer,
             canvas: canvas,
             context: context,
+            handlesLayer: handlesLayer,
             x: 0,
             y: 0,
             width: size.width,
@@ -5124,9 +5711,9 @@
         };
 
         board.floatingPaste = floatingPaste;
-        layer.addEventListener("pointerdown", floatingPaste.pointerDown);
-        layer.addEventListener("pointermove", floatingPaste.pointerHover);
-        layer.addEventListener("dblclick", floatingPaste.doubleClick);
+        handlesLayer.addEventListener("pointerdown", floatingPaste.pointerDown);
+        handlesLayer.addEventListener("pointermove", floatingPaste.pointerHover);
+        handlesLayer.addEventListener("dblclick", floatingPaste.doubleClick);
         document.addEventListener("pointermove", floatingPaste.pointerMove, true);
         document.addEventListener("pointerup", floatingPaste.pointerUp, true);
         document.addEventListener("pointercancel", floatingPaste.pointerUp, true);
@@ -5144,8 +5731,6 @@
 
     function renderFloatingPaste(board) {
         var paste = board && board.floatingPaste;
-        var handles;
-        var i;
 
         if (!paste) {
             return;
@@ -5153,17 +5738,6 @@
 
         paste.context.clearRect(0, 0, paste.canvas.width, paste.canvas.height);
         drawFloatingPasteImage(paste.context, paste);
-        paste.context.save();
-        paste.context.strokeStyle = "#000";
-        paste.context.setLineDash([4, 4]);
-        paste.context.lineWidth = 1;
-        traceFloatingPasteOutline(paste.context, paste.corners);
-        paste.context.stroke();
-        paste.context.strokeStyle = "#fff";
-        paste.context.lineDashOffset = 4;
-        traceFloatingPasteOutline(paste.context, paste.corners);
-        paste.context.stroke();
-        paste.context.restore();
         if (paste.transformOperation === "warp") {
             drawFloatingPasteWarpGrid(
                 paste.context,
@@ -5171,17 +5745,39 @@
                 paste.warpRoundBehavior
             );
         }
+        paste.handlesLayer.innerHTML = getFloatingPasteHandlesSvg(paste);
+    }
+
+    function getFloatingPasteHandlesSvg(paste) {
+        var corners = paste.corners;
+        var outlinePoints;
+        var handles;
+        var handleClass;
+        var markup;
+        var i;
+
+        outlinePoints = corners.map(function(corner) {
+            return escapeHtml(corner.x) + "," + escapeHtml(corner.y);
+        }).join(" ");
+
         handles = getFloatingPasteHandles(paste);
-        paste.context.save();
-        paste.context.fillStyle = paste.transformOperation === "scale" ? "#fff" : "#ffe36e";
-        paste.context.strokeStyle = "#000";
-        paste.context.lineWidth = 1;
-        paste.context.setLineDash([]);
+        handleClass = paste.transformOperation === "scale" ?
+            "paint-board-floating-paste-handle paint-board-floating-paste-handle-scale" :
+            "paint-board-floating-paste-handle paint-board-floating-paste-handle-transform";
+
+        markup = "<svg class=\"paint-board-floating-paste-svg\" xmlns=\"http://www.w3.org/2000/svg\">" +
+            "<polygon class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" points=\"" + outlinePoints + "\"></polygon>" +
+            "<polygon class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" points=\"" + outlinePoints + "\"></polygon>";
+
         for (i = 0; i < handles.length; i++) {
-            paste.context.fillRect(handles[i].left, handles[i].top, handles[i].size, handles[i].size);
-            paste.context.strokeRect(handles[i].left + 0.5, handles[i].top + 0.5, handles[i].size - 1, handles[i].size - 1);
+            markup += "<rect class=\"" + handleClass + "\" x=\"" + escapeHtml(handles[i].left) +
+                "\" y=\"" + escapeHtml(handles[i].top) +
+                "\" width=\"" + escapeHtml(handles[i].size) +
+                "\" height=\"" + escapeHtml(handles[i].size) + "\"></rect>";
         }
-        paste.context.restore();
+
+        markup += "</svg>";
+        return markup;
     }
 
     function startFloatingPasteDrag(board, event) {
@@ -5218,8 +5814,8 @@
         paste.startCorners = cloneFloatingPasteCorners(paste.corners);
         paste.startWarpPoints = cloneFloatingPasteCorners(paste.warpPoints);
         paste.aspectRatio = paste.height ? paste.width / paste.height : 1;
-        paste.layer.style.cursor = getFloatingPasteCursor(handle);
-        capturePointer(paste.layer, event.pointerId);
+        paste.handlesLayer.style.cursor = getFloatingPasteCursor(handle);
+        capturePointer(paste.handlesLayer, event.pointerId);
     }
 
     function moveFloatingPaste(board, event) {
@@ -5544,7 +6140,7 @@
 
         point = getSelectionPointerPosition(board, event);
         handle = getFloatingPasteHandleAtPoint(paste, point);
-        paste.layer.style.cursor = getFloatingPasteCursor(handle || (isPointInsideBounds(point, paste) ? "move" : null));
+        paste.handlesLayer.style.cursor = getFloatingPasteCursor(handle || (isPointInsideBounds(point, paste) ? "move" : null));
     }
 
     function handleFloatingPasteKeyDown(board, event) {
@@ -6228,9 +6824,9 @@
             return;
         }
 
-        paste.layer.removeEventListener("pointerdown", paste.pointerDown);
-        paste.layer.removeEventListener("pointermove", paste.pointerHover);
-        paste.layer.removeEventListener("dblclick", paste.doubleClick);
+        paste.handlesLayer.removeEventListener("pointerdown", paste.pointerDown);
+        paste.handlesLayer.removeEventListener("pointermove", paste.pointerHover);
+        paste.handlesLayer.removeEventListener("dblclick", paste.doubleClick);
         document.removeEventListener("pointermove", paste.pointerMove, true);
         document.removeEventListener("pointerup", paste.pointerUp, true);
         document.removeEventListener("pointercancel", paste.pointerUp, true);
@@ -6238,6 +6834,14 @@
 
         if (paste.layer.parentNode) {
             paste.layer.parentNode.removeChild(paste.layer);
+        }
+
+        if (paste.handlesLayer.parentNode) {
+            paste.handlesLayer.parentNode.removeChild(paste.handlesLayer);
+        }
+
+        if (board.element && board.element.classList) {
+            board.element.classList.remove("paint-board-has-floating-paste");
         }
 
         if (paste.image && typeof paste.image.close === "function") {
@@ -6268,6 +6872,424 @@
         }
 
         global.dispatchEvent(event);
+    }
+
+    function notifyCropSessionChange(board, active) {
+        var crop = board && board.cropSession;
+        var detail = {
+            board: board && board.element,
+            paintBoard: board || null,
+            active: !!active
+        };
+        var event;
+
+        if (crop) {
+            detail.x = crop.x;
+            detail.y = crop.y;
+            detail.width = crop.width;
+            detail.height = crop.height;
+        }
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-board-crop-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-board-crop-change", false, false, detail);
+        }
+
+        global.dispatchEvent(event);
+    }
+
+    // ------------------------------------------------------------------
+    // Crop Board tool
+    //
+    // Shows an interactive crop rectangle (8 scale-style handles plus a
+    // marching-ants outline) on a dedicated overlay that can extend beyond the
+    // official board area, exactly like the floating paste handles. Pressing
+    // Enter applies the crop, resizing the board to the selected rectangle and
+    // shifting every layer's pixels accordingly. The rectangle may be larger,
+    // smaller or partly outside the old board, so the result can grow, shrink or
+    // cut the old board.
+    // ------------------------------------------------------------------
+
+    function startCropSession(board) {
+        var cropSession;
+
+        if (!board) {
+            return false;
+        }
+
+        cancelFloatingPaste(board);
+        clearSelection(board);
+        cancelCropSession(board);
+
+        clearTempSquare(board);
+        board.tempLayerElement.classList.add("paint-board-temp-layer-crop");
+        board.tempLayerElement.style.cursor = "default";
+        board.tempLayerElement.title = "Crop Board: drag the handles, press Enter to apply or Escape to cancel.";
+        if (board.element && board.element.classList) {
+            board.element.classList.add("paint-board-has-crop");
+        }
+
+        cropSession = {
+            overlay: board.tempLayerElement,
+            x: 0,
+            y: 0,
+            width: board.width,
+            height: board.height,
+            isDragging: false,
+            dragAction: null,
+            resizeHandle: null,
+            pointerId: null,
+            startX: 0,
+            startY: 0,
+            startWidth: 0,
+            startHeight: 0,
+            startPointerX: 0,
+            startPointerY: 0,
+            pointerDown: null,
+            pointerMove: null,
+            pointerUp: null,
+            pointerHover: null,
+            keyDown: null
+        };
+
+        cropSession.pointerDown = function(event) {
+            startCropDrag(board, event);
+        };
+        cropSession.pointerMove = function(event) {
+            moveCrop(board, event);
+        };
+        cropSession.pointerUp = function(event) {
+            stopCropDrag(board, event);
+        };
+        cropSession.pointerHover = function(event) {
+            updateCropCursor(board, event);
+        };
+        cropSession.keyDown = function(event) {
+            handleCropKeyDown(board, event);
+        };
+
+        board.cropSession = cropSession;
+        cropSession.overlay.addEventListener("pointerdown", cropSession.pointerDown);
+        cropSession.overlay.addEventListener("pointermove", cropSession.pointerHover);
+        document.addEventListener("pointermove", cropSession.pointerMove, true);
+        document.addEventListener("pointerup", cropSession.pointerUp, true);
+        document.addEventListener("pointercancel", cropSession.pointerUp, true);
+        document.addEventListener("keydown", cropSession.keyDown);
+        renderCropSession(board);
+        notifyCropSessionChange(board, true);
+        return true;
+    }
+
+    function renderCropSession(board) {
+        var crop = board && board.cropSession;
+
+        if (!crop) {
+            return;
+        }
+
+        crop.overlay.innerHTML = getCropHandlesSvg(crop);
+        notifyCropSessionChange(board, true);
+    }
+
+    function getCropHandlesSvg(crop) {
+        var corners = [
+            { x: crop.x, y: crop.y },
+            { x: crop.x + crop.width, y: crop.y },
+            { x: crop.x + crop.width, y: crop.y + crop.height },
+            { x: crop.x, y: crop.y + crop.height }
+        ];
+        var outlinePoints;
+        var handles;
+        var markup;
+        var i;
+
+        outlinePoints = corners.map(function(corner) {
+            return escapeHtml(corner.x) + "," + escapeHtml(corner.y);
+        }).join(" ");
+
+        handles = getCropHandles(crop);
+
+        markup = "<svg class=\"paint-board-crop-svg\" xmlns=\"http://www.w3.org/2000/svg\">" +
+            "<polygon class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" points=\"" + outlinePoints + "\"></polygon>" +
+            "<polygon class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" points=\"" + outlinePoints + "\"></polygon>";
+
+        for (i = 0; i < handles.length; i++) {
+            markup += "<rect class=\"paint-board-crop-handle\" x=\"" + escapeHtml(handles[i].left) +
+                "\" y=\"" + escapeHtml(handles[i].top) +
+                "\" width=\"" + escapeHtml(handles[i].size) +
+                "\" height=\"" + escapeHtml(handles[i].size) + "\"></rect>";
+        }
+
+        markup += "</svg>";
+        return markup;
+    }
+
+    function getCropHandles(crop) {
+        var size = 8;
+        var half = size / 2;
+        var left = crop.x;
+        var top = crop.y;
+        var centerX = crop.x + (crop.width / 2);
+        var centerY = crop.y + (crop.height / 2);
+        var right = crop.x + crop.width;
+        var bottom = crop.y + crop.height;
+
+        return [
+            createFloatingPasteHandle("nw", left, top, size, half),
+            createFloatingPasteHandle("n", centerX, top, size, half),
+            createFloatingPasteHandle("ne", right, top, size, half),
+            createFloatingPasteHandle("e", right, centerY, size, half),
+            createFloatingPasteHandle("se", right, bottom, size, half),
+            createFloatingPasteHandle("s", centerX, bottom, size, half),
+            createFloatingPasteHandle("sw", left, bottom, size, half),
+            createFloatingPasteHandle("w", left, centerY, size, half)
+        ];
+    }
+
+    function getCropHandleAtPoint(crop, point) {
+        var handles;
+        var handle;
+        var i;
+
+        if (!crop || !point) {
+            return null;
+        }
+
+        handles = getCropHandles(crop);
+        for (i = 0; i < handles.length; i++) {
+            handle = handles[i];
+            if (point.x >= handle.left &&
+                point.x <= handle.left + handle.size &&
+                point.y >= handle.top &&
+                point.y <= handle.top + handle.size) {
+                return handle.name;
+            }
+        }
+
+        return null;
+    }
+
+    function startCropDrag(board, event) {
+        var crop = board && board.cropSession;
+        var point;
+        var handle;
+
+        if (!crop || !isPrimaryPaintInput(event)) {
+            return;
+        }
+
+        point = getSelectionPointerPosition(board, event);
+        handle = getCropHandleAtPoint(crop, point);
+
+        if (!handle && !isPointInsideBounds(point, crop)) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        crop.isDragging = true;
+        crop.dragAction = handle ? "resize" : "move";
+        crop.resizeHandle = handle;
+        crop.pointerId = typeof event.pointerId === "number" ? event.pointerId : null;
+        crop.startX = crop.x;
+        crop.startY = crop.y;
+        crop.startWidth = crop.width;
+        crop.startHeight = crop.height;
+        crop.startPointerX = point.x;
+        crop.startPointerY = point.y;
+        crop.overlay.style.cursor = getFloatingPasteCursor(handle || "move");
+        capturePointer(crop.overlay, event.pointerId);
+    }
+
+    function moveCrop(board, event) {
+        var crop = board && board.cropSession;
+        var point;
+
+        if (!crop || !crop.isDragging) {
+            return;
+        }
+
+        if (crop.pointerId !== null && typeof event.pointerId === "number" && event.pointerId !== crop.pointerId) {
+            return;
+        }
+
+        event.preventDefault();
+        point = getSelectionPointerPosition(board, event);
+
+        if (crop.dragAction === "resize") {
+            resizeCrop(crop, point);
+        } else {
+            crop.x = crop.startX + Math.round(point.x - crop.startPointerX);
+            crop.y = crop.startY + Math.round(point.y - crop.startPointerY);
+        }
+
+        renderCropSession(board);
+    }
+
+    function resizeCrop(crop, point) {
+        var handle = crop.resizeHandle;
+        var left = crop.startX;
+        var top = crop.startY;
+        var right = crop.startX + crop.startWidth;
+        var bottom = crop.startY + crop.startHeight;
+        var swap;
+
+        if (handle.indexOf("w") !== -1) {
+            left = point.x;
+        }
+
+        if (handle.indexOf("e") !== -1) {
+            right = point.x;
+        }
+
+        if (handle.indexOf("n") !== -1) {
+            top = point.y;
+        }
+
+        if (handle.indexOf("s") !== -1) {
+            bottom = point.y;
+        }
+
+        if (right < left) {
+            swap = left;
+            left = right;
+            right = swap;
+        }
+
+        if (bottom < top) {
+            swap = top;
+            top = bottom;
+            bottom = swap;
+        }
+
+        crop.x = Math.round(left);
+        crop.y = Math.round(top);
+        crop.width = Math.max(1, Math.round(right - left));
+        crop.height = Math.max(1, Math.round(bottom - top));
+    }
+
+    function stopCropDrag(board, event) {
+        var crop = board && board.cropSession;
+
+        if (!crop || !crop.isDragging) {
+            return;
+        }
+
+        if (crop.pointerId !== null && event && typeof event.pointerId === "number" && event.pointerId !== crop.pointerId) {
+            return;
+        }
+
+        crop.isDragging = false;
+        crop.dragAction = null;
+        crop.resizeHandle = null;
+        crop.pointerId = null;
+        renderCropSession(board);
+        if (event) {
+            updateCropCursor(board, event);
+        }
+    }
+
+    function updateCropCursor(board, event) {
+        var crop = board && board.cropSession;
+        var point;
+        var handle;
+
+        if (!crop || crop.isDragging) {
+            return;
+        }
+
+        point = getSelectionPointerPosition(board, event);
+        handle = getCropHandleAtPoint(crop, point);
+        crop.overlay.style.cursor = getFloatingPasteCursor(handle || (isPointInsideBounds(point, crop) ? "move" : null));
+    }
+
+    function handleCropKeyDown(board, event) {
+        var crop = board && board.cropSession;
+
+        if (!crop || isEditableKeyboardTarget(event.target)) {
+            return;
+        }
+
+        if (event.key === "Enter") {
+            event.preventDefault();
+            commitCropSession(board);
+            return;
+        }
+
+        if (event.key === "Escape") {
+            event.preventDefault();
+            cancelCropSession(board);
+        }
+    }
+
+    function commitCropSession(board) {
+        var crop = board && board.cropSession;
+        var cropX;
+        var cropY;
+        var width;
+        var height;
+
+        if (!crop) {
+            return false;
+        }
+
+        cropX = crop.x;
+        cropY = crop.y;
+        width = crop.width;
+        height = crop.height;
+
+        // Remove the interactive overlay before resizing so it is not affected by
+        // the new board dimensions.
+        removeCropSession(board);
+
+        // The crop changes the board dimensions and every layer at once, which the
+        // single-layer snapshot undo cannot represent faithfully, so (like the
+        // resizeTo API) it is applied directly without an undo step.
+        if (!cropBoardTo(board, cropX, cropY, width, height)) {
+            return false;
+        }
+        notifyContentChange(board);
+        return true;
+    }
+
+    function cancelCropSession(board) {
+        if (!board || !board.cropSession) {
+            return false;
+        }
+
+        removeCropSession(board);
+        return true;
+    }
+
+    function removeCropSession(board) {
+        var crop = board && board.cropSession;
+
+        if (!crop) {
+            return;
+        }
+
+        crop.overlay.removeEventListener("pointerdown", crop.pointerDown);
+        crop.overlay.removeEventListener("pointermove", crop.pointerHover);
+        document.removeEventListener("pointermove", crop.pointerMove, true);
+        document.removeEventListener("pointerup", crop.pointerUp, true);
+        document.removeEventListener("pointercancel", crop.pointerUp, true);
+        document.removeEventListener("keydown", crop.keyDown);
+
+        crop.overlay.innerHTML = "";
+        crop.overlay.title = "";
+        crop.overlay.style.cursor = "";
+        crop.overlay.classList.remove("paint-board-temp-layer-crop");
+
+        if (board.element && board.element.classList) {
+            board.element.classList.remove("paint-board-has-crop");
+        }
+
+        board.cropSession = null;
+        notifyCropSessionChange(board, false);
     }
 
     function getCurrentPaintColor(board) {
@@ -6551,6 +7573,7 @@
 
     function destroy(board, paintHandlers, paintToolChangeHandlers) {
         cancelFloatingPaste(board);
+        cancelCropSession(board);
 
         if (paintHandlers && paintHandlers.supportsPointerEvents) {
             bindCanvasPaintHandlers(board.canvas, paintHandlers, true, false);

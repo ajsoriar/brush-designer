@@ -6,6 +6,17 @@
     image-rendering: pixelated;
 }
 
+/* While a floating paste is active, let its transform/distort handles and the
+   transformed image extend beyond the official board area (up to the window
+   content area) instead of being clipped at the board edges. */
+.paint-board.paint-board-has-floating-paste {
+    overflow: visible;
+}
+
+.paint-board.paint-board-has-crop {
+    overflow: visible;
+}
+
 .paint-board-layers {
     display: block;
     height: 100%;
@@ -54,11 +65,10 @@
 }
 
 .paint-board-floating-paste-layer {
-    cursor: move;
     display: block;
     height: 100%;
     left: 0;
-    pointer-events: auto;
+    pointer-events: none;
     position: absolute;
     top: 0;
     width: 100%;
@@ -74,6 +84,45 @@
     width: 100%;
 }
 
+.paint-board-floating-paste-handles {
+    cursor: move;
+    display: block;
+    height: 100%;
+    left: 0;
+    overflow: visible;
+    pointer-events: auto;
+    position: absolute;
+    top: 0;
+    touch-action: none;
+    width: 100%;
+    z-index: 1;
+}
+
+.paint-board-floating-paste-svg {
+    display: block;
+    height: 100%;
+    left: 0;
+    overflow: visible;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    width: 100%;
+}
+
+.paint-board-floating-paste-handle {
+    pointer-events: auto;
+    stroke: #000;
+    stroke-width: var(--paint-board-screen-pixel, 1px);
+}
+
+.paint-board-floating-paste-handle-scale {
+    fill: #fff;
+}
+
+.paint-board-floating-paste-handle-transform {
+    fill: #ffe36e;
+}
+
 .paint-board-temp-layer {
     display: block;
     height: 100%;
@@ -83,6 +132,30 @@
     top: 0;
     width: 100%;
     z-index: 2;
+}
+
+.paint-board-temp-layer.paint-board-temp-layer-crop {
+    overflow: visible;
+    pointer-events: auto;
+    touch-action: none;
+}
+
+.paint-board-crop-svg {
+    display: block;
+    height: 100%;
+    left: 0;
+    overflow: visible;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    width: 100%;
+}
+
+.paint-board-crop-handle {
+    fill: #fff;
+    pointer-events: auto;
+    stroke: #000;
+    stroke-width: var(--paint-board-screen-pixel, 1px);
 }
 
 .paint-board-selection-layer {

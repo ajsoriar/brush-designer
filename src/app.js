@@ -10,6 +10,7 @@
     global.App.memory.currentBrushShape = global.App.memory.currentBrushShape || "square";
     global.App.memory.currentBrushStroke = global.App.memory.currentBrushStroke || false;
     global.App.memory.currentBrushAntialiasing = global.App.memory.currentBrushAntialiasing || false;
+    global.App.memory.cropExpansionFillMode = global.App.memory.cropExpansionFillMode || "background-color";
     global.App.memory.rainbowCrazyMode = global.App.memory.rainbowCrazyMode || false;
     global.App.memory.rainbowCrazyAlgorithm = global.App.memory.rainbowCrazyAlgorithm || "random";
     global.App.memory.rainbowCrazyJump = !!global.App.memory.rainbowCrazyJump;
@@ -71,6 +72,7 @@
     var toolsMagicWandOptionsComponent = null;
     var toolsTransformOptionsComponent = null;
     var toolsCrazyOptionsComponent = null;
+    var toolsCropOptionsComponent = null;
     var foregroundBackgroundColorsComponent = null;
     var appMenuComponent = null;
 
@@ -88,6 +90,7 @@
         initToolsMagicWandOptionsComponent();
         initToolsTransformOptionsComponent();
         initToolsCrazyOptionsComponent();
+        initToolsCropOptionsComponent();
         syncBrushWidthPickerToPaintTool(global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : null);
         global.AppOpenWindows.createDemoWindow("paintBoard");
         updateFillSelectionButton();
@@ -136,10 +139,16 @@
     });
 
     global.addEventListener("paint-board-content-change", function(event) {
-        if (!event.detail ||
-            !event.detail.paintBoard ||
-            !event.detail.layerId ||
-            !global.AppOpenWindows.updateLayersPanelThumbnail) {
+        if (!event.detail || !event.detail.paintBoard) {
+            return;
+        }
+
+        if (event.detail.refreshLayersPanel) {
+            refreshLayersPanel(event.detail.paintBoard);
+            return;
+        }
+
+        if (!event.detail.layerId || !global.AppOpenWindows.updateLayersPanelThumbnail) {
             return;
         }
 
@@ -152,6 +161,27 @@
     global.addEventListener("paint-board-active-change", function() {
         updateFillSelectionButton();
         syncToolsTransformOptionsVisibility();
+        syncToolsCropOptionsVisibility();
+    });
+
+    global.addEventListener("paint-board-crop-change", function(event) {
+        var activePaintBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (!toolsCropOptionsComponent ||
+            !event.detail ||
+            event.detail.paintBoard !== activePaintBoard) {
+            return;
+        }
+
+        toolsCropOptionsComponent.setVisible(!!event.detail.active);
+        if (event.detail.active) {
+            toolsCropOptionsComponent.setCropBounds({
+                x: event.detail.x,
+                y: event.detail.y,
+                width: event.detail.width,
+                height: event.detail.height
+            });
+        }
     });
 
     global.addEventListener("paint-board-floating-paste-change", function(event) {
@@ -192,6 +222,10 @@
         syncToolsMagicWandOptionsVisibility(mode);
         syncBrushWidthPickerToPaintTool(mode);
 
+        if (mode === "CROP-BOARD") {
+            startCropOnActivePaintBoard();
+        }
+
         if (mode === "DESIGNED-BRUSH") {
             global.AppOpenWindows.openBrushEditorOutputsWindow({
                 selectFirstIfNone: true
@@ -221,6 +255,14 @@
             global.AppOpenWindows.openLinesDesignerWindow();
         }
     });
+
+    function startCropOnActivePaintBoard() {
+        var activePaintBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (activePaintBoard && typeof activePaintBoard.startCrop === "function") {
+            activePaintBoard.startCrop();
+        }
+    }
 
     function initSelectionBehabiourComponent() {
         if (!global.SelectionBehabiourComponent) {
@@ -375,6 +417,64 @@
             }
         });
         global.ToolsCrazyOptionsApi = toolsCrazyOptionsComponent;
+    }
+
+    function initToolsCropOptionsComponent() {
+        if (!global.ToolsCropOptionsComponent) {
+            return;
+        }
+
+        toolsCropOptionsComponent = global.ToolsCropOptionsComponent({
+            id: "tools-crop-options-toolbar",
+            containerId: "tools-crop-options-container",
+            visible: false,
+            fillMode: global.App.memory.cropExpansionFillMode,
+            onFillModeChange: function(fillMode) {
+                global.App.memory.cropExpansionFillMode = fillMode;
+            },
+            onAccept: function() {
+                var activePaintBoard = global.AppOpenWindows.getActivePaintBoard();
+
+                if (activePaintBoard && activePaintBoard.commitCrop) {
+                    activePaintBoard.commitCrop();
+                }
+            },
+            onCancel: function() {
+                var activePaintBoard = global.AppOpenWindows.getActivePaintBoard();
+
+                if (activePaintBoard && activePaintBoard.cancelCrop) {
+                    activePaintBoard.cancelCrop();
+                }
+            }
+        });
+
+        global.ToolsCropOptionsApi = toolsCropOptionsComponent;
+        syncToolsCropOptionsVisibility();
+    }
+
+    function syncToolsCropOptionsVisibility() {
+        var activePaintBoard;
+        var crop;
+
+        if (!toolsCropOptionsComponent) {
+            return;
+        }
+
+        activePaintBoard = global.AppOpenWindows && global.AppOpenWindows.getActivePaintBoard ?
+            global.AppOpenWindows.getActivePaintBoard() :
+            null;
+        crop = activePaintBoard && activePaintBoard.cropSession ? activePaintBoard.cropSession : null;
+
+        toolsCropOptionsComponent.setVisible(!!crop);
+        if (crop) {
+            toolsCropOptionsComponent.setCropBounds({
+                x: crop.x,
+                y: crop.y,
+                width: crop.width,
+                height: crop.height
+            });
+            toolsCropOptionsComponent.setFillMode(global.App.memory.cropExpansionFillMode);
+        }
     }
 
     function syncBrushWidthPickerToPaintTool(mode) {

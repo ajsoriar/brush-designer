@@ -314,8 +314,8 @@
 
     // Adds a new layer immediately above the active layer: updates the board's
     // layers data structure and creates the matching <li> (id
-    // "<boardId>-layer-<n>") inside the board's <ol>. The current active layer
-    // remains active. Returns a copy of the new layer.
+    // "<boardId>-layer-<n>") inside the board's <ol>. The new layer becomes
+    // the active/selected layer. Returns a copy of the new layer.
     function addLayer(board, options) {
         var settings = options || {};
         var number = getNextLayerNumber(board);
@@ -348,6 +348,7 @@
 
         createLayerElement(board, layerId, layerData["order-from-the-bottom"]);
         syncLayerOrderInDom(board);
+        setActiveLayer(board, layerId);
 
         return cloneLayer(layerData);
     }

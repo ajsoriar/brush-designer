@@ -164,6 +164,17 @@
                     return false;
                 }
 
+                // Keep thumbnail proportions in sync with the actual board/mask
+                // canvas size, even if caller order misses an explicit size sync.
+                if (sourceCanvas.width > 0 && sourceCanvas.height > 0 &&
+                    (config.boardWidth !== sourceCanvas.width ||
+                        config.boardHeight !== sourceCanvas.height)) {
+                    config.boardWidth = sourceCanvas.width;
+                    config.boardHeight = sourceCanvas.height;
+                    syncThumbnailSizes();
+                    thumbnailCanvas = getThumbnailCanvas(layerId, type);
+                }
+
                 thumbnailSources[sourceKey] = sourceCanvas;
                 if (thumbnailCanvas) {
                     drawThumbnailCanvas(thumbnailCanvas, sourceCanvas);
@@ -185,13 +196,28 @@
             removeActiveLayer: function() {
                 return removeActiveLayer();
             },
-            setBoardSize: function(width, height) {
+            setThumbnailSourceSize: function(width, height) {
                 if (width <= 0 || height <= 0) {
                     return false;
                 }
 
                 config.boardWidth = width;
                 config.boardHeight = height;
+                syncThumbnailSizes();
+                return true;
+            },
+            // Backward-compatible alias. Use setThumbnailSourceSize for clarity.
+            setBoardSize: function(width, height) {
+                return component.setThumbnailSourceSize(width, height);
+            },
+            resizeThumbnailsTo: function(maxSize) {
+                var size = Math.floor(Number(maxSize));
+
+                if (!size || size < 1) {
+                    return false;
+                }
+
+                config.thumbnailMaxSize = size;
                 syncThumbnailSizes();
                 return true;
             },
@@ -329,6 +355,7 @@
 
             config.layers.push(layer);
             renderLayers();
+            setActiveLayer(layer.id, "board", false);
             return extend({}, layer);
         }
 

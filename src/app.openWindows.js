@@ -421,14 +421,24 @@
     }
 
     function syncLayersPanelBoardSize(paintBoard) {
-        if (!paintBoard || !appLayersPanel || !appLayersPanel.setBoardSize) {
+        var width;
+        var height;
+
+        if (!paintBoard || !appLayersPanel) {
             return;
         }
 
-        appLayersPanel.setBoardSize(
-            paintBoard.canvas ? paintBoard.canvas.width : paintBoard.width,
-            paintBoard.canvas ? paintBoard.canvas.height : paintBoard.height
-        );
+        width = paintBoard.canvas ? paintBoard.canvas.width : paintBoard.width;
+        height = paintBoard.canvas ? paintBoard.canvas.height : paintBoard.height;
+
+        if (appLayersPanel.setThumbnailSourceSize) {
+            appLayersPanel.setThumbnailSourceSize(width, height);
+            return;
+        }
+
+        if (appLayersPanel.setBoardSize) {
+            appLayersPanel.setBoardSize(width, height);
+        }
     }
 
     function syncLayersPanelLayers(paintBoard) {
@@ -458,6 +468,14 @@
         syncLayersPanelBoardSize(targetBoard);
         syncLayersPanelLayers(targetBoard);
         syncLayersPanelWindowTitle(targetBoard);
+    }
+
+    function resizeLayersPanelThumbnailsTo(maxSize) {
+        if (!appLayersPanel || !appLayersPanel.resizeThumbnailsTo) {
+            return false;
+        }
+
+        return appLayersPanel.resizeThumbnailsTo(maxSize);
     }
 
     function updateLayersPanelThumbnail(paintBoard, layerId) {
@@ -1905,6 +1923,39 @@
         }
     }
 
+    function getActiveColors() {
+        var colors = {
+            frontColor: (global.App && global.App.memory && global.App.memory.currentColor) || "#000000",
+            backgroundColor: "#ffffff"
+        };
+
+        if (global.ForegroundBackgroundColorsApi) {
+            if (typeof global.ForegroundBackgroundColorsApi.getColors === "function") {
+                colors = global.ForegroundBackgroundColorsApi.getColors();
+            } else {
+                if (typeof global.ForegroundBackgroundColorsApi.getFrontColor === "function") {
+                    colors.frontColor = global.ForegroundBackgroundColorsApi.getFrontColor();
+                }
+                if (typeof global.ForegroundBackgroundColorsApi.getBackgroundColor === "function") {
+                    colors.backgroundColor = global.ForegroundBackgroundColorsApi.getBackgroundColor();
+                }
+            }
+        }
+
+        return {
+            frontColor: colors.frontColor,
+            backgroundColor: colors.backgroundColor
+        };
+    }
+
+    function getFrontColor() {
+        return getActiveColors().frontColor;
+    }
+
+    function getBackgroundColor() {
+        return getActiveColors().backgroundColor;
+    }
+
     global.AppOpenWindows = {
         openEditor: openEditor,
         newDocument: newDocument,
@@ -1935,11 +1986,15 @@
         updatePaintBoardToolbarState: updatePaintBoardToolbarState,
         updateLayersPanelThumbnail: updateLayersPanelThumbnail,
         refreshLayersPanel: refreshLayersPanel,
+        resizeLayersPanelThumbnailsTo: resizeLayersPanelThumbnailsTo,
         getActivePaintBoard: getActivePaintBoard,
         clearBoard: clearBoard,
         flattenImage: flattenImage,
         mergeSelectedLayers: mergeSelectedLayers,
-        setActiveColor: setActiveColor
+        setActiveColor: setActiveColor,
+        getActiveColors: getActiveColors,
+        getFrontColor: getFrontColor,
+        getBackgroundColor: getBackgroundColor
     };
 
 }(window, jQuery));
