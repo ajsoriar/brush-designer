@@ -78,8 +78,9 @@
     var DEFAULT_MAGIC_WAND_MODE = MAGIC_WAND_MODES.PHOTOSHOP;
     var currentMagicWandOptions = {
         tolerance: 32,
-        antiAlias: true,
+        antiAlias: false,
         contiguous: true,
+        sampleAllLayers: true,
         mode: DEFAULT_MAGIC_WAND_MODE
     };
     var MAGIC_WAND_MAX_DISTANCE = Math.sqrt(4 * 255 * 255);
@@ -156,6 +157,14 @@
         },
         getMagicWandContiguous: function() {
             return currentMagicWandOptions.contiguous;
+        },
+        setMagicWandSampleAllLayers: function(sampleAllLayers) {
+            currentMagicWandOptions.sampleAllLayers = !!sampleAllLayers;
+            notifyMagicWandOptionsChange(currentMagicWandOptions);
+            return currentMagicWandOptions.sampleAllLayers;
+        },
+        getMagicWandSampleAllLayers: function() {
+            return currentMagicWandOptions.sampleAllLayers;
         },
         setMagicWandMode: function(mode) {
             currentMagicWandOptions.mode = normalizeMagicWandMode(mode);
@@ -240,6 +249,7 @@
             tolerance: normalizeMagicWandTolerance(source.tolerance),
             antiAlias: !!source.antiAlias,
             contiguous: !!source.contiguous,
+            sampleAllLayers: !!source.sampleAllLayers,
             mode: normalizeMagicWandMode(source.mode)
         };
     }
@@ -249,6 +259,7 @@
             tolerance: options.tolerance,
             antiAlias: options.antiAlias,
             contiguous: options.contiguous,
+            sampleAllLayers: !!options.sampleAllLayers,
             mode: options.mode
         };
     }
@@ -3956,6 +3967,7 @@
     function createMagicWandMask(board, startX, startY, options) {
         var width = board.canvas.width;
         var height = board.canvas.height;
+        var sourceImageData;
         var sourceData;
         var reference;
         var matcher;
@@ -3968,7 +3980,12 @@
             return null;
         }
 
-        sourceData = board.context.getImageData(0, 0, width, height).data;
+        sourceImageData = getMagicWandSourceImageData(board, width, height, options);
+        if (!sourceImageData || !sourceImageData.data) {
+            return null;
+        }
+
+        sourceData = sourceImageData.data;
         reference = getMagicWandReferenceColor(sourceData, width, startX, startY);
         matcher = createMagicWandMatcher(options, reference);
 
@@ -3991,6 +4008,95 @@
         maskContext.putImageData(maskImageData, 0, 0);
 
         return maskCanvas;
+    }
+
+    function getMagicWandSourceImageData(board, width, height, options) {
+        var sourceCanvas;
+        var sourceContext;
+
+        if (options && options.sampleAllLayers) {
+            sourceCanvas = composeVisibleLayersForMagicWand(board, width, height);
+            sourceContext = sourceCanvas && sourceCanvas.getContext("2d");
+            if (sourceContext) {
+                return sourceContext.getImageData(0, 0, width, height);
+            }
+        }
+
+        return board.context.getImageData(0, 0, width, height);
+    }
+
+    function composeVisibleLayersForMagicWand(board, width, height) {
+        var doc;
+        var compositeCanvas;
+        var compositeContext;
+        var orderedLayers;
+
+        doc = (board.layersElement && board.layersElement.ownerDocument) || document;
+        compositeCanvas = board.magicWandSampleCanvas;
+
+        if (!compositeCanvas) {
+            compositeCanvas = doc.createElement("canvas");
+            board.magicWandSampleCanvas = compositeCanvas;
+        }
+
+        if (compositeCanvas.width !== width) {
+            compositeCanvas.width = width;
+        }
+        if (compositeCanvas.height !== height) {
+            compositeCanvas.height = height;
+        }
+
+        compositeContext = compositeCanvas.getContext("2d");
+        compositeContext.clearRect(0, 0, width, height);
+
+        if (!board.layers || !board.layers.length || !board.layersElement) {
+            return compositeCanvas;
+        }
+
+        orderedLayers = board.layers.slice().sort(function(a, b) {
+            var aOrder = typeof a["order-from-the-bottom"] === "number" ?
+                a["order-from-the-bottom"] : 0;
+            var bOrder = typeof b["order-from-the-bottom"] === "number" ?
+                b["order-from-the-bottom"] : 0;
+
+            return aOrder - bOrder;
+        });
+
+        orderedLayers.forEach(function(layer) {
+            var layerElement;
+            var layerCanvas;
+            var opacity;
+            var blendMode;
+
+            if (layer.visible === false) {
+                return;
+            }
+
+            layerElement = board.layersElement.querySelector('[data-layer="' + layer.id + '"]');
+            layerCanvas = layerElement && layerElement.querySelector("canvas");
+            if (!layerCanvas) {
+                return;
+            }
+
+            opacity = Number(layer.opacity);
+            if (!isFinite(opacity)) {
+                opacity = 100;
+            }
+            opacity = Math.max(0, Math.min(100, opacity));
+            if (opacity <= 0) {
+                return;
+            }
+
+            blendMode = layer.blendMode || layer["blend-mode"] || "source-over";
+
+            compositeContext.save();
+            compositeContext.globalCompositeOperation = blendMode;
+            compositeContext.globalAlpha = opacity / 100;
+            compositeContext.drawImage(layerCanvas, 0, 0);
+            compositeContext.restore();
+        });
+
+        return compositeCanvas;
     }
 
     function getMagicWandReferenceColor(data, width, x, y) {

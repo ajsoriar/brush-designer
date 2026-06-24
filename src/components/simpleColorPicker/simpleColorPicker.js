@@ -110,8 +110,8 @@
                     height: getHeight(config)
                 };
             },
-            setActiveColor: function(color) {
-                setActiveColor(picker, color, config);
+            setActiveColor: function(color, silent) {
+                setActiveColor(picker, color, config, !!silent);
             },
             resizeTo: function(width, height, resizePolicy) {
                 resizeTo(picker, config, width, height, resizePolicy);

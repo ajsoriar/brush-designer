@@ -71,6 +71,8 @@
         var antiAliasInput = document.createElement("input");
         var contiguousLabel = document.createElement("label");
         var contiguousInput = document.createElement("input");
+        var sampleAllLayersLabel = document.createElement("label");
+        var sampleAllLayersInput = document.createElement("input");
         var modeGroup = document.createElement("span");
         var modeInputs = {};
         var componentId = config.id || ("tools-magic-wand-options-" + Date.now());
@@ -110,6 +112,12 @@
         contiguousLabel.appendChild(contiguousInput);
         contiguousLabel.appendChild(document.createTextNode("Contiguous"));
 
+        sampleAllLayersLabel.className = "tools-magic-wand-options-check";
+        sampleAllLayersInput.type = "checkbox";
+        sampleAllLayersInput.title = "Sample all layers";
+        sampleAllLayersLabel.appendChild(sampleAllLayersInput);
+        sampleAllLayersLabel.appendChild(document.createTextNode("Sample all layers"));
+
         modeGroup.className = "tools-magic-wand-options-modes";
         buildModeRadios(modeGroup, modeInputs, componentId);
 
@@ -118,6 +126,7 @@
         grid.appendChild(toleranceNumber);
         grid.appendChild(antiAliasLabel);
         grid.appendChild(contiguousLabel);
+        grid.appendChild(sampleAllLayersLabel);
         grid.appendChild(modeGroup);
 
         element.appendChild(legend);
@@ -170,6 +179,12 @@
             }
         });
 
+        sampleAllLayersInput.addEventListener("change", function() {
+            if (global.PaintTools && global.PaintTools.setMagicWandSampleAllLayers) {
+                global.PaintTools.setMagicWandSampleAllLayers(sampleAllLayersInput.checked);
+            }
+        });
+
         bindModeRadios(modeInputs, function(mode) {
             if (global.PaintTools && global.PaintTools.setMagicWandMode) {
                 global.PaintTools.setMagicWandMode(mode);
@@ -186,7 +201,8 @@
             setOptionsOnInputs({
                 tolerance: value,
                 antiAlias: antiAliasInput.checked,
-                contiguous: contiguousInput.checked
+                contiguous: contiguousInput.checked,
+                sampleAllLayers: sampleAllLayersInput.checked
             });
 
             if (global.PaintTools && global.PaintTools.setMagicWandTolerance) {
@@ -202,6 +218,7 @@
             toleranceNumber.value = String(safeTolerance);
             antiAliasInput.checked = !!(nextOptions && nextOptions.antiAlias);
             contiguousInput.checked = !!(nextOptions && nextOptions.contiguous);
+            sampleAllLayersInput.checked = !!(nextOptions && nextOptions.sampleAllLayers);
 
             if (modeInputs[mode]) {
                 modeInputs[mode].checked = true;
@@ -213,6 +230,7 @@
                 tolerance: clampTolerance(toleranceRange.value),
                 antiAlias: !!antiAliasInput.checked,
                 contiguous: !!contiguousInput.checked,
+                sampleAllLayers: !!sampleAllLayersInput.checked,
                 mode: readSelectedMode(modeInputs)
             };
         }
@@ -277,8 +295,9 @@
         if (!global.PaintTools) {
             return {
                 tolerance: 32,
-                antiAlias: true,
+                antiAlias: false,
                 contiguous: true,
+                sampleAllLayers: true,
                 mode: DEFAULT_MODE
             };
         }
@@ -289,8 +308,9 @@
 
         return {
             tolerance: 32,
-            antiAlias: true,
+            antiAlias: false,
             contiguous: true,
+            sampleAllLayers: true,
             mode: DEFAULT_MODE
         };
     }

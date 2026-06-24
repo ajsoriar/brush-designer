@@ -1034,8 +1034,7 @@
             },
             resizePolicy: "EXPAND",
             onColorSelected: function(color) {
-                global.App.memory.currentColor = color;
-                console.log("Selected color:", color);
+                setActiveColor(color);
             },
             color: {
                 defaultWidth: 17,
@@ -1982,7 +1981,7 @@
         global.App.memory.currentColor = color;
 
         if (appColorPicker && appColorPicker.setActiveColor) {
-            appColorPicker.setActiveColor(color);
+            appColorPicker.setActiveColor(color, true);
         }
 
         if (appBigColorPicker && appBigColorPicker.setActiveColor) {

@@ -2,8 +2,8 @@
 
     "use strict";
 
-    var MIN_ZOOM = 0.5;
-    var MAX_ZOOM = 16;
+    var MIN_ZOOM = 0.15;
+    var MAX_ZOOM = 22;
     var ZOOM_STEP = 0.1;
     var WHEEL_PROGRESSIVE_ZOOM_START = 1;
     var WHEEL_PROGRESSIVE_FACTOR = 0.15;

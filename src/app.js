@@ -538,6 +538,7 @@
                 clearBoard: clearBoard,
                 clearSelectionContent: deleteActiveSelection,
                 selectAll: selectAll,
+                unselect: unselect,
                 fillSelectionWithFrontColor: fillSelectionWithFrontColor,
                 reverseSelection: reverseSelection,
                 flattenImage: global.AppOpenWindows.flattenImage,
@@ -880,6 +881,7 @@
 
         if (appMenuComponent && appMenuComponent.setItemEnabled) {
             appMenuComponent.setItemEnabled("clearSelectionContent", hasSelection);
+            appMenuComponent.setItemEnabled("unselect", hasSelection);
             appMenuComponent.setItemEnabled("fillSelectionWithFrontColor", hasSelection);
             appMenuComponent.setItemEnabled("reverseSelection", hasSelection);
         }
@@ -893,6 +895,17 @@
         }
 
         return targetBoard.selectAll();
+    }
+
+    function unselect() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (!targetBoard || typeof targetBoard.clearSelection !== "function") {
+            return false;
+        }
+
+        targetBoard.clearSelection();
+        return true;
     }
 
     function reverseSelection() {

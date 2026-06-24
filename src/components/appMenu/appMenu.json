@@ -46,6 +46,7 @@
       "label": "Select",
       "items": [
         { "label": "All", "action": "selectAll" },
+        { "label": "Unselect", "action": "unselect", "enabled": false },
         { "type": "separator" },
         { "label": "Fill Selection", "action": "fillSelectionWithFrontColor", "enabled": false },
         { "label": "Reverse Selection", "action": "reverseSelection", "enabled": false }

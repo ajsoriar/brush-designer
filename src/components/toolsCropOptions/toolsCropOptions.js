@@ -11,6 +11,7 @@
         y: 0,
         width: 0,
         height: 0,
+        maxPixels: 9000000,
         fillMode: "background-color",
         onFillModeChange: null,
         onAccept: null,
@@ -33,6 +34,8 @@
         var layout = document.createElement("div");
         var sizeLine = document.createElement("div");
         var positionLine = document.createElement("div");
+        var pixelsLine = document.createElement("div");
+        var pixelsValue = document.createElement("span");
         var sizeLabel = document.createElement("span");
         var sizeValue = document.createElement("span");
         var positionLabel = document.createElement("span");
@@ -43,6 +46,7 @@
         var acceptButton = document.createElement("button");
         var cancelButton = document.createElement("button");
         var componentId = config.id || ("tools-crop-options-" + Date.now());
+        var maxPixels = Math.max(1, toInteger(config.maxPixels));
         var component;
 
         element.id = componentId;
@@ -56,6 +60,8 @@
         sizeValue.className = "tools-crop-options-value";
         positionLabel.className = "tools-crop-options-label";
         positionValue.className = "tools-crop-options-value";
+        pixelsLine.className = "tools-crop-options-pixels";
+        pixelsValue.className = "tools-crop-options-pixels-value";
 
         sizeLabel.textContent = "Size:";
         positionLabel.textContent = "Origin:";
@@ -78,6 +84,7 @@
 
         sizeLine.appendChild(sizeLabel);
         sizeLine.appendChild(sizeValue);
+        pixelsLine.appendChild(pixelsValue);
         positionLine.appendChild(positionLabel);
         positionLine.appendChild(positionValue);
 
@@ -85,6 +92,7 @@
         actions.appendChild(cancelButton);
 
         layout.appendChild(sizeLine);
+        layout.appendChild(pixelsLine);
         layout.appendChild(positionLine);
         layout.appendChild(fillModes);
         layout.appendChild(actions);
@@ -110,9 +118,20 @@
             },
             setCropBounds: function(bounds) {
                 var safe = sanitizeBounds(bounds);
+                var numberOfPixels = safe.width * safe.height;
+                var isOverLimit = numberOfPixels > maxPixels;
+                var availablePixels = Math.max(0, maxPixels - numberOfPixels);
+                var availabilityPercent = ((availablePixels / maxPixels) * 100).toFixed(3);
 
                 sizeValue.textContent = safe.width + " x " + safe.height;
                 positionValue.textContent = safe.x + ", " + safe.y;
+                pixelsValue.textContent = "Number of pixels: " + numberOfPixels + " (" + availabilityPercent + "%)";
+
+                if (isOverLimit) {
+                    pixelsLine.classList.add("OVER-LIMIT");
+                } else {
+                    pixelsLine.classList.remove("OVER-LIMIT");
+                }
             },
             setFillMode: function(fillMode) {
                 var normalized = normalizeFillMode(fillMode);
