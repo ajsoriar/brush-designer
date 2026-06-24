@@ -106,6 +106,27 @@
     min-width: 0;
 }
 
+.wm-title-icon {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 16px;
+    height: 16px;
+    justify-content: center;
+    margin-left: 4px;
+    width: 16px;
+    margin-right: -8px;
+}
+
+.wm-title-icon-placeholder {
+    background: transparent;
+}
+
+.wm-title-icon-image {
+    display: block;
+    height: 16px;
+    width: 16px;
+}
+
 .wm-top-right {
     cursor: nesw-resize;
     grid-column: 3;

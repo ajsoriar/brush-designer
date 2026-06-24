@@ -1,3 +1,5 @@
+import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
+
 (function(global, $) {
 
     "use strict";
@@ -75,9 +77,11 @@
     var toolsCropOptionsComponent = null;
     var foregroundBackgroundColorsComponent = null;
     var appMenuComponent = null;
+    var svgExporterToolbarIconComponent = null;
 
     $(document).ready(function() {
         console.log("jQuery document ready!");
+        initSvgExporterToolbarIconComponent();
         initAppMenuComponent();
         initForegroundBackgroundColorsComponent();
         global.AppOpenWindows.openBrushEditorOutputsWindow();
@@ -511,6 +515,32 @@
         global.ForegroundBackgroundColorsApi = foregroundBackgroundColorsComponent;
     }
 
+    function initSvgExporterToolbarIconComponent() {
+        if (!global.ToolsBarIcon) {
+            return;
+        }
+
+        svgExporterToolbarIconComponent = global.ToolsBarIcon({
+            id: "svg-exporter-toolbar-icon",
+            containerId: "svg-exporter-toolbar-icon-container",
+            buttons: [
+                {
+                    id: "svg-exporter-toolbar-button",
+                    title: "SVG Exporter",
+                    imageSrc: svgExporterIconUrl,
+                    imageAlt: "SVG Exporter",
+                    onClick: function() {
+                        if (global.AppOpenWindows && global.AppOpenWindows.openSvgExporterWindow) {
+                            global.AppOpenWindows.openSvgExporterWindow();
+                        }
+                    }
+                }
+            ]
+        });
+
+        global.SvgExporterToolbarIconApi = svgExporterToolbarIconComponent;
+    }
+
     function initAppMenuComponent() {
         if (!global.AppMenu) {
             return;
@@ -552,7 +582,8 @@
                 openColorPicker: global.AppOpenWindows.openSimpleColorPickerWindow,
                 openBigColorPicker: global.AppOpenWindows.openBigColorPickerWindow,
                 openLineWidthPicker: global.AppOpenWindows.openSimpleLineWidthPickerWindow,
-                openBrushWidthPicker: global.AppOpenWindows.openSimpleBrushWidthPickerWindow
+                openBrushWidthPicker: global.AppOpenWindows.openSimpleBrushWidthPickerWindow,
+                openSvgExporter: global.AppOpenWindows.openSvgExporterWindow
             }
         });
         global.AppMenuApi = appMenuComponent;

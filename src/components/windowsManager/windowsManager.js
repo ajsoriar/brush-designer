@@ -43,6 +43,7 @@
         resizeGeometryIndicator: true,
         cornerRadius: 0,
         topBarGradient: null,
+        titleBarIcon: false,
         toolsRow: false,
         toolsFooter: false,
         contentCentered: true,
@@ -169,6 +170,8 @@
             '<div class="wm-bottom" data-wm-resize="s"></div>',
             '<div class="wm-bottom-right" data-wm-resize="se"></div>'
         ].join("");
+
+        applyTitleBarIcon(element, config.titleBarIcon);
 
         applyTopBarGradient(element, config.topBarGradient);
 
@@ -322,6 +325,50 @@
         topLeft.style.background = colorA;
         top.style.background = gradient;
         topRight.style.background = colorB;
+    }
+
+    function applyTitleBarIcon(element, titleBarIcon) {
+        var top = element.querySelector(".wm-top");
+        var title = element.querySelector(".wm-title");
+        var iconSlot;
+        var iconImg;
+
+        if (!top || !title || !titleBarIcon) {
+            return;
+        }
+
+        iconSlot = document.createElement("div");
+        iconSlot.className = "wm-title-icon";
+
+        if (titleBarIcon === true) {
+            iconSlot.className += " wm-title-icon-placeholder";
+            iconSlot.setAttribute("title", "Window icon pending");
+            top.insertBefore(iconSlot, title);
+            return;
+        }
+
+        iconImg = document.createElement("img");
+        iconImg.className = "wm-title-icon-image";
+
+        if (typeof titleBarIcon === "string") {
+            iconImg.src = titleBarIcon;
+            iconImg.alt = "Window icon";
+            iconSlot.appendChild(iconImg);
+            top.insertBefore(iconSlot, title);
+            return;
+        }
+
+        if (titleBarIcon && typeof titleBarIcon === "object" && (titleBarIcon.src || titleBarIcon.imageSrc)) {
+            iconImg.src = titleBarIcon.src || titleBarIcon.imageSrc;
+            iconImg.alt = titleBarIcon.alt || "Window icon";
+            iconSlot.appendChild(iconImg);
+            top.insertBefore(iconSlot, title);
+            return;
+        }
+
+        iconSlot.className += " wm-title-icon-placeholder";
+        iconSlot.setAttribute("title", "Window icon pending");
+        top.insertBefore(iconSlot, title);
     }
 
     function isDarkColor(color) {

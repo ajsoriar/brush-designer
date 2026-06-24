@@ -1,3 +1,5 @@
+import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
+
 (function(global, $) {
 
     "use strict";
@@ -18,6 +20,7 @@
     var appPatternsView = null;
     var appGradientPanel = null;
     var appLinesDesigner = null;
+    var appSvgExporter = null;
     var syncingLineWidthComponents = false;
     var documentCount = 0;
     var activePaintBoard = null;
@@ -1935,6 +1938,96 @@
         return appStarGenerator;
     }
 
+    function openSvgExporterWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("svg-exporter");
+        var exporterWidth = 900;
+        var exporterHeight = 560;
+        var frameWidth = 16;
+        var frameHeight = 36;
+        var exporterWindow;
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return appSvgExporter;
+        }
+
+        exporterWindow = WindowsManager.create({
+            id: "svg-exporter-window",
+            windowId: "svg-exporter",
+            title: "SVG Exporter",
+            titleBarIcon: {
+                imageSrc: svgExporterIconUrl,
+                alt: "SVG Exporter"
+            },
+            type: "TOOL",
+            x: 260,
+            y: 110,
+            width: exporterWidth + frameWidth,
+            height: exporterHeight + frameHeight,
+            minimizable: false,
+            scrollBarX: false,
+            scrollBarY: false,
+            contentId: "svg-exporter-window-content",
+            beforeClose: function() {
+                if (appSvgExporter && appSvgExporter.destroy) {
+                    appSvgExporter.destroy();
+                }
+                appSvgExporter = null;
+                return true;
+            }
+        });
+
+        exporterWindow.element.className += " wm-window-svg-exporter";
+
+        appSvgExporter = SVGExporter({
+            id: "app-svg-exporter",
+            containerId: exporterWindow.contentId,
+            width: exporterWidth,
+            height: exporterHeight,
+            onExportToLayer: function(payload) {
+                var targetBoard = getActivePaintBoard();
+                var newLayer;
+
+                if (!targetBoard || !targetBoard.addLayer || !targetBoard.drawImage) {
+                    notifyMessage("Open a paint board first.", "error");
+                    return false;
+                }
+
+                if (targetBoard.floatingPaste && targetBoard.commitFloatingPaste) {
+                    targetBoard.commitFloatingPaste();
+                }
+
+                newLayer = targetBoard.addLayer({
+                    label: "SVG Layer"
+                });
+                if (newLayer && targetBoard.setActiveLayer) {
+                    targetBoard.setActiveLayer(newLayer.id);
+                }
+
+                targetBoard.drawImage(payload.canvas, 0, 0);
+                refreshLayersPanel(targetBoard);
+                notifyMessage("SVG added as a new layer.", "success");
+                return true;
+            }
+        });
+
+        exporterWindow.scaleToContent(appSvgExporter.getWidth(), appSvgExporter.getHeight());
+        return appSvgExporter;
+    }
+
+    function notifyMessage(message, type) {
+        if (typeof global.ajsrnotify !== "function") {
+            return;
+        }
+
+        global.ajsrnotify({
+            msg: message,
+            type: type || "success",
+            position: "right",
+            timeout: 1800
+        });
+    }
+
     function getPaintToolsCount() {
         return VISIBLE_PAINT_TOOLS.length;
     }
@@ -2053,6 +2146,7 @@
         openPaintToolsWindow: openPaintToolsWindow,
         openLayersPanelWindow: openLayersPanelWindow,
         openStarGeneratorWindow: openStarGeneratorWindow,
+        openSvgExporterWindow: openSvgExporterWindow,
         updatePaintBoardWindowTitle: updatePaintBoardWindowTitle,
         updatePaintBoardToolbarState: updatePaintBoardToolbarState,
         updateLayersPanelThumbnail: updateLayersPanelThumbnail,

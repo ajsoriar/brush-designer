@@ -72,3 +72,7 @@ body {
     }
 
 }
+
+#svg-exporter-toolbar-icon-container {
+    margin-left: auto;
+}
