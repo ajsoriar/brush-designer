@@ -1,4 +1,5 @@
 import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
+import undoIconUrl from "./images/undo-icon.png";
 
 (function(global, $) {
 
@@ -77,10 +78,12 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
     var toolsCropOptionsComponent = null;
     var foregroundBackgroundColorsComponent = null;
     var appMenuComponent = null;
+    var undoToolbarIconComponent = null;
     var svgExporterToolbarIconComponent = null;
 
     $(document).ready(function() {
         console.log("jQuery document ready!");
+        initUndoToolbarIconComponent();
         initSvgExporterToolbarIconComponent();
         initAppMenuComponent();
         initForegroundBackgroundColorsComponent();
@@ -539,6 +542,30 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         });
 
         global.SvgExporterToolbarIconApi = svgExporterToolbarIconComponent;
+    }
+
+    function initUndoToolbarIconComponent() {
+        if (!global.ToolsBarIcon) {
+            return;
+        }
+
+        undoToolbarIconComponent = global.ToolsBarIcon({
+            id: "undo-toolbar-icon",
+            containerId: "undo-toolbar-icon-container",
+            buttons: [
+                {
+                    id: "undo-toolbar-button",
+                    title: "Undo",
+                    imageSrc: undoIconUrl,
+                    imageAlt: "Undo",
+                    onClick: function() {
+                        undoLastAction();
+                    }
+                }
+            ]
+        });
+
+        global.UndoToolbarIconApi = undoToolbarIconComponent;
     }
 
     function initAppMenuComponent() {

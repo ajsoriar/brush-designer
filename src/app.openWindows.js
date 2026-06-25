@@ -39,6 +39,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         "PAINT-BUCKET",
         "PATTERN-BUCKET",
         "INK-DROPPER",
+        "POINTER-TOOL",
         "GRADIENT",
         "OLD-BRUSH",
         "DESIGNED-BRUSH",
@@ -1958,6 +1959,11 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             titleBarIcon: {
                 imageSrc: svgExporterIconUrl,
                 alt: "SVG Exporter"
+            },
+            topBarGradient: {
+                a: "#123477",
+                b: "#9bc8ef",
+                orientation: "horizontal"
             },
             type: "TOOL",
             x: 260,

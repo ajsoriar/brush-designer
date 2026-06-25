@@ -49,7 +49,6 @@
 		var previewImage = document.createElement("img");
 		var previewPlaceholder = document.createElement("p");
 		var actions = document.createElement("div");
-		var validateButton = document.createElement("button");
 		var downloadButton = document.createElement("button");
 		var exportLayerButton = document.createElement("button");
 		var status = document.createElement("p");
@@ -74,13 +73,9 @@
 		previewImage.className = "svg-exporter-preview-image";
 		previewImage.alt = "SVG preview";
 		previewPlaceholder.className = "svg-exporter-placeholder";
-		previewPlaceholder.textContent = "Paste SVG XML and click Render Preview.";
+		previewPlaceholder.textContent = "Paste SVG XML to see a live preview.";
 
 		actions.className = "svg-exporter-actions";
-		validateButton.type = "button";
-		validateButton.className = "svg-exporter-btn";
-		validateButton.textContent = "Render Preview";
-
 		downloadButton.type = "button";
 		downloadButton.className = "svg-exporter-btn svg-exporter-btn-primary";
 		downloadButton.textContent = "Download SVG";
@@ -101,7 +96,6 @@
 		previewBox.appendChild(previewPlaceholder);
 		previewColumn.appendChild(previewBox);
 
-		actions.appendChild(validateButton);
 		actions.appendChild(downloadButton);
 		actions.appendChild(exportLayerButton);
 
@@ -145,7 +139,7 @@
 			}
 		});
 
-		validateButton.addEventListener("click", function() {
+		textarea.addEventListener("input", function() {
 			renderPreview();
 		});
 
@@ -227,6 +221,7 @@
 
 			if (!svgText) {
 				setPlaceholderMode(true);
+				setTextareaError(false);
 				setStatus("Paste SVG XML to render a preview.", false);
 				return;
 			}
@@ -243,12 +238,14 @@
 
 				currentPreviewUrl = nextPreviewUrl;
 				setPlaceholderMode(false);
+				setTextareaError(false);
 				setStatus("Preview updated (" + previewImage.naturalWidth + " x " + previewImage.naturalHeight + ").", false);
 			};
 
 			previewImage.onerror = function() {
 				URL.revokeObjectURL(nextPreviewUrl);
 				setPlaceholderMode(true);
+				setTextareaError(true);
 				setStatus("Invalid SVG. Check your XML.", true);
 			};
 
@@ -263,6 +260,15 @@
 		function setStatus(message, isError) {
 			status.textContent = message;
 			status.style.color = isError ? "#8a1f1f" : "#273142";
+		}
+
+		function setTextareaError(active) {
+			if (active) {
+				textarea.classList.add("svg-exporter-textarea-error");
+				return;
+			}
+
+			textarea.classList.remove("svg-exporter-textarea-error");
 		}
 	}
 

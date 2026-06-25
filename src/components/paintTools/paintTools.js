@@ -27,6 +27,7 @@
         "PAINT-BUCKET": new URL("./icons/paint-tools_40.png", import.meta.url).href,
         "PATTERN-BUCKET": new URL("./icons/paint-tools_40.png", import.meta.url).href,
         "INK-DROPPER": new URL("./icons/paint-tools_29.png", import.meta.url).href,
+        "POINTER-TOOL": new URL("./icons/paint-tools_pointer.png", import.meta.url).href,
         "DESIGNED-BRUSH": new URL("./icons/paint-tools_31.png", import.meta.url).href,
         "DESIGNED-BRUSH-2": new URL("./icons/paint-tools_31.png", import.meta.url).href,
         "MAGIC-WAND": new URL("./icons/paint-tools_magic-wand.png", import.meta.url).href,
@@ -36,6 +37,11 @@
     };
 
     var TOOL_ACTIONS = {
+        "POINTER-TOOL": function() {
+            if (global.PaintTools && global.PaintTools.use) {
+                global.PaintTools.use("POINTER-TOOL");
+            }
+        },
         "STAR-GENERATOR": function() {
             if (global.openStarGeneratorWindow) {
                 global.openStarGeneratorWindow();
@@ -72,6 +78,7 @@
         "OLD-BRUSH": "Retro Brush",
         "PATTERN-BUCKET": "Pattern Bucket",
         "GRADIENT": "Gradient",
+        "POINTER-TOOL": "Pointer",
         "STRAIGHT-LINE": "Line",
         "LASSO-SELECTION": "Lasso Selection",
         "MAGIC-WAND": "Magic Wand",
