@@ -222,6 +222,54 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         return dialogWindow;
     }
 
+    function openResizeImageWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("resize-image");
+        var targetBoard = getActivePaintBoard();
+        var dialogWindow;
+        var dialog;
+        var initialWidth = targetBoard && targetBoard.canvas ? targetBoard.canvas.width : 800;
+        var initialHeight = targetBoard && targetBoard.canvas ? targetBoard.canvas.height : 600;
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return existingWindow;
+        }
+
+        dialogWindow = ModalWindow({
+            id: "resize-image-window",
+            windowId: "resize-image",
+            title: "Image Size",
+            width: Math.max(560, Math.min(650, global.innerWidth - 40)),
+            height: Math.max(360, Math.min(430, global.innerHeight - 40)),
+            className: "wm-window-resize-image",
+            beforeClose: function() {
+                if (dialog) {
+                    dialog.destroy();
+                    dialog = null;
+                }
+                return true;
+            }
+        });
+
+        if (!dialogWindow) {
+            return null;
+        }
+
+        dialog = ResizeImage({
+            width: initialWidth,
+            height: initialHeight,
+            onCancel: function() {
+                dialogWindow.close();
+            },
+            onOk: function() {
+                dialogWindow.close();
+            }
+        });
+
+        dialogWindow.setContent(dialog.element);
+        return dialogWindow;
+    }
+
     function openPaintBoardWindow(options) {
         var config = options || {};
         var paintBoardWidth = config.width || 800;
@@ -2140,6 +2188,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         openBrushEditorOutputsWindow: openBrushEditorOutputsWindow,
         openSimpleColorPickerWindow: openSimpleColorPickerWindow,
         openBigColorPickerWindow: openBigColorPickerWindow,
+        openResizeImageWindow: openResizeImageWindow,
         openSimpleLineWidthPickerWindow: openSimpleLineWidthPickerWindow,
         openSimpleBrushWidthPickerWindow: openSimpleBrushWidthPickerWindow,
         openLinesDesignerWindow: openLinesDesignerWindow,

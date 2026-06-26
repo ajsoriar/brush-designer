@@ -659,6 +659,7 @@ import undoIconUrl from "./images/undo-icon.png";
                 openMultiPaste: global.AppOpenWindows.openMultiPaste,
                 openFillBigColorPicker: openFillBigColorPicker,
                 transformLayer: transformActiveLayer,
+                openResizeImage: global.AppOpenWindows.openResizeImageWindow,
                 cropToSelection: cropToSelection,
                 duplicateLayer: duplicateActiveLayer,
                 clearBoard: clearBoard,
