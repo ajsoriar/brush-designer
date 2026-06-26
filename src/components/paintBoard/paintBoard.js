@@ -1104,8 +1104,8 @@
             setSize: function(width, height) {
                 setSize(board, width, height);
             },
-            resizeTo: function(width, height) {
-                return resizeTo(board, width, height);
+            resizeTo: function(width, height, options) {
+                return resizeTo(board, width, height, options);
             },
             cropToSelection: function() {
                 return cropToSelection(board);
@@ -1309,7 +1309,7 @@
     // is discarded on purpose, since it must not survive a resize. Returns true
     // when the resize was applied, or false when the requested size is rejected
     // (non-positive or above MAX_CANVAS_PIXELS).
-    function resizeTo(board, width, height) {
+    function resizeTo(board, width, height, options) {
         width = Math.floor(width);
         height = Math.floor(height);
 
@@ -1323,8 +1323,96 @@
         clearSelection(board);
         clearTempSquare(board);
 
-        applyBoardResize(board, width, height, 0, 0);
+        applyBoardScaleResize(board, width, height, options || {});
         return true;
+    }
+
+    function applyBoardScaleResize(board, width, height, options) {
+        var layerCanvases;
+        var i;
+
+        layerCanvases = board.layersElement ?
+            board.layersElement.querySelectorAll(".paint-board-canvas") : [];
+
+        for (i = 0; i < layerCanvases.length; i++) {
+            resizeCanvasScalingContent(
+                layerCanvases[i],
+                width,
+                height,
+                normalizeResizeResampling(options.resample || options.interpolation)
+            );
+        }
+
+        board.width = width;
+        board.height = height;
+        board.element.style.width = width + "px";
+        board.element.style.height = height + "px";
+        board.layersElement.style.width = width + "px";
+        board.layersElement.style.height = height + "px";
+        board.overlaysElement.style.width = width + "px";
+        board.overlaysElement.style.height = height + "px";
+        setSelectionLayerSize(board.selectionLayerElement, width, height);
+        setTempLayerSize(board.tempLayerElement, width, height);
+        resizeLayerElements(board, width, height);
+        board.context = board.canvas.getContext("2d");
+        updateBoardRulesSize(board, width, height);
+        resizeBoardWindowToContent(board, width, height);
+
+        if (global.Zoom && global.Zoom.updateBoardLayout) {
+            global.Zoom.updateBoardLayout(board.element);
+        }
+    }
+
+    function normalizeResizeResampling(resampling) {
+        var value = String(resampling || "").toLowerCase();
+
+        if (value.indexOf("bicubic") >= 0) {
+            return "bicubic";
+        }
+
+        // First Image Size implementation supports Bicubic only.
+        return "bicubic";
+    }
+
+    function resizeCanvasScalingContent(canvas, width, height, resampling) {
+        var snapshot;
+        var snapshotContext;
+        var context;
+
+        if (!canvas) {
+            return;
+        }
+
+        snapshot = document.createElement("canvas");
+        snapshot.width = canvas.width;
+        snapshot.height = canvas.height;
+        snapshotContext = snapshot.getContext("2d");
+        snapshotContext.drawImage(canvas, 0, 0);
+
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+
+        context = canvas.getContext("2d");
+        if (resampling === "bicubic" &&
+            global.ScaleTransformAlgorithms &&
+            global.ScaleTransformAlgorithms.hasAlgorithm &&
+            global.ScaleTransformAlgorithms.hasAlgorithm("bicubic")) {
+            global.ScaleTransformAlgorithms.render(context, snapshot, [
+                { x: 0, y: 0 },
+                { x: width, y: 0 },
+                { x: width, y: height },
+                { x: 0, y: height }
+            ], "bicubic");
+            return;
+        }
+
+        context.save();
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = "high";
+        context.drawImage(snapshot, 0, 0, width, height);
+        context.restore();
     }
 
     // Crops (or extends) the board so its new top-left origin is (cropX, cropY)

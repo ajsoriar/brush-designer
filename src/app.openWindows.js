@@ -261,7 +261,16 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             onCancel: function() {
                 dialogWindow.close();
             },
-            onOk: function() {
+            onOk: function(options) {
+                var board = getActivePaintBoard();
+
+                if (board && typeof board.resizeTo === "function") {
+                    board.resizeTo(options.width, options.height, {
+                        resample: options.interpolation
+                    });
+                    refreshLayersPanel(board);
+                    updatePaintBoardWindowTitle(board);
+                }
                 dialogWindow.close();
             }
         });
