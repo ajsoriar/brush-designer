@@ -158,6 +158,35 @@
     stroke-width: var(--paint-board-screen-pixel, 1px);
 }
 
+.paint-board-crop-shield {
+    fill: #000;
+    opacity: 0.5;
+}
+
+.paint-board-crop-thirds-guide {
+    opacity: 0.8;
+    pointer-events: none;
+    stroke: #000;
+    stroke-width: var(--paint-board-screen-pixel, 1px);
+}
+
+.paint-board-crop-geometry-indicator {
+    pointer-events: none;
+}
+
+.paint-board-crop-geometry-indicator rect {
+    fill: #ffffe1;
+    stroke: #111;
+    stroke-width: var(--paint-board-screen-pixel, 1px);
+}
+
+.paint-board-crop-geometry-indicator text {
+    dominant-baseline: central;
+    fill: #111;
+    font-family: "Courier New", monospace;
+    text-anchor: middle;
+}
+
 .paint-board-selection-layer {
     display: block;
     height: 100%;

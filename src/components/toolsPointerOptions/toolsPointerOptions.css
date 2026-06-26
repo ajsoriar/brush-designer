@@ -1,0 +1,40 @@
+.tools-pointer-options {
+    align-items: center;
+    border: 1px solid #a0a0a0;
+    display: flex;
+    gap: 6px;
+    margin: 0;
+    padding: 2px 7px 7px;
+}
+
+.tools-pointer-options legend,
+.tools-pointer-options-check {
+    color: #111;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.tools-pointer-options legend {
+    font-size: 10px;
+    padding: 0 4px;
+}
+
+.tools-pointer-options-grid {
+    align-items: center;
+    display: grid;
+    gap: 6px;
+    grid-template-columns: auto;
+}
+
+.tools-pointer-options-check {
+    align-items: center;
+    display: inline-flex;
+    gap: 4px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.tools-pointer-options input {
+    margin: 0;
+}

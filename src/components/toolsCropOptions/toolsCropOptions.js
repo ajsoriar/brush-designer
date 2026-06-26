@@ -13,7 +13,11 @@
         height: 0,
         maxPixels: 9000000,
         fillMode: "background-color",
+        squareAspectRatio: false,
+        ruleOfThirds: true,
+        shieldBlack50: true,
         onFillModeChange: null,
+        onOptionChange: null,
         onAccept: null,
         onCancel: null
     };
@@ -24,6 +28,12 @@
         { value: "black", label: "Black" },
         { value: "front-color", label: "FrontColor" },
         { value: "background-color", label: "BackgroundColor" }
+    ];
+
+    var CROP_OPTIONS = [
+        { value: "squareAspectRatio", label: "Square Aspect Ratio" },
+        { value: "ruleOfThirds", label: "Rule of Thirds" },
+        { value: "shieldBlack50", label: "Shield (Black 50%)" }
     ];
 
     function ToolsCropOptionsComponent(options) {
@@ -42,6 +52,8 @@
         var positionValue = document.createElement("span");
         var fillModes = document.createElement("div");
         var fillModeInputs = {};
+        var optionControls = document.createElement("div");
+        var optionInputs = {};
         var actions = document.createElement("div");
         var acceptButton = document.createElement("button");
         var cancelButton = document.createElement("button");
@@ -67,6 +79,8 @@
         positionLabel.textContent = "Origin:";
         fillModes.className = "tools-crop-options-fill-modes";
         buildFillModeInputs(fillModes, fillModeInputs, componentId);
+        optionControls.className = "tools-crop-options-checkboxes";
+        buildOptionInputs(optionControls, optionInputs, componentId);
 
         actions.className = "tools-crop-options-actions";
 
@@ -95,6 +109,7 @@
         layout.appendChild(pixelsLine);
         layout.appendChild(positionLine);
         layout.appendChild(fillModes);
+        layout.appendChild(optionControls);
         layout.appendChild(actions);
 
         element.appendChild(legend);
@@ -142,6 +157,12 @@
             },
             getFillMode: function() {
                 return readSelectedFillMode(fillModeInputs);
+            },
+            setOptions: function(options) {
+                setOptionsOnInputs(optionInputs, options);
+            },
+            getOptions: function() {
+                return readSelectedOptions(optionInputs);
             }
         };
 
@@ -152,11 +173,18 @@
             height: config.height
         });
         component.setFillMode(config.fillMode);
+        component.setOptions(config);
         component.setVisible(!!config.visible);
 
         bindFillModeInputs(fillModeInputs, function(fillMode) {
             if (typeof config.onFillModeChange === "function") {
                 config.onFillModeChange(fillMode, component);
+            }
+        });
+
+        bindOptionInputs(optionInputs, function(optionName, checked) {
+            if (typeof config.onOptionChange === "function") {
+                config.onOptionChange(optionName, checked, component.getOptions(), component);
             }
         });
 
@@ -210,6 +238,29 @@
         }
     }
 
+    function buildOptionInputs(container, optionInputs, componentId) {
+        var i;
+        var option;
+        var label;
+        var input;
+
+        for (i = 0; i < CROP_OPTIONS.length; i++) {
+            option = CROP_OPTIONS[i];
+            label = document.createElement("label");
+            input = document.createElement("input");
+
+            label.className = "tools-crop-options-checkbox";
+            input.id = componentId + "-" + option.value;
+            input.type = "checkbox";
+            input.value = option.value;
+            input.title = option.label;
+            label.appendChild(input);
+            label.appendChild(document.createTextNode(option.label));
+            container.appendChild(label);
+            optionInputs[option.value] = input;
+        }
+    }
+
     function bindFillModeInputs(fillModeInputs, onChange) {
         var key;
 
@@ -226,6 +277,46 @@
                 onChange(input.value);
             }
         });
+    }
+
+    function bindOptionInputs(optionInputs, onChange) {
+        var key;
+
+        for (key in optionInputs) {
+            if (Object.prototype.hasOwnProperty.call(optionInputs, key)) {
+                bindOptionInput(optionInputs[key], key, onChange);
+            }
+        }
+    }
+
+    function bindOptionInput(input, optionName, onChange) {
+        input.addEventListener("change", function() {
+            onChange(optionName, input.checked);
+        });
+    }
+
+    function setOptionsOnInputs(optionInputs, options) {
+        var safe = options || {};
+        var key;
+
+        for (key in optionInputs) {
+            if (Object.prototype.hasOwnProperty.call(optionInputs, key)) {
+                optionInputs[key].checked = !!safe[key];
+            }
+        }
+    }
+
+    function readSelectedOptions(optionInputs) {
+        var options = {};
+        var key;
+
+        for (key in optionInputs) {
+            if (Object.prototype.hasOwnProperty.call(optionInputs, key)) {
+                options[key] = !!optionInputs[key].checked;
+            }
+        }
+
+        return options;
     }
 
     function normalizeFillMode(fillMode) {

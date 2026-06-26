@@ -789,6 +789,9 @@
             getLayers: function() {
                 return board.layers;
             },
+            getTopLayerAtPoint: function(point) {
+                return getTopLayerAtPoint(board, point);
+            },
             addLayer: function(options) {
                 var previousCanvas = board.canvas;
                 var layer;
@@ -1104,6 +1107,9 @@
             resizeTo: function(width, height) {
                 return resizeTo(board, width, height);
             },
+            cropToSelection: function() {
+                return cropToSelection(board);
+            },
             startCrop: function() {
                 return startCropSession(board);
             },
@@ -1112,6 +1118,12 @@
             },
             cancelCrop: function() {
                 return cancelCropSession(board);
+            },
+            setCropSquareAspectRatio: function(active) {
+                return applyCropSquareAspectRatio(board, active);
+            },
+            refreshCrop: function() {
+                return renderCropSession(board);
             },
             isCropping: function() {
                 return !!board.cropSession;
@@ -1347,6 +1359,26 @@
             fillExpansionWithBackground: fillColor !== null,
             fillColor: fillColor
         });
+        return true;
+    }
+
+    function cropToSelection(board) {
+        var bounds;
+
+        if (!hasActiveSelection(board)) {
+            return false;
+        }
+
+        bounds = getSelectionMaskBounds(board.selection.maskCanvas);
+        if (!bounds || !bounds.width || !bounds.height) {
+            return false;
+        }
+
+        if (!cropBoardTo(board, bounds.left, bounds.top, bounds.width, bounds.height)) {
+            return false;
+        }
+
+        notifyContentChange(board);
         return true;
     }
 
@@ -2894,6 +2926,15 @@
     function canMoveSelectionWithPointer(board, event) {
         var isSelectionMoveMode = isLassoSelectionToolMode() || isPointerToolMode();
 
+        if (isPointerAutoSelectLayerEnabled()) {
+            return !!getPointerAutoSelectLayer(board, event);
+        }
+
+        if (isPointerToolMode() && !hasActiveSelection(board)) {
+            return !isLayerLockedForPointerMove(getActiveLayer(board)) &&
+                !!getCanvasPointerPosition(board, event);
+        }
+
         return isSelectionMoveMode &&
             (isPointerToolMode() || currentSelectionBehavior === SELECTION_BEHAVIORS.NORMAL) &&
             hasActiveSelection(board) &&
@@ -2914,6 +2955,110 @@
         }
 
         return null;
+    }
+
+    function isLayerLockedForPointerMove(layer) {
+        return !!(layer && layer.blocked);
+    }
+
+    function getLayerCanvas(board, layerId) {
+        var layerElement;
+
+        if (!board || !board.layersElement || !layerId) {
+            return null;
+        }
+
+        layerElement = board.layersElement.querySelector('[data-layer="' + layerId + '"]');
+        return layerElement ? layerElement.querySelector("canvas") : null;
+    }
+
+    function isLayerVisibleAtPoint(board, layer, point) {
+        var canvas;
+        var context;
+        var pixel;
+        var x;
+        var y;
+
+        if (!board || !layer || layer.visible === false || !point || isLayerLockedForPointerMove(layer)) {
+            return false;
+        }
+
+        if (typeof layer.opacity === "number" && layer.opacity <= 0) {
+            return false;
+        }
+
+        canvas = getLayerCanvas(board, layer.id);
+        if (!canvas) {
+            return false;
+        }
+
+        x = Math.floor(point.x);
+        y = Math.floor(point.y);
+        if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) {
+            return false;
+        }
+
+        context = canvas.getContext("2d");
+        pixel = context.getImageData(x, y, 1, 1).data;
+        return pixel[3] > 0;
+    }
+
+    function getTopLayerAtPoint(board, point) {
+        var ordered;
+        var i;
+
+        if (!board || !board.layers || !point) {
+            return null;
+        }
+
+        ordered = board.layers.slice().sort(function(a, b) {
+            return getLayerOrderFromBottom(b) - getLayerOrderFromBottom(a);
+        });
+
+        for (i = 0; i < ordered.length; i++) {
+            if (isLayerVisibleAtPoint(board, ordered[i], point)) {
+                return ordered[i];
+            }
+        }
+
+        return null;
+    }
+
+    function getLayerOrderFromBottom(layer) {
+        return typeof layer["order-from-the-bottom"] === "number" ?
+            layer["order-from-the-bottom"] :
+            0;
+    }
+
+    function isPointerAutoSelectLayerEnabled() {
+        return !!(isPointerToolMode() &&
+            global.App &&
+            global.App.memory &&
+            global.App.memory.pointerAutoSelectLayer);
+    }
+
+    function getPointerAutoSelectLayer(board, event) {
+        if (!isPointerAutoSelectLayerEnabled()) {
+            return null;
+        }
+
+        return getTopLayerAtPoint(board, getCanvasPointerPosition(board, event));
+    }
+
+    function activatePointerAutoSelectLayer(board, event) {
+        var layer = getPointerAutoSelectLayer(board, event);
+
+        if (!layer) {
+            return null;
+        }
+
+        if (layer.id !== board.activeLayerId && board.setActiveLayer(layer.id)) {
+            if (global.AppOpenWindows && global.AppOpenWindows.refreshLayersPanel) {
+                global.AppOpenWindows.refreshLayersPanel(board);
+            }
+        }
+
+        return layer;
     }
 
     function getPointerSelectionSourceFillColor(board) {
@@ -2970,16 +3115,68 @@
         board.context.drawImage(fillCanvas, 0, 0);
     }
 
+    function createFullLayerMoveSelection(board) {
+        var maskCanvas;
+        var maskContext;
+
+        if (!board || !board.canvas || board.canvas.width <= 0 || board.canvas.height <= 0) {
+            return null;
+        }
+
+        maskCanvas = createSelectionMaskCanvas(board);
+        maskContext = maskCanvas.getContext("2d");
+        maskContext.fillStyle = "#ffffff";
+        maskContext.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+
+        return {
+            type: "layer",
+            bounds: {
+                left: 0,
+                top: 0,
+                right: maskCanvas.width,
+                bottom: maskCanvas.height,
+                width: maskCanvas.width,
+                height: maskCanvas.height
+            },
+            maskCanvas: maskCanvas
+        };
+    }
+
     function startSelectionMove(board, event) {
         var originSelection;
+        var fullLayerMove = false;
+        var autoSelectedLayer;
 
         clearSelectionDraft(board);
-        originSelection = board.selection;
+        autoSelectedLayer = activatePointerAutoSelectLayer(board, event);
+        if (autoSelectedLayer) {
+            if (hasActiveSelection(board)) {
+                originSelection = board.selection;
+            } else {
+                originSelection = createFullLayerMoveSelection(board);
+                fullLayerMove = true;
+            }
+        } else if (isPointerAutoSelectLayerEnabled()) {
+            return;
+        } else if (hasActiveSelection(board)) {
+            originSelection = board.selection;
+        } else if (isPointerToolMode()) {
+            if (isLayerLockedForPointerMove(getActiveLayer(board))) {
+                return;
+            }
+            originSelection = createFullLayerMoveSelection(board);
+            fullLayerMove = true;
+        }
+
+        if (!originSelection) {
+            return;
+        }
 
         board.selectionMove = {
             startPoint: getSelectionPointerPosition(board, event),
             originSelection: originSelection,
             moveContent: isPointerToolMode(),
+            fullLayerMove: fullLayerMove,
             moved: false
         };
 
@@ -3010,6 +3207,17 @@
         point = getSelectionPointerPosition(board, event);
         offsetX = point.x - move.startPoint.x;
         offsetY = point.y - move.startPoint.y;
+
+        if (move.fullLayerMove) {
+            if (move.moveContent && move.baseCanvas && move.selectionPixelsCanvas) {
+                board.context.clearRect(0, 0, board.canvas.width, board.canvas.height);
+                board.context.drawImage(move.baseCanvas, 0, 0);
+                board.context.drawImage(move.selectionPixelsCanvas, offsetX, offsetY);
+                move.moved = true;
+            }
+            return;
+        }
+
         moved = buildTranslatedSelection(
             board,
             move.originSelection,
@@ -7188,11 +7396,17 @@
             startHeight: 0,
             startPointerX: 0,
             startPointerY: 0,
+            lastPointerPoint: null,
+            modifierState: {
+                shiftKey: false
+            },
+            squareAspectRatioStoredSize: null,
             pointerDown: null,
             pointerMove: null,
             pointerUp: null,
             pointerHover: null,
-            keyDown: null
+            keyChange: null,
+            zoomChange: null
         };
 
         cropSession.pointerDown = function(event) {
@@ -7207,17 +7421,27 @@
         cropSession.pointerHover = function(event) {
             updateCropCursor(board, event);
         };
-        cropSession.keyDown = function(event) {
-            handleCropKeyDown(board, event);
+        cropSession.keyChange = function(event) {
+            handleCropKeyChange(board, event);
+        };
+        cropSession.zoomChange = function(event) {
+            if (event.detail && event.detail.board === board.element) {
+                renderCropSession(board);
+            }
         };
 
         board.cropSession = cropSession;
-        cropSession.overlay.addEventListener("pointerdown", cropSession.pointerDown);
         cropSession.overlay.addEventListener("pointermove", cropSession.pointerHover);
+        document.addEventListener("pointerdown", cropSession.pointerDown, true);
         document.addEventListener("pointermove", cropSession.pointerMove, true);
         document.addEventListener("pointerup", cropSession.pointerUp, true);
         document.addEventListener("pointercancel", cropSession.pointerUp, true);
-        document.addEventListener("keydown", cropSession.keyDown);
+        document.addEventListener("keydown", cropSession.keyChange);
+        document.addEventListener("keyup", cropSession.keyChange);
+        global.addEventListener("paint-board-zoom-change", cropSession.zoomChange);
+        if (isCropSquareAspectRatioEnabled()) {
+            applyCropSquareAspectRatioToSession(cropSession, true);
+        }
         renderCropSession(board);
         notifyCropSessionChange(board, true);
         return true;
@@ -7230,11 +7454,12 @@
             return;
         }
 
-        crop.overlay.innerHTML = getCropHandlesSvg(crop);
+        crop.overlay.innerHTML = getCropHandlesSvg(board, crop);
         notifyCropSessionChange(board, true);
+        return true;
     }
 
-    function getCropHandlesSvg(crop) {
+    function getCropHandlesSvg(board, crop) {
         var corners = [
             { x: crop.x, y: crop.y },
             { x: crop.x + crop.width, y: crop.y },
@@ -7250,11 +7475,24 @@
             return escapeHtml(corner.x) + "," + escapeHtml(corner.y);
         }).join(" ");
 
-        handles = getCropHandles(crop);
+        handles = getCropHandles(crop, board);
 
-        markup = "<svg class=\"paint-board-crop-svg\" xmlns=\"http://www.w3.org/2000/svg\">" +
-            "<polygon class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" points=\"" + outlinePoints + "\"></polygon>" +
+        markup = "<svg class=\"paint-board-crop-svg\" xmlns=\"http://www.w3.org/2000/svg\">";
+
+        if (isCropShieldBlack50Enabled()) {
+            markup += getCropShieldSvg(board, crop);
+        }
+
+        markup += "<polygon class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" points=\"" + outlinePoints + "\"></polygon>" +
             "<polygon class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" points=\"" + outlinePoints + "\"></polygon>";
+
+        if (isCropRuleOfThirdsEnabled()) {
+            markup += getCropRuleOfThirdsSvg(crop);
+        }
+
+        if (crop.isDragging && crop.dragAction === "resize") {
+            markup += getCropGeometryIndicatorSvg(crop, board);
+        }
 
         for (i = 0; i < handles.length; i++) {
             markup += "<rect class=\"paint-board-crop-handle\" x=\"" + escapeHtml(handles[i].left) +
@@ -7267,8 +7505,70 @@
         return markup;
     }
 
-    function getCropHandles(crop) {
-        var size = 8;
+    function getCropShieldSvg(board, crop) {
+        var boardWidth = Math.max(1, board && board.width ? board.width : 1);
+        var boardHeight = Math.max(1, board && board.height ? board.height : 1);
+        var cropRight = crop.x + crop.width;
+        var cropBottom = crop.y + crop.height;
+        var path = "M0 0H" + boardWidth + "V" + boardHeight + "H0Z" +
+            "M" + crop.x + " " + crop.y +
+            "H" + cropRight +
+            "V" + cropBottom +
+            "H" + crop.x + "Z";
+
+        return "<path class=\"paint-board-crop-shield\" fill-rule=\"evenodd\" d=\"" + escapeHtml(path) + "\"></path>";
+    }
+
+    function getCropRuleOfThirdsSvg(crop) {
+        var left = crop.x;
+        var top = crop.y;
+        var right = crop.x + crop.width;
+        var bottom = crop.y + crop.height;
+        var firstThirdX = crop.x + (crop.width / 3);
+        var secondThirdX = crop.x + ((crop.width * 2) / 3);
+        var firstThirdY = crop.y + (crop.height / 3);
+        var secondThirdY = crop.y + ((crop.height * 2) / 3);
+
+        return getCropGuideLineSvg(firstThirdX, top, firstThirdX, bottom) +
+            getCropGuideLineSvg(secondThirdX, top, secondThirdX, bottom) +
+            getCropGuideLineSvg(left, firstThirdY, right, firstThirdY) +
+            getCropGuideLineSvg(left, secondThirdY, right, secondThirdY);
+    }
+
+    function getCropGuideLineSvg(x1, y1, x2, y2) {
+        return "<line class=\"paint-board-crop-thirds-guide\" x1=\"" + escapeHtml(x1) +
+            "\" y1=\"" + escapeHtml(y1) +
+            "\" x2=\"" + escapeHtml(x2) +
+            "\" y2=\"" + escapeHtml(y2) + "\"></line>";
+    }
+
+    function getCropGeometryIndicatorSvg(crop, board) {
+        var scale = getBoardScreenPixelScale(board);
+        var text = crop.width + "x" + crop.height;
+        var fontSize = 12 * scale;
+        var paddingX = 6 * scale;
+        var paddingY = 4 * scale;
+        var textWidth = text.length * 7 * scale;
+        var boxWidth = textWidth + (paddingX * 2);
+        var boxHeight = fontSize + (paddingY * 2);
+        var centerX = crop.x + (crop.width / 2);
+        var centerY = crop.y + (crop.height / 2);
+        var left = centerX - (boxWidth / 2);
+        var top = centerY - (boxHeight / 2);
+
+        return "<g class=\"paint-board-crop-geometry-indicator\">" +
+            "<rect x=\"" + escapeHtml(left) +
+            "\" y=\"" + escapeHtml(top) +
+            "\" width=\"" + escapeHtml(boxWidth) +
+            "\" height=\"" + escapeHtml(boxHeight) + "\"></rect>" +
+            "<text x=\"" + escapeHtml(centerX) +
+            "\" y=\"" + escapeHtml(centerY) +
+            "\" font-size=\"" + escapeHtml(fontSize) + "\">" + escapeHtml(text) + "</text>" +
+            "</g>";
+    }
+
+    function getCropHandles(crop, board) {
+        var size = 8 * getBoardScreenPixelScale(board);
         var half = size / 2;
         var left = crop.x;
         var top = crop.y;
@@ -7289,7 +7589,7 @@
         ];
     }
 
-    function getCropHandleAtPoint(crop, point) {
+    function getCropHandleAtPoint(crop, point, board) {
         var handles;
         var handle;
         var i;
@@ -7298,7 +7598,7 @@
             return null;
         }
 
-        handles = getCropHandles(crop);
+        handles = getCropHandles(crop, board);
         for (i = 0; i < handles.length; i++) {
             handle = handles[i];
             if (point.x >= handle.left &&
@@ -7312,6 +7612,23 @@
         return null;
     }
 
+    function getBoardScreenPixelScale(board) {
+        var element = board && board.element ? board.element : board;
+        var zoom;
+
+        if (!element || !element.getAttribute) {
+            return 1;
+        }
+
+        zoom = parseFloat(element.getAttribute("data-zoom"));
+
+        if (!zoom || isNaN(zoom)) {
+            return 1;
+        }
+
+        return 1 / zoom;
+    }
+
     function startCropDrag(board, event) {
         var crop = board && board.cropSession;
         var point;
@@ -7322,7 +7639,7 @@
         }
 
         point = getSelectionPointerPosition(board, event);
-        handle = getCropHandleAtPoint(crop, point);
+        handle = getCropHandleAtPoint(crop, point, board);
 
         if (!handle && !isPointInsideBounds(point, crop)) {
             return;
@@ -7340,6 +7657,8 @@
         crop.startHeight = crop.height;
         crop.startPointerX = point.x;
         crop.startPointerY = point.y;
+        crop.lastPointerPoint = point;
+        crop.modifierState.shiftKey = !!event.shiftKey;
         crop.overlay.style.cursor = getFloatingPasteCursor(handle || "move");
         capturePointer(crop.overlay, event.pointerId);
     }
@@ -7358,9 +7677,11 @@
 
         event.preventDefault();
         point = getSelectionPointerPosition(board, event);
+        crop.lastPointerPoint = point;
+        crop.modifierState.shiftKey = !!event.shiftKey;
 
         if (crop.dragAction === "resize") {
-            resizeCrop(crop, point);
+            resizeCrop(crop, point, event);
         } else {
             crop.x = crop.startX + Math.round(point.x - crop.startPointerX);
             crop.y = crop.startY + Math.round(point.y - crop.startPointerY);
@@ -7369,7 +7690,7 @@
         renderCropSession(board);
     }
 
-    function resizeCrop(crop, point) {
+    function resizeCrop(crop, point, event) {
         var handle = crop.resizeHandle;
         var left = crop.startX;
         var top = crop.startY;
@@ -7405,10 +7726,112 @@
             bottom = swap;
         }
 
+        if (isCropSquareAspectRatioEnabled() || isCropShiftSquareAspectRatioActive(crop, event)) {
+            resizeCropBoundsToSquare(crop, handle, left, top, right, bottom);
+            return;
+        }
+
         crop.x = Math.round(left);
         crop.y = Math.round(top);
         crop.width = Math.max(1, Math.round(right - left));
         crop.height = Math.max(1, Math.round(bottom - top));
+    }
+
+    function isCropShiftSquareAspectRatioActive(crop, event) {
+        if (event && typeof event.shiftKey === "boolean") {
+            return !!event.shiftKey;
+        }
+
+        return !!(crop && crop.modifierState && crop.modifierState.shiftKey);
+    }
+
+    function resizeCropBoundsToSquare(crop, handle, left, top, right, bottom) {
+        var hasWest = handle.indexOf("w") !== -1;
+        var hasEast = handle.indexOf("e") !== -1;
+        var hasNorth = handle.indexOf("n") !== -1;
+        var hasSouth = handle.indexOf("s") !== -1;
+        var startRight = crop.startX + crop.startWidth;
+        var startBottom = crop.startY + crop.startHeight;
+        var centerX = crop.startX + (crop.startWidth / 2);
+        var centerY = crop.startY + (crop.startHeight / 2);
+        var size;
+
+        if ((hasWest || hasEast) && (hasNorth || hasSouth)) {
+            size = Math.max(1, Math.max(right - left, bottom - top));
+            left = hasWest ? startRight - size : crop.startX;
+            right = hasWest ? startRight : crop.startX + size;
+            top = hasNorth ? startBottom - size : crop.startY;
+            bottom = hasNorth ? startBottom : crop.startY + size;
+        } else if (hasWest || hasEast) {
+            size = Math.max(1, right - left);
+            left = hasWest ? startRight - size : crop.startX;
+            right = hasWest ? startRight : crop.startX + size;
+            top = centerY - (size / 2);
+            bottom = centerY + (size / 2);
+        } else {
+            size = Math.max(1, bottom - top);
+            left = centerX - (size / 2);
+            right = centerX + (size / 2);
+            top = hasNorth ? startBottom - size : crop.startY;
+            bottom = hasNorth ? startBottom : crop.startY + size;
+        }
+
+        crop.x = Math.round(left);
+        crop.y = Math.round(top);
+        crop.width = Math.max(1, Math.round(right - left));
+        crop.height = Math.max(1, Math.round(bottom - top));
+    }
+
+    function applyCropSquareAspectRatio(board, active) {
+        var crop = board && board.cropSession;
+
+        if (!crop) {
+            return false;
+        }
+
+        applyCropSquareAspectRatioToSession(crop, active);
+        renderCropSession(board);
+        return true;
+    }
+
+    function applyCropSquareAspectRatioToSession(crop, active) {
+        var size;
+
+        if (!crop) {
+            return;
+        }
+
+        if (active) {
+            if (!crop.squareAspectRatioStoredSize) {
+                crop.squareAspectRatioStoredSize = {
+                    width: crop.width,
+                    height: crop.height
+                };
+            }
+
+            size = Math.max(1, Math.min(crop.width, crop.height));
+            crop.width = size;
+            crop.height = size;
+            return;
+        }
+
+        if (crop.squareAspectRatioStoredSize) {
+            crop.width = Math.max(1, Math.round(crop.squareAspectRatioStoredSize.width));
+            crop.height = Math.max(1, Math.round(crop.squareAspectRatioStoredSize.height));
+            crop.squareAspectRatioStoredSize = null;
+        }
+    }
+
+    function isCropSquareAspectRatioEnabled() {
+        return !!(global.App && global.App.memory && global.App.memory.cropSquareAspectRatio);
+    }
+
+    function isCropRuleOfThirdsEnabled() {
+        return !!(global.App && global.App.memory && global.App.memory.cropRuleOfThirds);
+    }
+
+    function isCropShieldBlack50Enabled() {
+        return !!(global.App && global.App.memory && global.App.memory.cropShieldBlack50);
     }
 
     function stopCropDrag(board, event) {
@@ -7442,14 +7865,23 @@
         }
 
         point = getSelectionPointerPosition(board, event);
-        handle = getCropHandleAtPoint(crop, point);
+        handle = getCropHandleAtPoint(crop, point, board);
         crop.overlay.style.cursor = getFloatingPasteCursor(handle || (isPointInsideBounds(point, crop) ? "move" : null));
     }
 
-    function handleCropKeyDown(board, event) {
+    function handleCropKeyChange(board, event) {
         var crop = board && board.cropSession;
 
         if (!crop || isEditableKeyboardTarget(event.target)) {
+            return;
+        }
+
+        if (event.key === "Shift") {
+            crop.modifierState.shiftKey = event.type !== "keyup";
+            if (crop.isDragging && crop.dragAction === "resize" && crop.lastPointerPoint) {
+                resizeCrop(crop, crop.lastPointerPoint, null);
+                renderCropSession(board);
+            }
             return;
         }
 
@@ -7511,12 +7943,14 @@
             return;
         }
 
-        crop.overlay.removeEventListener("pointerdown", crop.pointerDown);
         crop.overlay.removeEventListener("pointermove", crop.pointerHover);
+        document.removeEventListener("pointerdown", crop.pointerDown, true);
         document.removeEventListener("pointermove", crop.pointerMove, true);
         document.removeEventListener("pointerup", crop.pointerUp, true);
         document.removeEventListener("pointercancel", crop.pointerUp, true);
-        document.removeEventListener("keydown", crop.keyDown);
+        document.removeEventListener("keydown", crop.keyChange);
+        document.removeEventListener("keyup", crop.keyChange);
+        global.removeEventListener("paint-board-zoom-change", crop.zoomChange);
 
         crop.overlay.innerHTML = "";
         crop.overlay.title = "";

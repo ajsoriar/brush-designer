@@ -14,10 +14,18 @@ import undoIconUrl from "./images/undo-icon.png";
     global.App.memory.currentBrushStroke = global.App.memory.currentBrushStroke || false;
     global.App.memory.currentBrushAntialiasing = global.App.memory.currentBrushAntialiasing || false;
     global.App.memory.cropExpansionFillMode = global.App.memory.cropExpansionFillMode || "background-color";
+    global.App.memory.cropSquareAspectRatio = !!global.App.memory.cropSquareAspectRatio;
+    global.App.memory.cropRuleOfThirds = typeof global.App.memory.cropRuleOfThirds === "boolean" ?
+        global.App.memory.cropRuleOfThirds :
+        true;
+    global.App.memory.cropShieldBlack50 = typeof global.App.memory.cropShieldBlack50 === "boolean" ?
+        global.App.memory.cropShieldBlack50 :
+        true;
     global.App.memory.rainbowCrazyMode = global.App.memory.rainbowCrazyMode || false;
     global.App.memory.rainbowCrazyAlgorithm = global.App.memory.rainbowCrazyAlgorithm || "random";
     global.App.memory.rainbowCrazyJump = !!global.App.memory.rainbowCrazyJump;
     global.App.memory.rainbowCrazyLoop = !!global.App.memory.rainbowCrazyLoop;
+    global.App.memory.pointerAutoSelectLayer = !!global.App.memory.pointerAutoSelectLayer;
     global.App.memory.currentLineDesign = global.App.memory.currentLineDesign || {
         weight: global.App.memory.currentLineWidth,
         unit: "px",
@@ -74,6 +82,7 @@ import undoIconUrl from "./images/undo-icon.png";
     var selectionBehabiourComponent = null;
     var toolsMagicWandOptionsComponent = null;
     var toolsTransformOptionsComponent = null;
+    var toolsPointerOptionsComponent = null;
     var toolsCrazyOptionsComponent = null;
     var toolsCropOptionsComponent = null;
     var foregroundBackgroundColorsComponent = null;
@@ -96,6 +105,7 @@ import undoIconUrl from "./images/undo-icon.png";
         initSelectionBehabiourComponent();
         initToolsMagicWandOptionsComponent();
         initToolsTransformOptionsComponent();
+        initToolsPointerOptionsComponent();
         initToolsCrazyOptionsComponent();
         initToolsCropOptionsComponent();
         syncBrushWidthPickerToPaintTool(global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : null);
@@ -227,6 +237,7 @@ import undoIconUrl from "./images/undo-icon.png";
 
         syncSelectionBehabiourVisibility(mode);
         syncToolsMagicWandOptionsVisibility(mode);
+        syncToolsPointerOptionsVisibility(mode);
         syncBrushWidthPickerToPaintTool(mode);
 
         if (mode === "CROP-BOARD") {
@@ -323,6 +334,37 @@ import undoIconUrl from "./images/undo-icon.png";
         }
 
         toolsMagicWandOptionsComponent.hide();
+    }
+
+    function initToolsPointerOptionsComponent() {
+        if (!global.ToolsPointerOptionsComponent) {
+            return;
+        }
+
+        toolsPointerOptionsComponent = global.ToolsPointerOptionsComponent({
+            id: "tools-pointer-options-toolbar",
+            containerId: "tools-pointer-options-container",
+            visible: false,
+            autoSelectLayer: global.App.memory.pointerAutoSelectLayer,
+            onChange: function(options) {
+                global.App.memory.pointerAutoSelectLayer = !!options.autoSelectLayer;
+            }
+        });
+        global.ToolsPointerOptionsApi = toolsPointerOptionsComponent;
+        syncToolsPointerOptionsVisibility(global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : "");
+    }
+
+    function syncToolsPointerOptionsVisibility(mode) {
+        if (!toolsPointerOptionsComponent) {
+            return;
+        }
+
+        if (mode === "POINTER-TOOL") {
+            toolsPointerOptionsComponent.show();
+            return;
+        }
+
+        toolsPointerOptionsComponent.hide();
     }
 
     function initToolsTransformOptionsComponent() {
@@ -436,8 +478,29 @@ import undoIconUrl from "./images/undo-icon.png";
             containerId: "tools-crop-options-container",
             visible: false,
             fillMode: global.App.memory.cropExpansionFillMode,
+            squareAspectRatio: global.App.memory.cropSquareAspectRatio,
+            ruleOfThirds: global.App.memory.cropRuleOfThirds,
+            shieldBlack50: global.App.memory.cropShieldBlack50,
             onFillModeChange: function(fillMode) {
                 global.App.memory.cropExpansionFillMode = fillMode;
+            },
+            onOptionChange: function(optionName, checked) {
+                var activePaintBoard;
+
+                if (optionName === "squareAspectRatio") {
+                    global.App.memory.cropSquareAspectRatio = checked;
+                } else if (optionName === "ruleOfThirds") {
+                    global.App.memory.cropRuleOfThirds = checked;
+                } else if (optionName === "shieldBlack50") {
+                    global.App.memory.cropShieldBlack50 = checked;
+                }
+
+                activePaintBoard = global.AppOpenWindows.getActivePaintBoard();
+                if (optionName === "squareAspectRatio" && activePaintBoard && activePaintBoard.setCropSquareAspectRatio) {
+                    activePaintBoard.setCropSquareAspectRatio(checked);
+                } else if (activePaintBoard && activePaintBoard.refreshCrop) {
+                    activePaintBoard.refreshCrop();
+                }
             },
             onAccept: function() {
                 var activePaintBoard = global.AppOpenWindows.getActivePaintBoard();
@@ -481,6 +544,11 @@ import undoIconUrl from "./images/undo-icon.png";
                 height: crop.height
             });
             toolsCropOptionsComponent.setFillMode(global.App.memory.cropExpansionFillMode);
+            toolsCropOptionsComponent.setOptions({
+                squareAspectRatio: global.App.memory.cropSquareAspectRatio,
+                ruleOfThirds: global.App.memory.cropRuleOfThirds,
+                shieldBlack50: global.App.memory.cropShieldBlack50
+            });
         }
     }
 
@@ -591,6 +659,7 @@ import undoIconUrl from "./images/undo-icon.png";
                 openMultiPaste: global.AppOpenWindows.openMultiPaste,
                 openFillBigColorPicker: openFillBigColorPicker,
                 transformLayer: transformActiveLayer,
+                cropToSelection: cropToSelection,
                 duplicateLayer: duplicateActiveLayer,
                 clearBoard: clearBoard,
                 clearSelectionContent: deleteActiveSelection,
@@ -942,7 +1011,18 @@ import undoIconUrl from "./images/undo-icon.png";
             appMenuComponent.setItemEnabled("unselect", hasSelection);
             appMenuComponent.setItemEnabled("fillSelectionWithFrontColor", hasSelection);
             appMenuComponent.setItemEnabled("reverseSelection", hasSelection);
+            appMenuComponent.setItemEnabled("cropToSelection", hasSelection);
         }
+    }
+
+    function cropToSelection() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (!targetBoard || typeof targetBoard.cropToSelection !== "function") {
+            return false;
+        }
+
+        return targetBoard.cropToSelection();
     }
 
     function selectAll() {

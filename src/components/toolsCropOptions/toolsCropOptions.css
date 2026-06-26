@@ -13,11 +13,12 @@
 .tools-crop-options-value {
     color: #111;
     font-family: monospace;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: bold;
 }
 
 .tools-crop-options legend {
+    font-size: 10px;
     padding: 0 4px;
 }
 
@@ -39,7 +40,7 @@
 .tools-crop-options-pixels {
     color: #00f;
     font-family: monospace;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: bold;
     grid-column: 1 / span 2;
     white-space: nowrap;
@@ -80,7 +81,7 @@
     color: #111;
     display: inline-flex;
     font-family: monospace;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: bold;
     gap: 3px;
     white-space: nowrap;
@@ -90,32 +91,59 @@
     margin: 0;
 }
 
+.tools-crop-options-checkboxes {
+    align-items: center;
+    column-gap: 10px;
+    display: grid;
+    grid-column: 1 / span 3;
+    grid-row: 4;
+    grid-template-columns: repeat(3, auto);
+}
+
+.tools-crop-options-checkbox {
+    align-items: center;
+    color: #111;
+    display: inline-flex;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: bold;
+    gap: 3px;
+    white-space: nowrap;
+}
+
+.tools-crop-options-checkbox input {
+    margin: 0;
+}
+
 .tools-crop-options-action {
     background-color: transparent;
     background-repeat: no-repeat;
     border: 1px solid #8b8b8b;
     cursor: pointer;
-    height: 28px;
+    display: block;
+    height: 28px !important;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     margin: 0;
     outline: none;
     padding: 0;
-    width: 28px;
+    width: 28px !important;
 }
 
 .tools-crop-options-accept {
-    background-position: 0 0;
+    background-position: -29px 0;
 }
 
 .tools-crop-options-cancel {
-    background-position: -28px 0;
+    background-position: -1px -1px;
 }
 
 .tools-crop-options-action:hover {
+    background-color: transparent;
     border-color: #4d4d4d;
 }
 
+/* .tools-bar */
 .tools-crop-options-action:active {
     transform: translateY(1px);
 }

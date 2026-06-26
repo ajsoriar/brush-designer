@@ -28,7 +28,9 @@
     },
     {
       "label": "Image",
-      "items": []
+      "items": [
+        { "label": "Crop", "action": "cropToSelection", "enabled": false }
+      ]
     },
     {
       "label": "Layer",
