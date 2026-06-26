@@ -3,11 +3,11 @@
     box-sizing: border-box;
     color: #111111;
     display: grid;
-    font: 13px Arial, sans-serif;
+    font: 11px Arial, sans-serif;
     gap: 12px;
-    grid-template-columns: minmax(360px, 1fr) 128px;
+    grid-template-columns: minmax(360px, 1fr) 160px;
     height: 100%;
-    padding: 14px;
+    padding: 11px 4px;
     width: 100%;
 }
 
@@ -23,8 +23,8 @@
 }
 
 .resize-image-side {
-    align-content: start;
     display: grid;
+    grid-template-rows: auto 1fr;
     min-width: 0;
 }
 
@@ -38,7 +38,7 @@
     border: 2px groove #ffffff;
     margin: 0;
     min-width: 0;
-    padding: 10px 12px 12px;
+    padding: 8px 8px 8px;
 }
 
 .resize-image-fieldset legend {
@@ -66,8 +66,7 @@
 }
 
 .resize-image-row input,
-.resize-image-row select,
-.resize-image-resample-row select {
+.resize-image-row select {
     background: #ffffff;
     border: 1px solid #9f9f9f;
     color: #111111;
@@ -107,14 +106,58 @@
     margin: 0;
 }
 
-.resize-image-resample-row {
+.resize-image-resample-legend {
     align-items: center;
-    display: grid;
-    gap: 10px;
-    grid-template-columns: max-content minmax(170px, 1fr);
+    display: flex;
+    gap: 8px;
+    margin-left: 8px;
 }
 
-.resize-image-resample-disabled .resize-image-resample-row select {
+.resize-image-resample-legend-item {
+    align-items: center;
+    display: inline-flex;
+    gap: 3px;
+}
+
+.resize-image-resample-legend-swatch {
+    display: inline-block;
+    flex: 0 0 auto;
+    height: 8px;
+    width: 8px;
+}
+
+.resize-image-resample-row {
+    display: grid;
+    font-size: 10px;
+    gap: 7px;
+    line-height: unset;
+}
+
+.resize-image-algorithm-radios {
+    display: grid;
+    gap: 1px 6px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-left: 4px;
+}
+
+.resize-image-algorithm-option {
+    align-items: flex-start;
+    display: flex;
+    gap: 5px;
+    line-height: 1.15;
+    min-width: 0;
+}
+
+.resize-image-algorithm-option input {
+    flex: 0 0 auto;
+    margin: 1px 0 0;
+}
+
+.resize-image-algorithm-option span {
+    min-width: 0;
+}
+
+.resize-image-resample-disabled .resize-image-algorithm-option span {
     color: #777777;
 }
 
@@ -124,6 +167,29 @@
     gap: 10px;
     padding-top: 2px;
     width: 96px;
+}
+
+.resize-image-algorithm-description {
+    color: #222222;
+    line-height: 1.25;
+    margin-top: 177px;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0;
+    width: 160px;
+}
+
+.resize-image-algorithm-description-title {
+    font-weight: 700;
+    margin-bottom: 7px;
+}
+
+.resize-image-algorithm-description-text {
+    color: #333333;
+}
+
+.resize-image-algorithm-description-empty {
+    color: #777777;
 }
 
 .resize-image-actions button {

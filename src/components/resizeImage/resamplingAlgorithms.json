@@ -1,0 +1,146 @@
+[
+  {
+    "id": "nearest-neighbor",
+    "displayText": "Nearest Neighbor (preserve hard edges)",
+    "textColor": "blue",
+    "description": "Samples the closest source pixel without smoothing or blending. Best for pixel art, masks, icons, UI captures, and hard-edged artwork where every original pixel should remain crisp."
+  },
+  {
+    "id": "bilinear",
+    "displayText": "Bilinear",
+    "textColor": "blue",
+    "description": "Blends the four nearest source pixels to create a simple smooth result. It is fast and predictable, but softer and less detailed than higher-quality filters."
+  },
+  {
+    "id": "bicubic",
+    "displayText": "Bicubic (best for smooth gradients)",
+    "textColor": "blue",
+    "description": "Uses cubic interpolation over neighboring pixels for a balanced, polished resize. Good general-purpose quality for photos, smooth artwork, gradients, and most everyday image-size changes."
+  },
+  {
+    "id": "bicubic-smoother",
+    "displayText": "Bicubic Smoother (best for enlargement)",
+    "textColor": "blue",
+    "description": "A smoother bicubic variant intended for upscaling images. It reduces jagged edges and stair-stepping when enlarging, at the cost of some sharpness and fine texture."
+  },
+  {
+    "id": "bicubic-sharper",
+    "displayText": "Bicubic Sharper (best for reduction)",
+    "textColor": "blue",
+    "description": "A sharper bicubic variant intended for reducing image size. It preserves apparent detail and edge definition while shrinking, though high-contrast artwork can become slightly crisp."
+  },
+  {
+    "id": "area-average",
+    "displayText": "Area Average (best for reduction)",
+    "textColor": "red",
+    "description": "Averages the covered source pixels for each output pixel, especially when reducing size. Strong choice for shrinking images cleanly with fewer aliasing artifacts and less shimmer."
+  },
+  {
+    "id": "lanczos",
+    "displayText": "Lanczos (high quality)",
+    "textColor": "red",
+    "description": "Uses a windowed sinc filter for high-quality resizing with strong detail retention. Often crisp and detailed, but may create subtle ringing or halos near hard edges."
+  },
+  {
+    "id": "mitchell-netravali",
+    "displayText": "Mitchell-Netravali",
+    "textColor": "gray",
+    "description": "Balanced cubic filter that aims to avoid both excessive blur and excessive ringing. It is a careful middle ground for natural-looking resizing without dramatic sharpening."
+  },
+  {
+    "id": "catmull-rom",
+    "displayText": "Catmull-Rom",
+    "textColor": "gray",
+    "description": "Sharper cubic filter that preserves detail and local contrast well. It can overshoot around high-contrast edges, so it may look crisp but slightly aggressive."
+  },
+  {
+    "id": "hermite",
+    "displayText": "Hermite",
+    "textColor": "gray",
+    "description": "Smooth interpolation filter that is simple, stable, and useful for modest resizing. It favors gentle transitions over sharp detail and usually avoids strong artifacts."
+  },
+  {
+    "id": "gaussian",
+    "displayText": "Gaussian (soft anti-alias)",
+    "textColor": "red",
+    "description": "Blurs with a Gaussian kernel for very smooth results and strong anti-aliasing when shrinking. Useful for reducing harsh edges, but it sacrifices sharpness and fine detail."
+  },
+  {
+    "id": "b-spline",
+    "displayText": "B-Spline (smoothest)",
+    "textColor": "gray",
+    "description": "Cubic B-spline filter that produces very smooth output and removes visible aliasing. It is gentle and stable, but trades away fine detail and crisp edges."
+  },
+  {
+    "id": "magic-kernel-sharp",
+    "displayText": "Magic Kernel Sharp",
+    "textColor": "green",
+    "description": "Modern filter that combines smooth resampling with a controlled sharpening pass. It aims for crisp, lively results without obvious ringing artifacts or crunchy over-sharpening."
+  },
+  {
+    "id": "spline36",
+    "displayText": "Spline36 (high quality)",
+    "textColor": "red",
+    "description": "High-quality spline filter with wide support and strong reconstruction quality. It preserves detail well across both enlargement and reduction, but can be slower to compute."
+  },
+  {
+    "id": "box",
+    "displayText": "Box (fast averaging)",
+    "textColor": "gray",
+    "description": "Simplest averaging filter that gives each covered source pixel equal weight. Very fast and decent for simple reductions, especially halving sizes, but not very refined."
+  },
+  {
+    "id": "triangle",
+    "displayText": "Triangle (linear)",
+    "textColor": "gray",
+    "description": "Tent-shaped linear filter, effectively equivalent to bilinear interpolation. Fast and smooth with minimal artifacts for small scale changes, but limited detail preservation."
+  },
+  {
+    "id": "robidoux",
+    "displayText": "Robidoux",
+    "textColor": "gray",
+    "description": "Cubic filter tuned to minimize blur while avoiding visible halos. A balanced general-purpose option for photo resizing when you want natural detail without hard sharpening."
+  },
+  {
+    "id": "robidoux-sharp",
+    "displayText": "Robidoux Sharp",
+    "textColor": "gray",
+    "description": "Sharper Robidoux variant that retains more detail and local contrast. Well suited to downscaling where crispness matters, but slightly more prone to edge emphasis."
+  },
+  {
+    "id": "blackman-sinc",
+    "displayText": "Blackman-Sinc (low ringing)",
+    "textColor": "red",
+    "description": "Windowed sinc filter using a Blackman window for high-quality reconstruction. It usually rings less than Lanczos near hard edges while keeping much of the same detail."
+  },
+  {
+    "id": "scale2x",
+    "displayText": "Scale2x / EPX (pixel art)",
+    "textColor": "green",
+    "description": "Edge-preserving pixel-art upscaler that smooths jagged diagonals without general blurring. Ideal for retro sprites at integer scales when nearest-neighbor feels too blocky."
+  },
+  {
+    "id": "xbr",
+    "displayText": "xBR (pixel art, smooth edges)",
+    "textColor": "green",
+    "description": "Advanced pattern-based pixel-art scaler that detects and interpolates edges. Produces smooth, clean upscales of low-resolution artwork while preserving the graphic character."
+  },
+  {
+    "id": "super-xbr",
+    "displayText": "Super xBR (pixel art)",
+    "textColor": "green",
+    "description": "Higher-quality xBR variant that produces cleaner, less blocky upscales for sprites and low-resolution images. It focuses on smooth contours while avoiding ordinary blur."
+  },
+  {
+    "id": "hqx",
+    "displayText": "HQx (HQ2x / HQ3x / HQ4x)",
+    "textColor": "green",
+    "description": "Lookup-based pixel-art upscaler that smooths edges and curves for retro graphics. Designed for fixed 2x, 3x, or 4x scales where stylized enlargement is preferred."
+  },
+  {
+    "id": "pixel-art",
+    "displayText": "Pixel Art (integer scale)",
+    "textColor": "green",
+    "description": "Keeps pixels crisp by favoring hard edges and integer-like scaling behavior. Best for retro or low-resolution artwork where softness would destroy the intended pixel structure."
+  }
+]

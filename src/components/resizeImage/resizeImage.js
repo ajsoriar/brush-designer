@@ -2,6 +2,39 @@
 
     "use strict";
 
+    var FALLBACK_RESAMPLING_ALGORITHMS = [
+        {
+            id: "nearest-neighbor",
+            displayText: "Nearest Neighbor (preserve hard edges)",
+            textColor: "blue",
+            description: "Samples the closest source pixel without smoothing. Best for pixel art, masks, icons, and hard-edged artwork."
+        },
+        {
+            id: "bilinear",
+            displayText: "Bilinear",
+            textColor: "blue",
+            description: "Blends the four nearest source pixels. Fast and smooth, but softer than higher-quality filters."
+        },
+        {
+            id: "bicubic",
+            displayText: "Bicubic (best for smooth gradients)",
+            textColor: "blue",
+            description: "Uses cubic interpolation over neighboring pixels. Good general-purpose quality for smooth artwork and gradients."
+        },
+        {
+            id: "bicubic-smoother",
+            displayText: "Bicubic Smoother (best for enlargement)",
+            textColor: "blue",
+            description: "A smoother bicubic variant intended for upscaling, reducing jagged edges at the cost of some sharpness."
+        },
+        {
+            id: "bicubic-sharper",
+            displayText: "Bicubic Sharper (best for reduction)",
+            textColor: "blue",
+            description: "A sharper bicubic variant intended for downscaling, preserving apparent detail while reducing size."
+        }
+    ];
+
     var DEFAULTS = {
         width: 800,
         height: 600,
@@ -13,14 +46,8 @@
         printUnit: "inches",
         constrainProportions: true,
         resample: true,
-        interpolation: "Bicubic (best for smooth gradients)",
-        interpolationOptions: [
-            "Nearest Neighbor (preserve hard edges)",
-            "Bilinear",
-            "Bicubic (best for smooth gradients)",
-            "Bicubic Smoother (best for enlargement)",
-            "Bicubic Sharper (best for reduction)"
-        ],
+        interpolation: "bicubic",
+        interpolationOptions: null,
         onOk: null,
         onCancel: null,
         onChange: null
@@ -40,6 +67,8 @@
 
     function ResizeImage(options) {
         var config = extend(extend({}, DEFAULTS), options || {});
+        var interpolationOptions = getResamplingAlgorithms(config.interpolationOptions);
+        var initialInterpolationId = normalizeInterpolationId(config.interpolation, interpolationOptions);
         var aspectRatio = sanitizeNumber(config.width, DEFAULTS.width) /
             sanitizeNumber(config.height, DEFAULTS.height);
         var root = createElement("div", "resize-image-dialog");
@@ -61,7 +90,8 @@
         var optionsFieldset = createFieldset("Options");
         var constrainCheck = createCheckbox("resize-image-constrain", "Constrain Proportions", config.constrainProportions);
         var resampleCheck = createCheckbox("resize-image-resample", "Resample Image", config.resample);
-        var interpolationSelect = createSelect("resize-image-interpolation", config.interpolationOptions, config.interpolation);
+        var interpolationRadios = createAlgorithmRadios("resize-image-interpolation", interpolationOptions, initialInterpolationId);
+        var algorithmDescription = createAlgorithmDescriptionPanel();
         var okButton = createButton("OK");
         var cancelButton = createButton("Cancel");
         var component;
@@ -76,7 +106,8 @@
         addChainIcon(documentFieldset.content);
 
         optionsFieldset.content.appendChild(constrainCheck.row);
-        optionsFieldset.content.appendChild(createResampleRow(resampleCheck, interpolationSelect));
+        appendResampleLegend(resampleCheck.row);
+        optionsFieldset.content.appendChild(createResampleRow(resampleCheck, interpolationRadios.element));
 
         form.appendChild(sizeFieldset.element);
         form.appendChild(documentFieldset.element);
@@ -84,6 +115,7 @@
         body.appendChild(form);
         actions.appendChild(okButton);
         actions.appendChild(cancelButton);
+        sidePanel.appendChild(algorithmDescription.element);
 
         component = {
             element: root,
@@ -123,7 +155,7 @@
         });
 
         [printWidthInput, printHeightInput, printUnit, resolutionInput, resolutionUnit,
-            resampleCheck.input, interpolationSelect].forEach(function(control) {
+            resampleCheck.input, interpolationRadios.element].forEach(function(control) {
             control.addEventListener("input", function() {
                 updateState(true);
             });
@@ -150,6 +182,7 @@
         function getOptions() {
             var widthValue = sanitizeNumber(widthInput.value, config.width);
             var heightValue = sanitizeNumber(heightInput.value, config.height);
+            var interpolationOption = getAlgorithmById(interpolationOptions, interpolationRadios.getValue());
 
             return {
                 width: unitToPixels(widthValue, widthUnit.value, config.width),
@@ -165,7 +198,9 @@
                 resolutionUnit: resolutionUnit.value,
                 constrainProportions: constrainCheck.input.checked,
                 resample: resampleCheck.input.checked,
-                interpolation: interpolationSelect.value
+                interpolationId: interpolationOption.id,
+                interpolation: interpolationOption.displayText,
+                interpolationDescription: interpolationOption.description
             };
         }
 
@@ -188,7 +223,10 @@
                 resampleCheck.input.checked = !!nextOptions.resample;
             }
             if (nextOptions.interpolation !== undefined) {
-                interpolationSelect.value = nextOptions.interpolation;
+                interpolationRadios.setValue(normalizeInterpolationId(nextOptions.interpolation, interpolationOptions));
+            }
+            if (nextOptions.interpolationId !== undefined) {
+                interpolationRadios.setValue(normalizeInterpolationId(nextOptions.interpolationId, interpolationOptions));
             }
 
             aspectRatio = sanitizeNumber(config.width, DEFAULTS.width) /
@@ -217,7 +255,8 @@
             var options = getOptions();
 
             sizeFieldset.legend.textContent = "Pixel Dimensions: " + estimateImageSize(options.width, options.height);
-            interpolationSelect.disabled = !options.resample;
+            interpolationRadios.setDisabled(!options.resample);
+            algorithmDescription.update(options.resample ? getAlgorithmById(interpolationOptions, options.interpolationId) : null);
             root.classList.toggle("resize-image-constrained", options.constrainProportions);
             root.classList.toggle("resize-image-resample-disabled", !options.resample);
             if (emitChange && typeof config.onChange === "function") {
@@ -230,6 +269,28 @@
         var icon = createElement("span", "resize-image-chain", parent);
 
         icon.setAttribute("aria-hidden", "true");
+    }
+
+    function createAlgorithmDescriptionPanel() {
+        var element = createElement("div", "resize-image-algorithm-description");
+        var title = createElement("div", "resize-image-algorithm-description-title", element);
+        var text = createElement("div", "resize-image-algorithm-description-text", element);
+
+        return {
+            element: element,
+            update: function(algorithm) {
+                if (!algorithm) {
+                    title.textContent = "";
+                    text.textContent = "";
+                    element.classList.add("resize-image-algorithm-description-empty");
+                    return;
+                }
+
+                title.textContent = algorithm.displayText;
+                text.textContent = algorithm.description;
+                element.classList.remove("resize-image-algorithm-description-empty");
+            }
+        };
     }
 
     function createFieldset(title) {
@@ -259,11 +320,11 @@
         return row;
     }
 
-    function createResampleRow(resampleCheck, interpolationSelect) {
+    function createResampleRow(resampleCheck, interpolationControl) {
         var row = createElement("div", "resize-image-resample-row");
 
         row.appendChild(resampleCheck.row);
-        row.appendChild(interpolationSelect);
+        row.appendChild(interpolationControl);
 
         return row;
     }
@@ -283,6 +344,24 @@
             row: row,
             input: input
         };
+    }
+
+    function appendResampleLegend(row) {
+        var legend = createElement("div", "resize-image-resample-legend", row);
+
+        appendLegendItem(legend, "blue", "Default (Photoshop)");
+        appendLegendItem(legend, "green", "Interesting / Creative");
+        appendLegendItem(legend, "red", "Slow");
+        appendLegendItem(legend, "gray", "Not important");
+    }
+
+    function appendLegendItem(parent, color, labelText) {
+        var item = createElement("span", "resize-image-resample-legend-item", parent);
+        var swatch = createElement("span", "resize-image-resample-legend-swatch", item);
+        var label = createElement("span", "", item);
+
+        swatch.style.backgroundColor = color;
+        label.textContent = labelText;
     }
 
     function createNumberInput(id, value, min, max, step) {
@@ -312,6 +391,102 @@
         select.value = value;
 
         return select;
+    }
+
+    function createAlgorithmRadios(name, algorithms, value) {
+        var group = createElement("div", "resize-image-algorithm-radios");
+        var selectedValue = normalizeInterpolationId(value, algorithms);
+
+        group.setAttribute("role", "radiogroup");
+        group.setAttribute("aria-label", "Resampling algorithm");
+        algorithms.forEach(function(algorithm) {
+            var label = createElement("label", "resize-image-algorithm-option", group);
+            var input = document.createElement("input");
+            var text = createElement("span", "", label);
+
+            input.type = "radio";
+            input.name = name;
+            input.value = algorithm.id;
+            input.checked = algorithm.id === selectedValue;
+            input.title = algorithm.description;
+            if (algorithm.textColor) {
+                text.style.color = algorithm.textColor;
+            }
+            text.textContent = algorithm.displayText;
+            label.title = algorithm.description;
+            label.insertBefore(input, text);
+        });
+
+        return {
+            element: group,
+            getValue: function() {
+                var checked = group.querySelector("input:checked");
+
+                return checked ? checked.value : selectedValue;
+            },
+            setValue: function(nextValue) {
+                var normalized = normalizeInterpolationId(nextValue, algorithms);
+                var input = group.querySelector('input[value="' + cssEscape(normalized) + '"]');
+
+                if (input) {
+                    input.checked = true;
+                    selectedValue = normalized;
+                }
+            },
+            setDisabled: function(disabled) {
+                var inputs = group.querySelectorAll("input");
+                var i;
+
+                for (i = 0; i < inputs.length; i++) {
+                    inputs[i].disabled = !!disabled;
+                }
+            }
+        };
+    }
+
+    function getResamplingAlgorithms(options) {
+        var source = options ||
+            global.ResizeImageResamplingAlgorithms ||
+            FALLBACK_RESAMPLING_ALGORITHMS;
+
+        return source.map(function(algorithm) {
+            return {
+                id: String(algorithm.id || "").trim(),
+                displayText: String(algorithm.displayText || algorithm.label || algorithm.id || "").trim(),
+                textColor: algorithm.textColor || "#444444",
+                description: String(algorithm.description || "").trim()
+            };
+        }).filter(function(algorithm) {
+            return algorithm.id && algorithm.displayText;
+        });
+    }
+
+    function normalizeInterpolationId(value, algorithms) {
+        var normalized = String(value || "").toLowerCase();
+        var found = algorithms.filter(function(algorithm) {
+            return algorithm.id.toLowerCase() === normalized ||
+                algorithm.displayText.toLowerCase() === normalized;
+        })[0];
+
+        return (found || algorithms[0] || { id: "bicubic" }).id;
+    }
+
+    function getAlgorithmById(algorithms, id) {
+        return algorithms.filter(function(algorithm) {
+            return algorithm.id === id;
+        })[0] || algorithms[0] || {
+            id: "bicubic",
+            displayText: "Bicubic (best for smooth gradients)",
+            description: ""
+        };
+    }
+
+    function cssEscape(value) {
+        if (global.CSS && typeof global.CSS.escape === "function") {
+            return global.CSS.escape(value);
+        }
+
+        return String(value).replace(/"/g, "\\\"");
     }
 
     function createButton(label) {

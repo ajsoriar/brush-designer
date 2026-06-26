@@ -240,7 +240,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             windowId: "resize-image",
             title: "Image Size",
             width: Math.max(560, Math.min(650, global.innerWidth - 40)),
-            height: Math.max(360, Math.min(430, global.innerHeight - 40)),
+            height: Math.max(470, Math.min(560, global.innerHeight - 40)),
             className: "wm-window-resize-image",
             beforeClose: function() {
                 if (dialog) {
@@ -266,7 +266,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
 
                 if (board && typeof board.resizeTo === "function") {
                     board.resizeTo(options.width, options.height, {
-                        resample: options.interpolation
+                        resample: options.interpolationId || options.interpolation
                     });
                     refreshLayersPanel(board);
                     updatePaintBoardWindowTitle(board);
