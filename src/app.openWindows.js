@@ -27,6 +27,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
     var VISIBLE_PAINT_TOOLS = [
         "SQUARED-POINTS",
         "ROUND-POINTS",
+        "PENCIL-TOOL",
         "SQUARED-LINES",
         "ROUND-LINES",
         "STRAIGHT-LINE",

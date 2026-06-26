@@ -133,6 +133,10 @@
     line-height: unset;
 }
 
+.resize-image-resample-row .resize-image-check > span {
+    font-size: 11px;
+}
+
 .resize-image-algorithm-radios {
     display: grid;
     gap: 1px 6px;

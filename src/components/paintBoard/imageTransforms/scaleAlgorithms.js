@@ -9,7 +9,26 @@
         "bicubic": renderBicubic,
         "lo-fi": renderLoFi,
         "pixel-art": renderPixelArt,
-        "area-average": renderAreaAverage
+        "area-average": renderAreaAverage,
+        "bicubic-smoother": makeKernelRenderer(2, bicubicSmootherWeight),
+        "bicubic-sharper": makeKernelRenderer(2, bicubicSharperWeight),
+        "mitchell-netravali": makeKernelRenderer(2, mitchellWeight),
+        "catmull-rom": makeKernelRenderer(2, catmullRomWeight),
+        "hermite": makeKernelRenderer(1, hermiteWeight),
+        "b-spline": makeKernelRenderer(2, bSplineWeight),
+        "robidoux": makeKernelRenderer(2, robidouxWeight),
+        "robidoux-sharp": makeKernelRenderer(2, robidouxSharpWeight),
+        "magic-kernel-sharp": makeKernelRenderer(2, magicKernelSharpWeight),
+        "gaussian": makeKernelRenderer(2, gaussianWeight),
+        "box": makeKernelRenderer(1, boxWeight),
+        "triangle": makeKernelRenderer(1, triangleWeight),
+        "lanczos": makeKernelRenderer(3, lanczosWeight),
+        "blackman-sinc": makeKernelRenderer(3, blackmanSincWeight),
+        "spline36": makeKernelRenderer(3, spline36Weight),
+        "scale2x": makeEpxRenderer(0),
+        "xbr": makeEpxRenderer(0.25),
+        "super-xbr": makeEpxRenderer(0.4),
+        "hqx": makeEpxRenderer(0.5)
     };
     var sourceCache = typeof global.WeakMap === "function" ? new global.WeakMap() : null;
 
@@ -226,6 +245,155 @@
         }
     }
 
+    // Pixel-art upscalers built on the EPX/Scale2x rule. "blend" controls how
+    // much the interpolated corner is mixed toward the center pixel: 0 is the
+    // exact hard-edged EPX (scale2x), higher values give the softer contours
+    // used to approximate xBR / Super xBR / HQx.
+    function makeEpxRenderer(blend) {
+        return function(context, image, bounds) {
+            return renderEpxFamily(context, image, bounds, blend);
+        };
+    }
+
+    function renderEpxFamily(context, image, bounds, blend) {
+        var source = getSourcePixels(image);
+        var targetWidth = Math.max(1, Math.round(Math.abs(bounds.width)));
+        var targetHeight = Math.max(1, Math.round(Math.abs(bounds.height)));
+        var current;
+        var iterations = 0;
+        var scaledCanvas;
+        var scaledContext;
+        var scaledImage;
+
+        if (!source) {
+            return renderNearestNeighbor(context, image, bounds);
+        }
+
+        current = source;
+        while ((current.width < targetWidth || current.height < targetHeight) && iterations < 3) {
+            current = doubleEpx(current, blend);
+            iterations += 1;
+        }
+
+        scaledCanvas = document.createElement("canvas");
+        scaledCanvas.width = current.width;
+        scaledCanvas.height = current.height;
+        scaledContext = scaledCanvas.getContext("2d");
+        scaledImage = scaledContext.createImageData(current.width, current.height);
+        scaledImage.data.set(current.data);
+        scaledContext.putImageData(scaledImage, 0, 0);
+
+        context.save();
+        context.imageSmoothingEnabled = blend > 0;
+        if (blend > 0) {
+            context.imageSmoothingQuality = "high";
+        }
+        context.drawImage(scaledCanvas, bounds.x, bounds.y, bounds.width, bounds.height);
+        context.restore();
+        return true;
+    }
+
+    // Doubles an image using the EPX rule. With blend > 0 each interpolated
+    // corner is mixed back toward the center pixel for smoother edges.
+    function doubleEpx(source, blend) {
+        var width = source.width;
+        var height = source.height;
+        var outWidth = width * 2;
+        var outHeight = height * 2;
+        var output = new Uint8ClampedArray(outWidth * outHeight * 4);
+        var x;
+        var y;
+        var center;
+        var up;
+        var right;
+        var left;
+        var down;
+        var e1;
+        var e2;
+        var e3;
+        var e4;
+
+        for (y = 0; y < height; y += 1) {
+            for (x = 0; x < width; x += 1) {
+                center = readPixel(source, x, y);
+                up = readPixel(source, x, y - 1);
+                right = readPixel(source, x + 1, y);
+                left = readPixel(source, x - 1, y);
+                down = readPixel(source, x, y + 1);
+
+                e1 = center;
+                e2 = center;
+                e3 = center;
+                e4 = center;
+
+                if (colorsSimilar(left, up) && !colorsSimilar(left, down) && !colorsSimilar(up, right)) {
+                    e1 = up;
+                }
+                if (colorsSimilar(up, right) && !colorsSimilar(up, left) && !colorsSimilar(right, down)) {
+                    e2 = right;
+                }
+                if (colorsSimilar(down, left) && !colorsSimilar(down, right) && !colorsSimilar(left, up)) {
+                    e3 = left;
+                }
+                if (colorsSimilar(right, down) && !colorsSimilar(right, up) && !colorsSimilar(down, left)) {
+                    e4 = down;
+                }
+
+                if (blend > 0) {
+                    e1 = mixColor(center, e1, blend);
+                    e2 = mixColor(center, e2, blend);
+                    e3 = mixColor(center, e3, blend);
+                    e4 = mixColor(center, e4, blend);
+                }
+
+                writePixel(output, outWidth, x * 2, y * 2, e1);
+                writePixel(output, outWidth, (x * 2) + 1, y * 2, e2);
+                writePixel(output, outWidth, x * 2, (y * 2) + 1, e3);
+                writePixel(output, outWidth, (x * 2) + 1, (y * 2) + 1, e4);
+            }
+        }
+
+        return { width: outWidth, height: outHeight, data: output };
+    }
+
+    function readPixel(source, x, y) {
+        var safeX = Math.max(0, Math.min(source.width - 1, x));
+        var safeY = Math.max(0, Math.min(source.height - 1, y));
+        var index = ((safeY * source.width) + safeX) * 4;
+
+        return [
+            source.data[index],
+            source.data[index + 1],
+            source.data[index + 2],
+            source.data[index + 3]
+        ];
+    }
+
+    function writePixel(data, width, x, y, color) {
+        var index = ((y * width) + x) * 4;
+
+        data[index] = color[0];
+        data[index + 1] = color[1];
+        data[index + 2] = color[2];
+        data[index + 3] = color[3];
+    }
+
+    function mixColor(a, b, t) {
+        return [
+            a[0] + ((b[0] - a[0]) * t),
+            a[1] + ((b[1] - a[1]) * t),
+            a[2] + ((b[2] - a[2]) * t),
+            a[3] + ((b[3] - a[3]) * t)
+        ];
+    }
+
+    function colorsSimilar(a, b) {
+        return (Math.abs(a[0] - b[0]) +
+            Math.abs(a[1] - b[1]) +
+            Math.abs(a[2] - b[2]) +
+            Math.abs(a[3] - b[3])) < 48;
+    }
+
     function getSourcePixels(image) {
         var cached = sourceCache && sourceCache.get(image);
         var size;
@@ -275,6 +443,152 @@
         }
         if (absolute < 2) {
             return (-0.5 * absolute * absolute * absolute) + (2.5 * absolute * absolute) - (4 * absolute) + 2;
+        }
+        return 0;
+    }
+
+    // Builds a render function that resamples through a separable convolution
+    // kernel. "windowRadius" is the integer half-width of the tap window; the
+    // weight function defines the actual filter support and shape.
+    function makeKernelRenderer(windowRadius, weightFunction) {
+        return function(context, image, bounds) {
+            return renderResampled(context, image, bounds, function(source, x, y, output, index) {
+                sampleKernel(source, x, y, windowRadius, weightFunction, output, index);
+            });
+        };
+    }
+
+    // Keys parametric cubic. "a" controls sharpness: -0.5 is the standard
+    // bicubic, values closer to 0 are softer, more negative values sharper.
+    function keysWeight(value, a) {
+        var ax = Math.abs(value);
+        var ax2 = ax * ax;
+        var ax3 = ax2 * ax;
+
+        if (ax <= 1) {
+            return ((a + 2) * ax3) - ((a + 3) * ax2) + 1;
+        }
+        if (ax < 2) {
+            return (a * ax3) - (5 * a * ax2) + (8 * a * ax) - (4 * a);
+        }
+        return 0;
+    }
+
+    // Mitchell-Netravali parametric cubic in (B, C) form. Covers Mitchell,
+    // Catmull-Rom, B-Spline, Hermite and the Robidoux filters.
+    function cubicBCWeight(value, b, c) {
+        var ax = Math.abs(value);
+        var ax2 = ax * ax;
+        var ax3 = ax2 * ax;
+
+        if (ax < 1) {
+            return (((12 - (9 * b) - (6 * c)) * ax3) +
+                ((-18 + (12 * b) + (6 * c)) * ax2) +
+                (6 - (2 * b))) / 6;
+        }
+        if (ax < 2) {
+            return ((((-b) - (6 * c)) * ax3) +
+                (((6 * b) + (30 * c)) * ax2) +
+                ((((-12) * b) - (48 * c)) * ax) +
+                ((8 * b) + (24 * c))) / 6;
+        }
+        return 0;
+    }
+
+    function sinc(value) {
+        var px;
+
+        if (value === 0) {
+            return 1;
+        }
+        px = Math.PI * value;
+        return Math.sin(px) / px;
+    }
+
+    function bicubicSmootherWeight(value) {
+        return keysWeight(value, -0.25);
+    }
+
+    function bicubicSharperWeight(value) {
+        return keysWeight(value, -0.75);
+    }
+
+    function magicKernelSharpWeight(value) {
+        // Approximation of Magic Kernel Sharp using a sharpened Keys cubic.
+        return keysWeight(value, -0.6);
+    }
+
+    function mitchellWeight(value) {
+        return cubicBCWeight(value, 1 / 3, 1 / 3);
+    }
+
+    function catmullRomWeight(value) {
+        return cubicBCWeight(value, 0, 0.5);
+    }
+
+    function bSplineWeight(value) {
+        return cubicBCWeight(value, 1, 0);
+    }
+
+    function hermiteWeight(value) {
+        return cubicBCWeight(value, 0, 0);
+    }
+
+    function robidouxWeight(value) {
+        return cubicBCWeight(value, 0.37821575509399866, 0.31089212278101547);
+    }
+
+    function robidouxSharpWeight(value) {
+        return cubicBCWeight(value, 0.2620145737457259, 0.3689927438004929);
+    }
+
+    function gaussianWeight(value) {
+        return Math.exp(-2.0 * value * value);
+    }
+
+    function boxWeight(value) {
+        return Math.abs(value) <= 0.5 ? 1 : 0;
+    }
+
+    function triangleWeight(value) {
+        var ax = Math.abs(value);
+
+        return ax < 1 ? 1 - ax : 0;
+    }
+
+    function lanczosWeight(value) {
+        var a = 3;
+
+        if (value <= -a || value >= a) {
+            return 0;
+        }
+        return sinc(value) * sinc(value / a);
+    }
+
+    function blackmanSincWeight(value) {
+        var a = 3;
+        var window;
+
+        if (value <= -a || value >= a) {
+            return 0;
+        }
+        window = 0.42 +
+            (0.5 * Math.cos((Math.PI * value) / a)) +
+            (0.08 * Math.cos((2 * Math.PI * value) / a));
+        return sinc(value) * window;
+    }
+
+    function spline36Weight(value) {
+        var ax = Math.abs(value);
+
+        if (ax < 1) {
+            return ((((13 / 11) * ax) - (453 / 209)) * ax - (3 / 209)) * ax + 1;
+        }
+        if (ax < 2) {
+            return ((((-6 / 11) * (ax - 1)) + (270 / 209)) * (ax - 1) - (156 / 209)) * (ax - 1);
+        }
+        if (ax < 3) {
+            return ((((1 / 11) * (ax - 2)) - (45 / 209)) * (ax - 2) + (26 / 209)) * (ax - 2);
         }
         return 0;
     }

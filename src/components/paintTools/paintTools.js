@@ -33,7 +33,8 @@
         "MAGIC-WAND": new URL("./icons/paint-tools_magic-wand.png", import.meta.url).href,
         "GRADIENT": new URL("./icons/paint-tools_gradient.png", import.meta.url).href,
         "STAR-GENERATOR": new URL("./icons/paint-tools_poligon-star.png", import.meta.url).href,
-        "CROP-BOARD": new URL("./icons/paint-tools_crop.png", import.meta.url).href
+        "CROP-BOARD": new URL("./icons/paint-tools_crop.png", import.meta.url).href,
+        "PENCIL-TOOL": new URL("./icons/paint-tools_pencil.png", import.meta.url).href
     };
 
     var TOOL_ACTIONS = {
@@ -76,6 +77,7 @@
 
     var TOOL_LABELS = {
         "OLD-BRUSH": "Retro Brush",
+        "PENCIL-TOOL": "Pencil",
         "PATTERN-BUCKET": "Pattern Bucket",
         "GRADIENT": "Gradient",
         "POINTER-TOOL": "Pointer",

@@ -154,6 +154,27 @@
             updateState(true);
         });
 
+        interpolationRadios.element.addEventListener("mouseover", function(event) {
+            var option = event.target.closest(".resize-image-algorithm-option");
+
+            if (!option || !interpolationRadios.element.contains(option)) {
+                return;
+            }
+
+            algorithmDescription.update(getAlgorithmById(
+                interpolationOptions,
+                option.getAttribute("data-algorithm-id")
+            ));
+        });
+
+        interpolationRadios.element.addEventListener("mouseout", function(event) {
+            if (interpolationRadios.element.contains(event.relatedTarget)) {
+                return;
+            }
+
+            updateState(false);
+        });
+
         [printWidthInput, printHeightInput, printUnit, resolutionInput, resolutionUnit,
             resampleCheck.input, interpolationRadios.element].forEach(function(control) {
             control.addEventListener("input", function() {
@@ -352,7 +373,7 @@
         appendLegendItem(legend, "blue", "Default (Photoshop)");
         appendLegendItem(legend, "green", "Interesting / Creative");
         appendLegendItem(legend, "red", "Slow");
-        appendLegendItem(legend, "gray", "Not important");
+        appendLegendItem(legend, "gray", "Other / Extra");
     }
 
     function appendLegendItem(parent, color, labelText) {
@@ -404,6 +425,7 @@
             var input = document.createElement("input");
             var text = createElement("span", "", label);
 
+            label.setAttribute("data-algorithm-id", algorithm.id);
             input.type = "radio";
             input.name = name;
             input.value = algorithm.id;

@@ -73,9 +73,9 @@
   },
   {
     "id": "magic-kernel-sharp",
-    "displayText": "Magic Kernel Sharp",
+    "displayText": "Magic Kernel Sharp (approx.)",
     "textColor": "green",
-    "description": "Modern filter that combines smooth resampling with a controlled sharpening pass. It aims for crisp, lively results without obvious ringing artifacts or crunchy over-sharpening."
+    "description": "Modern filter that combines smooth resampling with a controlled sharpening pass, aiming for crisp results without obvious ringing. Approximated here with a sharpened cubic filter rather than the original Magic Kernel Sharp."
   },
   {
     "id": "spline36",
@@ -121,21 +121,21 @@
   },
   {
     "id": "xbr",
-    "displayText": "xBR (pixel art, smooth edges)",
+    "displayText": "xBR (pixel art, smooth edges) (approx.)",
     "textColor": "green",
-    "description": "Advanced pattern-based pixel-art scaler that detects and interpolates edges. Produces smooth, clean upscales of low-resolution artwork while preserving the graphic character."
+    "description": "Pattern-based pixel-art scaler that detects and interpolates edges to produce smooth, clean upscales of low-resolution artwork. Approximated here with an edge-blended EPX scaler rather than the full xBR rule set."
   },
   {
     "id": "super-xbr",
-    "displayText": "Super xBR (pixel art)",
+    "displayText": "Super xBR (pixel art) (approx.)",
     "textColor": "green",
-    "description": "Higher-quality xBR variant that produces cleaner, less blocky upscales for sprites and low-resolution images. It focuses on smooth contours while avoiding ordinary blur."
+    "description": "Higher-quality xBR variant that produces cleaner, less blocky upscales for sprites and low-resolution images. Approximated here with a smoother edge-blended EPX scaler rather than the original Super xBR."
   },
   {
     "id": "hqx",
-    "displayText": "HQx (HQ2x / HQ3x / HQ4x)",
+    "displayText": "HQx (HQ2x / HQ3x / HQ4x) (approx.)",
     "textColor": "green",
-    "description": "Lookup-based pixel-art upscaler that smooths edges and curves for retro graphics. Designed for fixed 2x, 3x, or 4x scales where stylized enlargement is preferred."
+    "description": "Pixel-art upscaler that smooths edges and curves for retro graphics at fixed integer scales. Approximated here with a corner-blended EPX scaler rather than the original lookup-table HQx."
   },
   {
     "id": "pixel-art",

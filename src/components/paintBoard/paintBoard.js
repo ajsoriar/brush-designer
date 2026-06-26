@@ -30,6 +30,7 @@
 
     var PAINT_TOOL_MODES = {
         SQUARED_POINTS: "SQUARED-POINTS",
+        PENCIL_TOOL: "PENCIL-TOOL",
         ROUND_POINTS: "ROUND-POINTS",
         SQUARED_LINES: "SQUARED-LINES",
         ROUND_LINES: "ROUND-LINES",
@@ -1366,11 +1367,15 @@
     function normalizeResizeResampling(resampling) {
         var value = String(resampling || "").toLowerCase();
 
-        if (value.indexOf("bicubic") >= 0) {
-            return "bicubic";
+        // Honor any algorithm that has a real implementation in the scale
+        // engine (nearest-neighbor, bilinear, bicubic, area-average,
+        // pixel-art, ...). Everything else falls back to Bicubic.
+        if (global.ScaleTransformAlgorithms &&
+            global.ScaleTransformAlgorithms.hasAlgorithm &&
+            global.ScaleTransformAlgorithms.hasAlgorithm(value)) {
+            return value;
         }
 
-        // First Image Size implementation supports Bicubic only.
         return "bicubic";
     }
 
@@ -1395,16 +1400,15 @@
         canvas.style.height = height + "px";
 
         context = canvas.getContext("2d");
-        if (resampling === "bicubic" &&
-            global.ScaleTransformAlgorithms &&
+        if (global.ScaleTransformAlgorithms &&
             global.ScaleTransformAlgorithms.hasAlgorithm &&
-            global.ScaleTransformAlgorithms.hasAlgorithm("bicubic")) {
+            global.ScaleTransformAlgorithms.hasAlgorithm(resampling)) {
             global.ScaleTransformAlgorithms.render(context, snapshot, [
                 { x: 0, y: 0 },
                 { x: width, y: 0 },
                 { x: width, y: height },
                 { x: 0, y: height }
-            ], "bicubic");
+            ], resampling);
             return;
         }
 
@@ -2435,6 +2439,7 @@
         return toolMode === PAINT_TOOL_MODES.OLD_BRUSH ||
             toolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH ||
             toolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2 ||
+            toolMode === PAINT_TOOL_MODES.PENCIL_TOOL ||
             toolMode === PAINT_TOOL_MODES.SQUARED_POINTS ||
             toolMode === PAINT_TOOL_MODES.ROUND_POINTS ||
             toolMode === PAINT_TOOL_MODES.SQUARED_LINES ||
@@ -2445,6 +2450,7 @@
         var toolMode = mode || currentPaintToolMode;
 
         return toolMode === PAINT_TOOL_MODES.SQUARED_POINTS ||
+            toolMode === PAINT_TOOL_MODES.PENCIL_TOOL ||
             toolMode === PAINT_TOOL_MODES.SQUARED_LINES;
     }
 
@@ -4191,6 +4197,8 @@
                 paintOldBrushLine(board, board.lastPointerPosition, point);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES && board.lastPointerPosition) {
                 paintSquaredLine(board, board.lastPointerPosition, point);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.PENCIL_TOOL && board.lastPointerPosition) {
+                paintSquaredLine(board, board.lastPointerPosition, point);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES && board.lastPointerPosition) {
                 paintRoundLine(board, board.lastPointerPosition, point);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH) {
@@ -4217,12 +4225,14 @@
 
     function isContinuousLineToolMode() {
         return currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.PENCIL_TOOL ||
             currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES ||
             currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH;
     }
 
     function isDragPaintToolMode() {
         return currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_POINTS ||
+            currentPaintToolMode === PAINT_TOOL_MODES.PENCIL_TOOL ||
             currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS ||
             currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES ||
             currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES ||
