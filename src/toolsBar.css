@@ -11,6 +11,7 @@ body {
     padding: 2px;
     background-color: #f0f0f0;
     border-right: 1px solid #ccc;
+    margin-top: 26px;
 
     button {
         display: flex;

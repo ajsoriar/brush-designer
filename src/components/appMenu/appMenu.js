@@ -58,6 +58,9 @@ import defaultMenuConfig from "./appMenu.json";
             var popup = document.createElement("div");
 
             wrapper.className = "app-menu-group";
+            if (menu.align === "right") {
+                wrapper.classList.add("app-menu-group-right");
+            }
             trigger.type = "button";
             trigger.className = "app-menu-trigger";
             trigger.textContent = menu.label;

@@ -679,10 +679,15 @@ import undoIconUrl from "./images/undo-icon.png";
                 openBigColorPicker: global.AppOpenWindows.openBigColorPickerWindow,
                 openLineWidthPicker: global.AppOpenWindows.openSimpleLineWidthPickerWindow,
                 openBrushWidthPicker: global.AppOpenWindows.openSimpleBrushWidthPickerWindow,
-                openSvgExporter: global.AppOpenWindows.openSvgExporterWindow
+                openSvgExporter: global.AppOpenWindows.openSvgExporterWindow,
+                showAbout: showAbout
             }
         });
         global.AppMenuApi = appMenuComponent;
+    }
+
+    function showAbout() {
+        alert("Brush Designer\nVersion 1.0.0");
     }
 
     function openImage() {

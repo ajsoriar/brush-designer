@@ -3,8 +3,8 @@
     {
       "label": "File",
       "items": [
-        { "label": "New Document", "action": "newDocument" },
-        { "label": "New Paint Board", "action": "createPaintBoard" },
+        { "label": "New...", "action": "newDocument" },
+        { "label": "Quick New (800x600)", "action": "createPaintBoard" },
         { "label": "Open", "action": "openImage" },
         { "type": "separator" },
         { "label": "Save", "action": "saveImage" },
@@ -74,6 +74,13 @@
         { "type": "separator" },
         { "label": "Line Width", "action": "openLineWidthPicker" },
         { "label": "Brush Width", "action": "openBrushWidthPicker" }
+      ]
+    },
+    {
+      "label": "Help",
+      "align": "right",
+      "items": [
+        { "label": "About", "action": "showAbout" }
       ]
     }
   ]

@@ -7,13 +7,24 @@
     font: 11px Tahoma, "MS Sans Serif", Arial, sans-serif;
     height: 24px;
     padding: 1px 3px 0;
-    position: relative;
     user-select: none;
     z-index: 150000;
+    width: 100%;
+    position: fixed;
+    top:0;
 }
 
 .app-menu-group {
     position: relative;
+}
+
+.app-menu-group-right {
+    margin-left: auto;
+}
+
+.app-menu-group-right .app-menu-popup {
+    left: auto;
+    right: 0;
 }
 
 .app-menu-trigger {
