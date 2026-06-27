@@ -8071,6 +8071,12 @@
             return;
         }
 
+        if (event.target &&
+            !board.element.contains(event.target) &&
+            !(crop.overlay && crop.overlay.contains(event.target))) {
+            return;
+        }
+
         point = getSelectionPointerPosition(board, event);
         handle = getCropHandleAtPoint(crop, point, board);
 
