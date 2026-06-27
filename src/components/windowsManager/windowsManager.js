@@ -42,7 +42,9 @@
         resizeContentStep: null,
         resizeGeometryIndicator: true,
         cornerRadius: 0,
+        boxShadow: null,
         topBarGradient: null,
+        transparentFrame: false,
         titleBarIcon: false,
         toolsRow: false,
         toolsFooter: false,
@@ -124,6 +126,9 @@
         element.style.minWidth = config.minWidth + "px";
         element.style.minHeight = config.minHeight + "px";
         element.style.borderRadius = getCornerRadius(config.cornerRadius) + "px";
+        if (config.boxShadow !== null && config.boxShadow !== undefined) {
+            element.style.boxShadow = String(config.boxShadow);
+        }
 
         if (config.fixed) {
             element.className += " wm-window-fixed";
@@ -143,6 +148,10 @@
 
         if (!config.contentCentered) {
             element.className += " wm-window-content-not-centered";
+        }
+
+        if (config.transparentFrame) {
+            element.className += " wm-window-transparent-frame";
         }
 
         if (type === WINDOW_TYPES.MODAL) {

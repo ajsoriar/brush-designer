@@ -708,6 +708,7 @@ import undoIconUrl from "./images/undo-icon.png";
                 openStarGenerator: global.AppOpenWindows.openStarGeneratorWindow,
                 openPaintTools: global.AppOpenWindows.openPaintToolsWindow,
                 openLayers: global.AppOpenWindows.openLayersPanelWindow,
+                openGlobalGoalsPicker: global.AppOpenWindows.openTheGlobalGoalsPickerWindow,
                 openColorPicker: global.AppOpenWindows.openSimpleColorPickerWindow,
                 openBigColorPicker: global.AppOpenWindows.openBigColorPickerWindow,
                 openLineWidthPicker: global.AppOpenWindows.openSimpleLineWidthPickerWindow,
@@ -1205,6 +1206,7 @@ import undoIconUrl from "./images/undo-icon.png";
     global.LinesDesignerApi = global.AppOpenWindows.getLinesDesignerApi();
     global.openPaintToolsWindow = global.AppOpenWindows.openPaintToolsWindow;
     global.openLayersPanelWindow = global.AppOpenWindows.openLayersPanelWindow;
+    global.openTheGlobalGoalsPickerWindow = global.AppOpenWindows.openTheGlobalGoalsPickerWindow;
     global.openStarGeneratorWindow = global.AppOpenWindows.openStarGeneratorWindow;
     global.renderBruses = renderBruses;
     global.storeImage = storeImage;

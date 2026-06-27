@@ -358,6 +358,25 @@
     filter: grayscale(1);
 }
 
+.wm-window-transparent-frame,
+.wm-window-transparent-frame .wm-top-left,
+.wm-window-transparent-frame .wm-top,
+.wm-window-transparent-frame .wm-top-right,
+.wm-window-transparent-frame .wm-tools-row,
+.wm-window-transparent-frame .wm-middle-left,
+.wm-window-transparent-frame .wm-center,
+.wm-window-transparent-frame .wm-middle-right,
+.wm-window-transparent-frame .wm-tools-footer,
+.wm-window-transparent-frame .wm-bottom-left,
+.wm-window-transparent-frame .wm-bottom,
+.wm-window-transparent-frame .wm-bottom-right {
+    background: transparent;
+}
+
+.wm-window-transparent-frame {
+    box-shadow: none;
+}
+
 .paint-board-scroll-area {
     display: block;
     left: 0;

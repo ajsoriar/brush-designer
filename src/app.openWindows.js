@@ -22,6 +22,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
     var appLinesDesigner = null;
     var appSvgExporter = null;
     var appBrightnessContrast = null;
+    var appGlobalGoalsPicker = null;
     var syncingLineWidthComponents = false;
     var documentCount = 0;
     var activePaintBoard = null;
@@ -2076,6 +2077,90 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         }
     }
 
+    function openTheGlobalGoalsPickerWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("global-goals-picker");
+        var pickerWindow;
+        var activeGoal;
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return appGlobalGoalsPicker;
+        }
+
+        pickerWindow = WindowsManager.create({
+            id: "global-goals-picker-window",
+            windowId: "global-goals-picker",
+            title: "",
+            type: "TOOL",
+            x: Math.max(6, global.innerWidth - 220),
+            y: 200,
+            width: 200,
+            height: 227,
+            resizable: false,
+            minimizable: false,
+            scrollBarX: false,
+            scrollBarY: false,
+            transparentFrame: true,
+            cornerRadius: 4,
+            boxShadow: "rgba(0, 0, 0, 0.5) 2px 2px 5px 0px",
+            contentId: "global-goals-picker-content",
+            beforeClose: function() {
+                if (appGlobalGoalsPicker) {
+                    appGlobalGoalsPicker.destroy();
+                    appGlobalGoalsPicker = null;
+                }
+                return true;
+            }
+        });
+
+        if (!pickerWindow) {
+            return null;
+        }
+
+        pickerWindow.element.className += " wm-window-global-goals-picker";
+
+        activeGoal = global.TheGlobalGoalsPickerGoalByColor ?
+            global.TheGlobalGoalsPickerGoalByColor(getActiveColors().frontColor) :
+            null;
+
+        appGlobalGoalsPicker = TheGlobalGoalsPicker({
+            containerId: pickerWindow.contentId,
+            activeGoal: activeGoal && activeGoal.index,
+            onChange: function(goal) {
+                setActiveColor(goal.color);
+            }
+        });
+
+        return appGlobalGoalsPicker;
+    }
+
+    function openTransparentFrameExampleWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("transparent-frame-example");
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return existingWindow;
+        }
+
+        return WindowsManager.create({
+            id: "transparent-frame-example-window",
+            windowId: "transparent-frame-example",
+            title: "",
+            type: "TOOL",
+            x: 200,
+            y: 100,
+            width: 200,
+            height: 227,
+            resizable: false,
+            minimizable: false,
+            closable: true,
+            scrollBarX: false,
+            scrollBarY: false,
+            transparentFrame: true,
+            contentId: "transparent-frame-example-content"
+        });
+    }
+
     function openStarGeneratorWindow() {
         var existingWindow = WindowsManager.getWindowByWindowId("star-generator");
 
@@ -2424,6 +2509,8 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
     }
 
     function setActiveColor(color) {
+        var globalGoal;
+
         global.App.memory.currentColor = color;
 
         if (appColorPicker && appColorPicker.setActiveColor) {
@@ -2437,6 +2524,17 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         if (global.ForegroundBackgroundColorsApi &&
             global.ForegroundBackgroundColorsApi.setFrontColor) {
             global.ForegroundBackgroundColorsApi.setFrontColor(color, true);
+        }
+
+        if (appGlobalGoalsPicker) {
+            globalGoal = global.TheGlobalGoalsPickerGoalByColor ?
+                global.TheGlobalGoalsPickerGoalByColor(color) :
+                null;
+            if (globalGoal && appGlobalGoalsPicker.setActiveGoal) {
+                appGlobalGoalsPicker.setActiveGoal(globalGoal.index);
+            } else if (appGlobalGoalsPicker.clearActiveGoal) {
+                appGlobalGoalsPicker.clearActiveGoal();
+            }
         }
     }
 
@@ -2500,6 +2598,8 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         getLinesDesignerApi: getLinesDesignerApi,
         openPaintToolsWindow: openPaintToolsWindow,
         openLayersPanelWindow: openLayersPanelWindow,
+        openTheGlobalGoalsPickerWindow: openTheGlobalGoalsPickerWindow,
+        openTransparentFrameExampleWindow: openTransparentFrameExampleWindow,
         openStarGeneratorWindow: openStarGeneratorWindow,
         openSvgExporterWindow: openSvgExporterWindow,
         updatePaintBoardWindowTitle: updatePaintBoardWindowTitle,
