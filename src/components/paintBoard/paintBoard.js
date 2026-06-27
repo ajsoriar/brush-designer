@@ -4708,20 +4708,26 @@
         var sampleX = clamp(Math.floor(point.x), 0, board.canvas.width - 1);
         var sampleY = clamp(Math.floor(point.y), 0, board.canvas.height - 1);
         var maskCanvas = createMagicWandMask(board, sampleX, sampleY, currentMagicWandOptions);
+        var behavior = event && event.shiftKey ?
+            SELECTION_BEHAVIORS.ADD :
+            currentSelectionBehavior;
 
         if (!maskCanvas || isSelectionMaskEmpty(maskCanvas)) {
-            if (currentSelectionBehavior === SELECTION_BEHAVIORS.NORMAL) {
+            if (behavior === SELECTION_BEHAVIORS.NORMAL) {
                 clearSelection(board);
             }
 
             return;
         }
 
+        var previousBehavior = currentSelectionBehavior;
+        currentSelectionBehavior = behavior;
         applySelectionBehavior(board, {
             type: "mask",
             bounds: getSelectionMaskBounds(maskCanvas),
             maskCanvas: maskCanvas
         });
+        currentSelectionBehavior = previousBehavior;
 
         renderLassoSelection(board);
     }
