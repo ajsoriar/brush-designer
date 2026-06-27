@@ -615,6 +615,9 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         updateLayersPanelFooterState(appLayersPanel);
         layers.forEach(function(layer) {
             updateLayersPanelThumbnail(paintBoard, layer.id);
+            if (layer.mask) {
+                updateLayersPanelThumbnail(paintBoard, layer.id, "mask");
+            }
         });
     }
 
@@ -634,9 +637,10 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         return appLayersPanel.resizeThumbnailsTo(maxSize);
     }
 
-    function updateLayersPanelThumbnail(paintBoard, layerId) {
+    function updateLayersPanelThumbnail(paintBoard, layerId, paintTarget) {
         var layerElement;
         var canvas;
+        var target = paintTarget === "mask" ? "mask" : "board";
 
         if (!paintBoard ||
             paintBoard !== activePaintBoard ||
@@ -646,15 +650,20 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             return false;
         }
 
-        layerElement = paintBoard.layersElement &&
-            paintBoard.layersElement.querySelector('[data-layer="' + layerId + '"]');
-        canvas = layerElement && layerElement.querySelector("canvas");
+        if (target === "mask" &&
+            paintBoard.getLayerMaskCanvas) {
+            canvas = paintBoard.getLayerMaskCanvas(layerId);
+        } else {
+            layerElement = paintBoard.layersElement &&
+                paintBoard.layersElement.querySelector('[data-layer="' + layerId + '"]');
+            canvas = layerElement && layerElement.querySelector('[data-paint-target="board"]');
+        }
 
         if (!canvas) {
             return false;
         }
 
-        return appLayersPanel.updateThumbnail(layerId, canvas, "board");
+        return appLayersPanel.updateThumbnail(layerId, canvas, target);
     }
 
     function syncLayersPanelWindowTitle(paintBoard) {
@@ -1771,7 +1780,17 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
                 activePaintBoard.canvas.width : 800,
             boardHeight: activePaintBoard && activePaintBoard.canvas ?
                 activePaintBoard.canvas.height : 600,
-            onActiveLayerChange: function(layer) {
+            onActiveLayerChange: function(layer, activePreview, panel) {
+                if (activePaintBoard &&
+                    activePaintBoard.setLayerSelection &&
+                    layer &&
+                    panel) {
+                    activePaintBoard.setLayerSelection(
+                        panel.getSelectedLayerIds(),
+                        layer.id,
+                        activePreview
+                    );
+                }
                 updateLayersPanelFooterState(appLayersPanel);
             },
             onSelectionChange: function(layers, activeLayer) {
@@ -1782,7 +1801,10 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
                         layers.map(function(layer) {
                             return layer.id;
                         }),
-                        activeLayer.id
+                        activeLayer.id,
+                        appLayersPanel && appLayersPanel.getActivePreview ?
+                            appLayersPanel.getActivePreview() :
+                            "board"
                     );
                 }
                 updateLayersPanelFooterState(appLayersPanel);
@@ -1800,6 +1822,9 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             onLayerMaskChange: function(layer, mask) {
                 if (activePaintBoard && activePaintBoard.setLayerMask && layer) {
                     activePaintBoard.setLayerMask(layer.id, mask);
+                    if (mask) {
+                        updateLayersPanelThumbnail(activePaintBoard, layer.id, "mask");
+                    }
                 }
             },
             onLayerOpacityChange: function(layer, opacity) {
@@ -1825,6 +1850,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         var blockButton;
         var opacityRange;
         var opacityValue;
+        var activeTargetLabel;
 
         if (!toolsRowElement || !layersPanel) {
             return;
@@ -1836,12 +1862,14 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
                 '<label class="layers-panel-opacity-control" for="layers-panel-opacity-range">Opacity</label>',
                 '<input id="layers-panel-opacity-range" class="layers-panel-opacity-range" type="range" min="0" max="100" step="1" value="100" aria-label="Layer opacity">',
                 '<span class="layers-panel-opacity-value">100%</span>',
+                '<span class="layers-panel-active-target-label" aria-live="polite">Active Target: Layer</span>',
             '</div>'
         ].join("");
 
         blockButton = toolsRowElement.querySelector(".layers-panel-block-btn");
         opacityRange = toolsRowElement.querySelector(".layers-panel-opacity-range");
         opacityValue = toolsRowElement.querySelector(".layers-panel-opacity-value");
+        activeTargetLabel = toolsRowElement.querySelector(".layers-panel-active-target-label");
 
         function syncOpacityValueLabel() {
             var value = parseInt(opacityRange.value, 10);
@@ -1876,6 +1904,12 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         });
         opacityRange.addEventListener("change", syncOpacityValueLabel);
         syncOpacityValueLabel();
+        if (activeTargetLabel) {
+            activeTargetLabel.textContent = layersPanel.getActivePreview &&
+                layersPanel.getActivePreview() === "mask" ?
+                "Active Target: Mask" :
+                "Active Target: Layer";
+        }
         updateLayersPanelFooterState(layersPanel);
     }
 
@@ -1945,6 +1979,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         var blockButton;
         var opacityRange;
         var opacityValue;
+        var activeTargetLabel;
         var activeLayer;
         var selectedLayers;
         var removableSelectedCount;
@@ -1969,6 +2004,8 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             footerElement.querySelector(".layers-panel-opacity-range");
         opacityValue = footerElement &&
             footerElement.querySelector(".layers-panel-opacity-value");
+        activeTargetLabel = footerElement &&
+            footerElement.querySelector(".layers-panel-active-target-label");
         activeLayer = layersPanel.getActiveLayer && layersPanel.getActiveLayer();
         selectedLayers = layersPanel.getSelectedLayers ?
             layersPanel.getSelectedLayers() :
@@ -2030,6 +2067,12 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         }
         if (opacityValue) {
             opacityValue.textContent = activeOpacity + "%";
+        }
+        if (activeTargetLabel) {
+            activeTargetLabel.textContent = layersPanel.getActivePreview &&
+                layersPanel.getActivePreview() === "mask" ?
+                "Active Target: Mask" :
+                "Active Target: Layer";
         }
     }
 

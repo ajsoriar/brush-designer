@@ -481,6 +481,7 @@
             board: board.element,
             paintBoard: board,
             layerId: board.activeLayerId,
+            paintTarget: board.activePaintTarget || "board",
             canvas: board.canvas
         };
 
@@ -665,7 +666,7 @@
                 return;
             }
 
-            if (event.target === board.canvas) {
+            if (event.target === getBoardInputCanvas(board)) {
                 return;
             }
 
@@ -695,7 +696,7 @@
 
             if (isDocumentMove &&
                 isPointerInsideCanvas(board, event) &&
-                event.target === board.canvas) {
+                event.target === getBoardInputCanvas(board)) {
                 return;
             }
 
@@ -836,6 +837,7 @@
 
         canvas.id = boardId + "-canvas";
         canvas.className = "paint-board-canvas";
+        canvas.setAttribute("data-paint-target", "board");
         canvas.width = config.width;
         canvas.height = config.height;
         canvas.style.width = config.width + "px";
@@ -862,6 +864,8 @@
             tempLayerElement: tempLayer,
             activeLayerElement: baseLayer,
             activeLayerId: baseLayerId,
+            activePaintTarget: "board",
+            inputCanvas: canvas,
             floatingPaste: null,
             cropSession: null,
             canvas: canvas,
@@ -882,14 +886,14 @@
                 return getTopLayerAtPoint(board, point);
             },
             addLayer: function(options) {
-                var previousCanvas = board.canvas;
+                var previousCanvas = board.inputCanvas || board.canvas;
                 var layer;
 
                 if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.addLayer) {
                     layer = global.PaintBoardLayersManager.addLayer(board, options);
 
                     if (config.paintOnPointer && layer) {
-                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                        rebindCanvasPaintHandlers(previousCanvas, board.inputCanvas || board.canvas, {
                             startPainting: startPainting,
                             continuePainting: continuePainting,
                             leaveCanvas: leaveCanvas,
@@ -904,7 +908,7 @@
                 return null;
             },
             duplicateActiveLayer: function() {
-                var previousCanvas = board.canvas;
+                var previousCanvas = board.inputCanvas || board.canvas;
                 var duplicatedLayer;
 
                 if (global.PaintBoardLayersManager &&
@@ -913,7 +917,7 @@
                         global.PaintBoardLayersManager.duplicateActiveLayer(board);
 
                     if (config.paintOnPointer && duplicatedLayer) {
-                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                        rebindCanvasPaintHandlers(previousCanvas, board.inputCanvas || board.canvas, {
                             startPainting: startPainting,
                             continuePainting: continuePainting,
                             leaveCanvas: leaveCanvas,
@@ -931,14 +935,14 @@
                 return null;
             },
             removeLayer: function(layerId) {
-                var previousCanvas = board.canvas;
+                var previousCanvas = board.inputCanvas || board.canvas;
                 var removed;
 
                 if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.removeLayer) {
                     removed = global.PaintBoardLayersManager.removeLayer(board, layerId);
 
                     if (config.paintOnPointer && removed) {
-                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                        rebindCanvasPaintHandlers(previousCanvas, board.inputCanvas || board.canvas, {
                             startPainting: startPainting,
                             continuePainting: continuePainting,
                             leaveCanvas: leaveCanvas,
@@ -953,14 +957,14 @@
                 return false;
             },
             removeLayers: function(layerIds) {
-                var previousCanvas = board.canvas;
+                var previousCanvas = board.inputCanvas || board.canvas;
                 var removed;
 
                 if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.removeLayers) {
                     removed = global.PaintBoardLayersManager.removeLayers(board, layerIds);
 
                     if (config.paintOnPointer && removed) {
-                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                        rebindCanvasPaintHandlers(previousCanvas, board.inputCanvas || board.canvas, {
                             startPainting: startPainting,
                             continuePainting: continuePainting,
                             leaveCanvas: leaveCanvas,
@@ -974,15 +978,19 @@
 
                 return false;
             },
-            setActiveLayer: function(layerId) {
-                var previousCanvas = board.canvas;
+            setActiveLayer: function(layerId, paintTarget) {
+                var previousCanvas = board.inputCanvas || board.canvas;
                 var activated;
 
                 if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setActiveLayer) {
-                    activated = global.PaintBoardLayersManager.setActiveLayer(board, layerId);
+                    activated = global.PaintBoardLayersManager.setActiveLayer(
+                        board,
+                        layerId,
+                        paintTarget
+                    );
 
                     if (config.paintOnPointer && activated) {
-                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                        rebindCanvasPaintHandlers(previousCanvas, board.inputCanvas || board.canvas, {
                             startPainting: startPainting,
                             continuePainting: continuePainting,
                             leaveCanvas: leaveCanvas,
@@ -996,19 +1004,20 @@
 
                 return false;
             },
-            setLayerSelection: function(layerIds, activeLayerId) {
-                var previousCanvas = board.canvas;
+            setLayerSelection: function(layerIds, activeLayerId, paintTarget) {
+                var previousCanvas = board.inputCanvas || board.canvas;
                 var selected;
 
                 if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayerSelection) {
                     selected = global.PaintBoardLayersManager.setLayerSelection(
                         board,
                         layerIds,
-                        activeLayerId
+                        activeLayerId,
+                        paintTarget
                     );
 
                     if (config.paintOnPointer && selected) {
-                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                        rebindCanvasPaintHandlers(previousCanvas, board.inputCanvas || board.canvas, {
                             startPainting: startPainting,
                             continuePainting: continuePainting,
                             leaveCanvas: leaveCanvas,
@@ -1050,6 +1059,14 @@
 
                 return false;
             },
+            getLayerMaskCanvas: function(layerId) {
+                if (global.PaintBoardLayersManager &&
+                    global.PaintBoardLayersManager.getLayerMaskCanvas) {
+                    return global.PaintBoardLayersManager.getLayerMaskCanvas(board, layerId);
+                }
+
+                return null;
+            },
             setLayersOrder: function(layers) {
                 if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayersOrder) {
                     return global.PaintBoardLayersManager.setLayersOrder(board, layers);
@@ -1058,7 +1075,7 @@
                 return false;
             },
             mergeSelectedLayers: function() {
-                var previousCanvas = board.canvas;
+                var previousCanvas = board.inputCanvas || board.canvas;
                 var mergedLayer;
 
                 if (global.PaintBoardLayersManager &&
@@ -1066,7 +1083,7 @@
                     mergedLayer = global.PaintBoardLayersManager.mergeSelectedLayers(board);
 
                     if (config.paintOnPointer && mergedLayer) {
-                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                        rebindCanvasPaintHandlers(previousCanvas, board.inputCanvas || board.canvas, {
                             startPainting: startPainting,
                             continuePainting: continuePainting,
                             leaveCanvas: leaveCanvas,
@@ -1092,14 +1109,14 @@
                 return null;
             },
             flattenImage: function() {
-                var previousCanvas = board.canvas;
+                var previousCanvas = board.inputCanvas || board.canvas;
                 var flattened;
 
                 if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.flattenImage) {
                     flattened = global.PaintBoardLayersManager.flattenImage(board);
 
                     if (config.paintOnPointer && flattened) {
-                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                        rebindCanvasPaintHandlers(previousCanvas, board.inputCanvas || board.canvas, {
                             startPainting: startPainting,
                             continuePainting: continuePainting,
                             leaveCanvas: leaveCanvas,
@@ -1359,6 +1376,7 @@
         board.canvas.style.width = width + "px";
         board.canvas.style.height = height + "px";
         updateBoardRulesSize(board, width, height);
+        refreshLayerMasks(board);
         clearSelection(board);
         clear(board);
     }
@@ -1375,6 +1393,44 @@
 
         tempLayer.style.width = width + "px";
         tempLayer.style.height = height + "px";
+    }
+
+    function refreshLayerMasks(board) {
+        if (global.PaintBoardLayersManager &&
+            global.PaintBoardLayersManager.applyLayerMasksToElements) {
+            global.PaintBoardLayersManager.applyLayerMasksToElements(board);
+        }
+    }
+
+    function refreshActiveLayerMask(board) {
+        if (board &&
+            board.activePaintTarget === "mask" &&
+            global.PaintBoardLayersManager &&
+            global.PaintBoardLayersManager.applyLayerMaskToElement) {
+            global.PaintBoardLayersManager.applyLayerMaskToElement(
+                board,
+                board.activeLayerId
+            );
+        }
+    }
+
+    function scheduleActiveLayerMaskRefresh(board) {
+        var schedule;
+
+        if (!board ||
+            board.activePaintTarget !== "mask" ||
+            board.pendingActiveLayerMaskRefresh) {
+            return;
+        }
+
+        schedule = global.requestAnimationFrame || function(callback) {
+            return global.setTimeout(callback, 16);
+        };
+        board.pendingActiveLayerMaskRefresh = true;
+        schedule(function() {
+            board.pendingActiveLayerMaskRefresh = false;
+            refreshActiveLayerMask(board);
+        });
     }
 
     function setSelectionLayerSize(selectionLayer, width, height) {
@@ -1448,6 +1504,7 @@
         board.context = getReadableCanvasContext(board.canvas);
         updateBoardRulesSize(board, width, height);
         resizeBoardWindowToContent(board, width, height);
+        refreshLayerMasks(board);
 
         if (global.Zoom && global.Zoom.updateBoardLayout) {
             global.Zoom.updateBoardLayout(board.element);
@@ -1653,6 +1710,7 @@
         resizeLayerElements(board, width, height);
         updateBoardRulesSize(board, width, height);
         resizeBoardWindowToContent(board, width, height);
+        refreshLayerMasks(board);
 
         if (global.Zoom && global.Zoom.updateBoardLayout) {
             global.Zoom.updateBoardLayout(board.element);
@@ -1690,7 +1748,7 @@
         if (backgroundLayerId && board && board.layersElement) {
             layerElement = board.layersElement.querySelector('[data-layer="' + backgroundLayerId + '"]');
             if (layerElement) {
-                return layerElement.querySelector(".paint-board-canvas") || null;
+                return layerElement.querySelector('[data-paint-target="board"]') || null;
             }
         }
 
@@ -1844,6 +1902,7 @@
         board.canvas.style.width = snapshot.width + "px";
         board.canvas.style.height = snapshot.height + "px";
         updateBoardRulesSize(board, snapshot.width, snapshot.height);
+        refreshLayerMasks(board);
         clearSelection(board);
         board.context.putImageData(snapshot.imageData, 0, 0);
         return true;
@@ -1883,6 +1942,7 @@
         board.actionHasChanges = false;
         notifyUndoStateChange(board);
         if (contentChanged) {
+            refreshActiveLayerMask(board);
             notifyContentChange(board);
         }
     }
@@ -2007,16 +2067,21 @@
         return rect;
     }
 
+    function getBoardInputCanvas(board) {
+        return (board && (board.inputCanvas || board.canvas)) || null;
+    }
+
     function getPointerCaptureTarget(board) {
+        var inputCanvas = getBoardInputCanvas(board);
         var canvasRect;
 
-        if (!board || !board.canvas) {
+        if (!board || !inputCanvas) {
             return board && board.element;
         }
 
-        canvasRect = board.canvas.getBoundingClientRect();
+        canvasRect = inputCanvas.getBoundingClientRect();
         if (canvasRect.width && canvasRect.height) {
-            return board.canvas;
+            return inputCanvas;
         }
         return board.element;
     }
@@ -3153,7 +3218,9 @@
         }
 
         layerElement = board.layersElement.querySelector('[data-layer="' + layerId + '"]');
-        return layerElement ? layerElement.querySelector("canvas") : null;
+        return layerElement ?
+            layerElement.querySelector('[data-paint-target="board"]') :
+            null;
     }
 
     function isLayerVisibleAtPoint(board, layer, point) {
@@ -4440,6 +4507,7 @@
             paintWithSelection(board, function() {
                 paintContinuousLineStart(board, point);
             });
+            scheduleActiveLayerMaskRefresh(board);
             board.lastPointerPosition = point;
             return;
         }
@@ -4474,6 +4542,7 @@
             }
         });
 
+        scheduleActiveLayerMaskRefresh(board);
         board.lastPointerPosition = point;
     }
 
@@ -4527,6 +4596,7 @@
         paintWithSelection(board, function() {
             paintShape(board, points.from, points.to);
         });
+        scheduleActiveLayerMaskRefresh(board);
     }
 
     function paintGradientPointerEvent(board, event) {
@@ -4542,6 +4612,7 @@
         paintWithSelection(board, function() {
             paintGradient(board, fromPoint, toPoint);
         });
+        scheduleActiveLayerMaskRefresh(board);
     }
 
     function paintStraightLinePointerEvent(board, event) {
@@ -4564,6 +4635,7 @@
         paintWithSelection(board, function() {
             paintLine(board, fromPoint, toPoint, "butt", "miter", lineDesign);
         });
+        scheduleActiveLayerMaskRefresh(board);
     }
 
     function getGradientEndPoint(fromPoint, toPoint, event) {
@@ -4605,6 +4677,8 @@
         paintWithSelection(board, function() {
             paintBucket(board, point.x, point.y);
         });
+        markUndoableChange(board);
+        scheduleActiveLayerMaskRefresh(board);
     }
 
     function patternBucketPointerEvent(board, event) {
@@ -4617,6 +4691,8 @@
         paintWithSelection(board, function() {
             paintPatternBucket(board, point.x, point.y);
         });
+        markUndoableChange(board);
+        scheduleActiveLayerMaskRefresh(board);
     }
 
     function inkDropperPointerEvent(board, event) {
@@ -4715,7 +4791,16 @@
         var doc;
         var compositeCanvas;
         var compositeContext;
+        var flattenedCanvas;
         var orderedLayers;
+
+        if (global.PaintBoardLayersManager &&
+            global.PaintBoardLayersManager.createFlattenedCanvas) {
+            flattenedCanvas = global.PaintBoardLayersManager.createFlattenedCanvas(board);
+            if (flattenedCanvas) {
+                return flattenedCanvas;
+            }
+        }
 
         doc = (board.layersElement && board.layersElement.ownerDocument) || document;
         compositeCanvas = board.magicWandSampleCanvas;
@@ -4759,7 +4844,8 @@
             }
 
             layerElement = board.layersElement.querySelector('[data-layer="' + layer.id + '"]');
-            layerCanvas = layerElement && layerElement.querySelector("canvas");
+            layerCanvas = layerElement &&
+                layerElement.querySelector('[data-paint-target="board"]');
             if (!layerCanvas) {
                 return;
             }
@@ -8590,7 +8676,12 @@
         cancelCropSession(board);
 
         if (paintHandlers && paintHandlers.supportsPointerEvents) {
-            bindCanvasPaintHandlers(board.canvas, paintHandlers, true, false);
+            bindCanvasPaintHandlers(
+                board.inputCanvas || board.canvas,
+                paintHandlers,
+                true,
+                false
+            );
             if (paintHandlers.container) {
                 paintHandlers.container.removeEventListener("pointerdown", paintHandlers.startPaintingFromOutside);
             }
@@ -8598,7 +8689,12 @@
             document.removeEventListener("pointerup", paintHandlers.endPainting, true);
             document.removeEventListener("pointercancel", paintHandlers.endPainting, true);
         } else if (paintHandlers) {
-            bindCanvasPaintHandlers(board.canvas, paintHandlers, false, false);
+            bindCanvasPaintHandlers(
+                board.inputCanvas || board.canvas,
+                paintHandlers,
+                false,
+                false
+            );
             if (paintHandlers.container) {
                 paintHandlers.container.removeEventListener("mousedown", paintHandlers.startPaintingFromOutside);
             }

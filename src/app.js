@@ -173,7 +173,8 @@ import undoIconUrl from "./images/undo-icon.png";
 
         global.AppOpenWindows.updateLayersPanelThumbnail(
             event.detail.paintBoard,
-            event.detail.layerId
+            event.detail.layerId,
+            event.detail.paintTarget
         );
     });
 
