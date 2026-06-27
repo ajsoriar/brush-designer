@@ -11,11 +11,26 @@
         paintOnPointer: true,
         brushSize: 1,
         className: "",
+        useLayers: false,
+        layers: null,
         onSave: null
     };
 
+    // Layer management (including the initial layers stack) lives in the
+    // PaintBoardLayersManager module (layersManager.js). The board only delegates
+    // to it. The layer object shape is shared with the LayersPanel component
+    // (src/components/layersPanel) and must stay in sync with it.
+    function createInitialLayers(boardId) {
+        if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.createInitialLayers) {
+            return global.PaintBoardLayersManager.createInitialLayers(boardId);
+        }
+
+        return [];
+    }
+
     var PAINT_TOOL_MODES = {
         SQUARED_POINTS: "SQUARED-POINTS",
+        PENCIL_TOOL: "PENCIL-TOOL",
         ROUND_POINTS: "ROUND-POINTS",
         SQUARED_LINES: "SQUARED-LINES",
         ROUND_LINES: "ROUND-LINES",
@@ -28,19 +43,62 @@
         STROKED_RECTANGLES: "STROKED-RECTANGLES",
         STROKED_CIRCLES: "STROKED-CIRCLES",
         STROKED_OVALS: "STROKED-OVALS",
+        LASSO_SELECTION: "LASSO-SELECTION",
+        MAGIC_WAND: "MAGIC-WAND",
         PAINT_BUCKET: "PAINT-BUCKET",
         PATTERN_BUCKET: "PATTERN-BUCKET",
+        POINTER_TOOL: "POINTER-TOOL",
         GRADIENT: "GRADIENT",
         INK_DROPPER: "INK-DROPPER",
         OLD_BRUSH: "OLD-BRUSH",
         DESIGNED_BRUSH: "DESIGNED-BRUSH",
-        DESIGNED_BRUSH_2: "DESIGNED-BRUSH-2"
+        DESIGNED_BRUSH_2: "DESIGNED-BRUSH-2",
+        CROP_BOARD: "CROP-BOARD"
+    };
+
+    var SELECTION_TOOL_TYPES = {
+        FREEHAND: "freehand",
+        POLYGONAL: "polygonal",
+        RECTANGLE: "rectangle",
+        OVAL: "oval"
+    };
+
+    var SELECTION_BEHAVIORS = {
+        NORMAL: "normal",
+        ADD: "add",
+        REMOVE: "remove"
     };
 
     var currentPaintToolMode = PAINT_TOOL_MODES.SQUARED_POINTS;
+    var currentSelectionToolType = SELECTION_TOOL_TYPES.FREEHAND;
+    var currentSelectionBehavior = SELECTION_BEHAVIORS.NORMAL;
+    var MAGIC_WAND_MODES = {
+        FAST: "fast",
+        PHOTOSHOP: "photoshop",
+        PERCEPTUAL: "perceptual"
+    };
+    var DEFAULT_MAGIC_WAND_MODE = MAGIC_WAND_MODES.PHOTOSHOP;
+    var currentMagicWandOptions = {
+        tolerance: 32,
+        antiAlias: false,
+        contiguous: true,
+        sampleAllLayers: true,
+        mode: DEFAULT_MAGIC_WAND_MODE
+    };
+    var currentBucketOptions = {
+        tolerance: 32,
+        antiAlias: false,
+        contiguous: true,
+        sampleAllLayers: true,
+        mode: DEFAULT_MAGIC_WAND_MODE
+    };
+    var MAGIC_WAND_MAX_DISTANCE = Math.sqrt(4 * 255 * 255);
+    var MAGIC_WAND_MAX_LAB_DISTANCE = 100;
 
     var PaintTools = {
         modes: PAINT_TOOL_MODES,
+        selectionTools: SELECTION_TOOL_TYPES,
+        selectionBehaviors: SELECTION_BEHAVIORS,
         use: function(mode) {
             var normalizedMode = String(mode || "").toUpperCase();
 
@@ -54,6 +112,134 @@
         },
         getMode: function() {
             return currentPaintToolMode;
+        },
+        setSelectionTool: function(selectionTool) {
+            var normalizedSelectionTool = String(selectionTool || "").toLowerCase();
+
+            if (!isValidSelectionToolType(normalizedSelectionTool)) {
+                throw new Error("Unknown selection tool: " + selectionTool);
+            }
+
+            currentSelectionToolType = normalizedSelectionTool;
+            notifySelectionToolChange(currentSelectionToolType);
+            return currentSelectionToolType;
+        },
+        getSelectionTool: function() {
+            return currentSelectionToolType;
+        },
+        setSelectionBehavior: function(selectionBehavior) {
+            var normalizedSelectionBehavior = String(selectionBehavior || "").toLowerCase();
+
+            if (!isValidSelectionBehavior(normalizedSelectionBehavior)) {
+                throw new Error("Unknown selection behavior: " + selectionBehavior);
+            }
+
+            currentSelectionBehavior = normalizedSelectionBehavior;
+            notifySelectionBehaviorChange(currentSelectionBehavior);
+            return currentSelectionBehavior;
+        },
+        getSelectionBehavior: function() {
+            return currentSelectionBehavior;
+        },
+        setMagicWandTolerance: function(tolerance) {
+            var normalizedTolerance = normalizeMagicWandTolerance(tolerance);
+
+            currentMagicWandOptions.tolerance = normalizedTolerance;
+            notifyMagicWandOptionsChange(currentMagicWandOptions);
+            return normalizedTolerance;
+        },
+        getMagicWandTolerance: function() {
+            return currentMagicWandOptions.tolerance;
+        },
+        setMagicWandAntiAlias: function(antiAlias) {
+            currentMagicWandOptions.antiAlias = !!antiAlias;
+            notifyMagicWandOptionsChange(currentMagicWandOptions);
+            return currentMagicWandOptions.antiAlias;
+        },
+        getMagicWandAntiAlias: function() {
+            return currentMagicWandOptions.antiAlias;
+        },
+        setMagicWandContiguous: function(contiguous) {
+            currentMagicWandOptions.contiguous = !!contiguous;
+            notifyMagicWandOptionsChange(currentMagicWandOptions);
+            return currentMagicWandOptions.contiguous;
+        },
+        getMagicWandContiguous: function() {
+            return currentMagicWandOptions.contiguous;
+        },
+        setMagicWandSampleAllLayers: function(sampleAllLayers) {
+            currentMagicWandOptions.sampleAllLayers = !!sampleAllLayers;
+            notifyMagicWandOptionsChange(currentMagicWandOptions);
+            return currentMagicWandOptions.sampleAllLayers;
+        },
+        getMagicWandSampleAllLayers: function() {
+            return currentMagicWandOptions.sampleAllLayers;
+        },
+        setMagicWandMode: function(mode) {
+            currentMagicWandOptions.mode = normalizeMagicWandMode(mode);
+            notifyMagicWandOptionsChange(currentMagicWandOptions);
+            return currentMagicWandOptions.mode;
+        },
+        getMagicWandMode: function() {
+            return currentMagicWandOptions.mode;
+        },
+        setMagicWandOptions: function(options) {
+            currentMagicWandOptions = normalizeMagicWandOptions(options);
+            notifyMagicWandOptionsChange(currentMagicWandOptions);
+            return copyMagicWandOptions(currentMagicWandOptions);
+        },
+        getMagicWandOptions: function() {
+            return copyMagicWandOptions(currentMagicWandOptions);
+        },
+        setBucketTolerance: function(tolerance) {
+            var normalizedTolerance = normalizeMagicWandTolerance(tolerance);
+
+            currentBucketOptions.tolerance = normalizedTolerance;
+            notifyBucketOptionsChange(currentBucketOptions);
+            return normalizedTolerance;
+        },
+        getBucketTolerance: function() {
+            return currentBucketOptions.tolerance;
+        },
+        setBucketAntiAlias: function(antiAlias) {
+            currentBucketOptions.antiAlias = !!antiAlias;
+            notifyBucketOptionsChange(currentBucketOptions);
+            return currentBucketOptions.antiAlias;
+        },
+        getBucketAntiAlias: function() {
+            return currentBucketOptions.antiAlias;
+        },
+        setBucketContiguous: function(contiguous) {
+            currentBucketOptions.contiguous = !!contiguous;
+            notifyBucketOptionsChange(currentBucketOptions);
+            return currentBucketOptions.contiguous;
+        },
+        getBucketContiguous: function() {
+            return currentBucketOptions.contiguous;
+        },
+        setBucketSampleAllLayers: function(sampleAllLayers) {
+            currentBucketOptions.sampleAllLayers = !!sampleAllLayers;
+            notifyBucketOptionsChange(currentBucketOptions);
+            return currentBucketOptions.sampleAllLayers;
+        },
+        getBucketSampleAllLayers: function() {
+            return currentBucketOptions.sampleAllLayers;
+        },
+        setBucketMode: function(mode) {
+            currentBucketOptions.mode = normalizeMagicWandMode(mode);
+            notifyBucketOptionsChange(currentBucketOptions);
+            return currentBucketOptions.mode;
+        },
+        getBucketMode: function() {
+            return currentBucketOptions.mode;
+        },
+        setBucketOptions: function(options) {
+            currentBucketOptions = normalizeMagicWandOptions(options);
+            notifyBucketOptionsChange(currentBucketOptions);
+            return copyMagicWandOptions(currentBucketOptions);
+        },
+        getBucketOptions: function() {
+            return copyMagicWandOptions(currentBucketOptions);
         }
     };
 
@@ -67,6 +253,74 @@
         }
 
         return false;
+    }
+
+    function isValidSelectionToolType(selectionTool) {
+        var key;
+
+        for (key in SELECTION_TOOL_TYPES) {
+            if (Object.prototype.hasOwnProperty.call(SELECTION_TOOL_TYPES, key) && SELECTION_TOOL_TYPES[key] === selectionTool) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    function isValidSelectionBehavior(selectionBehavior) {
+        var key;
+
+        for (key in SELECTION_BEHAVIORS) {
+            if (Object.prototype.hasOwnProperty.call(SELECTION_BEHAVIORS, key) && SELECTION_BEHAVIORS[key] === selectionBehavior) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    function normalizeMagicWandTolerance(tolerance) {
+        var numericTolerance = parseInt(tolerance, 10);
+
+        if (isNaN(numericTolerance)) {
+            return 0;
+        }
+
+        return Math.max(0, Math.min(100, numericTolerance));
+    }
+
+    function normalizeMagicWandMode(mode) {
+        var key;
+
+        for (key in MAGIC_WAND_MODES) {
+            if (Object.prototype.hasOwnProperty.call(MAGIC_WAND_MODES, key) && MAGIC_WAND_MODES[key] === mode) {
+                return mode;
+            }
+        }
+
+        return DEFAULT_MAGIC_WAND_MODE;
+    }
+
+    function normalizeMagicWandOptions(options) {
+        var source = options || {};
+
+        return {
+            tolerance: normalizeMagicWandTolerance(source.tolerance),
+            antiAlias: !!source.antiAlias,
+            contiguous: !!source.contiguous,
+            sampleAllLayers: !!source.sampleAllLayers,
+            mode: normalizeMagicWandMode(source.mode)
+        };
+    }
+
+    function copyMagicWandOptions(options) {
+        return {
+            tolerance: options.tolerance,
+            antiAlias: options.antiAlias,
+            contiguous: options.contiguous,
+            sampleAllLayers: !!options.sampleAllLayers,
+            mode: options.mode
+        };
     }
 
     function notifyPaintToolModeChange(mode) {
@@ -83,6 +337,76 @@
             event.initCustomEvent("paint-tools-change", false, false, {
                 mode: mode
             });
+        }
+
+        global.dispatchEvent(event);
+    }
+
+    function notifySelectionToolChange(selectionTool) {
+        var event;
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-selection-tool-change", {
+                detail: {
+                    selectionTool: selectionTool
+                }
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-selection-tool-change", false, false, {
+                selectionTool: selectionTool
+            });
+        }
+
+        global.dispatchEvent(event);
+    }
+
+    function notifySelectionBehaviorChange(selectionBehavior) {
+        var event;
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-selection-behavior-change", {
+                detail: {
+                    selectionBehavior: selectionBehavior
+                }
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-selection-behavior-change", false, false, {
+                selectionBehavior: selectionBehavior
+            });
+        }
+
+        global.dispatchEvent(event);
+    }
+
+    function notifyMagicWandOptionsChange(options) {
+        var event;
+        var detail = copyMagicWandOptions(options);
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-magic-wand-options-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-magic-wand-options-change", false, false, detail);
+        }
+
+        global.dispatchEvent(event);
+    }
+
+    function notifyBucketOptionsChange(options) {
+        var event;
+        var detail = copyMagicWandOptions(options);
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-bucket-options-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-bucket-options-change", false, false, detail);
         }
 
         global.dispatchEvent(event);
@@ -114,6 +438,64 @@
         global.dispatchEvent(event);
     }
 
+    function notifySelectionStateChange(board) {
+        var event;
+        var detail;
+
+        if (!board) {
+            return;
+        }
+
+        detail = {
+            board: board.element,
+            paintBoard: board,
+            hasSelection: hasActiveSelection(board)
+        };
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-board-selection-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-board-selection-change", false, false, detail);
+        }
+
+        global.dispatchEvent(event);
+    }
+
+    function notifyContentChange(board, options) {
+        var event;
+        var detail;
+        var eventOptions = options || {};
+
+        if (!board) {
+            return;
+        }
+
+        detail = {
+            board: board.element,
+            paintBoard: board,
+            layerId: board.activeLayerId,
+            canvas: board.canvas
+        };
+
+        if (eventOptions.refreshLayersPanel) {
+            detail.refreshLayersPanel = true;
+        }
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-board-content-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-board-content-change", false, false, detail);
+        }
+
+        global.dispatchEvent(event);
+    }
+
     function extend(target, source) {
         var key;
 
@@ -133,9 +515,11 @@
         var container = getContainer(config.containerId);
         var element = document.createElement("div");
         var layers = document.createElement("ol");
+        var overlays = document.createElement("div");
         var baseLayer = document.createElement("li");
         var canvas = document.createElement("canvas");
         var tempLayer = createTempLayer(config.width, config.height);
+        var selectionLayer = createSelectionLayer(config.width, config.height);
         var context;
         var isPainting = false;
         var activePointerId = null;
@@ -143,11 +527,85 @@
         var clearPreviewOnPaintToolChange = function(event) {
             var mode = event.detail && event.detail.mode;
 
-            if (mode !== PAINT_TOOL_MODES.OLD_BRUSH) {
-                clearRetroBrushPreview(board);
+            if (!isBrushHoverPreviewToolMode(mode)) {
+                clearBrushHoverPreview(board);
+            }
+        };
+        var clearSelectionDraftOnToolChange = function(event) {
+            var mode = event.detail && event.detail.mode;
+
+            if (mode !== PAINT_TOOL_MODES.LASSO_SELECTION) {
+                clearSelectionDraft(board);
+            }
+
+            if (mode !== PAINT_TOOL_MODES.CROP_BOARD) {
+                cancelCropSession(board);
+            }
+        };
+        var clearSelectionDraftOnSelectionToolChange = function() {
+            clearSelectionDraft(board);
+        };
+        var finishPolygonalSelectionFromEvent = function(event) {
+            if (isLassoSelectionToolMode() && isPolygonalSelectionTool()) {
+                event.preventDefault();
+                finishPolygonalSelection(board, event);
+            }
+        };
+        var clearHoverGuideOnBlur = function() {
+            board.hoverGuideControlActive = false;
+            board.axisLockMode = null;
+            clearHoverGuide(board);
+        };
+        var refreshSelectionOnZoomChange = function(event) {
+            if (event.detail && event.detail.board === board.element) {
+                renderLassoSelection(board);
             }
         };
         var stopPainting = function(event) {
+            if (board.selectionMove) {
+                finishSelectionMove(board, event);
+                isPainting = false;
+                board.lastPointerPosition = null;
+                board.designedBrush2Stroke = null;
+                board.pointerStartPosition = null;
+                board.previewPointerPosition = null;
+                board.previewModifierState = null;
+                return;
+            }
+
+            if (isPainting && isLassoSelectionToolMode() && isFreehandSelectionTool() && board.lassoSelectionStroke) {
+                finishFreehandSelection(board, event);
+                commitUndoableAction(board);
+                isPainting = false;
+                board.lastPointerPosition = null;
+                board.designedBrush2Stroke = null;
+                board.pointerStartPosition = null;
+                board.previewPointerPosition = null;
+                board.previewModifierState = null;
+                return;
+            }
+
+            if (isPainting && isLassoSelectionToolMode() && isBoxSelectionTool() && board.pointerStartPosition) {
+                finishBoxSelection(board, event);
+                commitUndoableAction(board);
+                isPainting = false;
+                board.lastPointerPosition = null;
+                board.designedBrush2Stroke = null;
+                board.pointerStartPosition = null;
+                board.previewPointerPosition = null;
+                board.previewModifierState = null;
+                return;
+            }
+
+            if (isPainting && isLassoSelectionToolMode() && isPolygonalSelectionTool()) {
+                isPainting = false;
+                board.lastPointerPosition = null;
+                board.designedBrush2Stroke = null;
+                board.pointerStartPosition = null;
+                board.previewModifierState = null;
+                return;
+            }
+
             if (isPainting && isStraightLineToolMode() && board.pointerStartPosition) {
                 paintStraightLinePointerEvent(board, event);
             }
@@ -160,8 +618,8 @@
                 paintGradientPointerEvent(board, event);
             }
 
-            if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH && isPointerInsideCanvas(board, event)) {
-                updateRetroBrushPreview(board, event);
+            if (isBrushHoverPreviewToolMode() && isPointerInsideCanvas(board, event)) {
+                updateBrushHoverPreview(board, event);
             } else {
                 clearTempSquare(board);
             }
@@ -179,23 +637,70 @@
                 return;
             }
 
+            updateHoverGuideFromPointer(board, event, true);
+
             if (supportsPointerEvents) {
                 activePointerId = event.pointerId;
-                capturePointer(canvas, event.pointerId);
+                capturePointer(getPointerCaptureTarget(board), event.pointerId);
             }
 
             isPainting = true;
             rememberPreviewInput(board, event);
             startTempPreview(board, event);
-            updateRetroBrushPreview(board, event);
+            updateBrushHoverPreview(board, event);
             startPointerAction(board, event);
         };
+        var startPaintingFromOutside = function(event) {
+            if (!isPrimaryPaintInput(event)) {
+                return;
+            }
+
+            if (event.target === board.canvas) {
+                return;
+            }
+
+            if (board.floatingPaste &&
+                board.floatingPaste.layer &&
+                board.floatingPaste.layer.contains(event.target)) {
+                return;
+            }
+
+            if (isPointerInsideCanvas(board, event)) {
+                startPainting(event);
+                return;
+            }
+
+            if (!canStartActionOutsideCanvas()) {
+                return;
+            }
+
+            startPainting(event);
+        };
         var continuePainting = function(event) {
+            var isDocumentMove = event && event.currentTarget === document;
+
+            if (isDocumentMove && !isPainting && !(isLassoSelectionToolMode() && isPolygonalSelectionTool() && board.polygonalSelectionPath)) {
+                return;
+            }
+
+            if (isDocumentMove &&
+                isPointerInsideCanvas(board, event) &&
+                event.target === board.canvas) {
+                return;
+            }
+
+            updateHoverGuideFromPointer(board, event, true);
+
             if (!isActivePaintInput(event, activePointerId)) {
                 return;
             }
 
-            updateRetroBrushPreview(board, event);
+            updateBrushHoverPreview(board, event);
+
+            if (!isPainting && isLassoSelectionToolMode() && isPolygonalSelectionTool() && board.polygonalSelectionPath) {
+                updatePolygonalSelectionPreview(board, event);
+                return;
+            }
 
             if (!isPainting) {
                 return;
@@ -205,10 +710,44 @@
             updateTempPreview(board, event);
             continuePointerAction(board, event);
         };
+        var rememberHoverGuidePointer = function(event) {
+            updateHoverGuideFromPointer(board, event, false);
+        };
         var updatePreviewModifier = function(event) {
-            if (!event || (event.key !== "Shift" && event.key !== "Alt")) {
+            var isPreviewModifier;
+            var arrowDelta;
+
+            if (isEscapeKey(event) && event.type === "keydown") {
+                event.preventDefault();
+                clearSelection(board);
                 return;
             }
+
+            if (event && event.type === "keydown" && isArrowKey(event) &&
+                !isEditableEventTarget(event.target) && hasActiveSelection(board)) {
+                arrowDelta = getArrowKeyDelta(event);
+
+                if (nudgeSelection(board, arrowDelta.dx, arrowDelta.dy)) {
+                    event.preventDefault();
+                }
+
+                return;
+            }
+
+            if (isSpacePanKey(event) && event.type !== "keyup") {
+                clearBrushHoverPreview(board);
+            }
+
+            updateHoverGuideFromKey(board, event);
+
+            isPreviewModifier = event &&
+                (event.key === "Shift" || event.key === "Alt" || isAxisLockKey(event));
+
+            if (!isPreviewModifier) {
+                return;
+            }
+
+            updateAxisLockState(board, event);
 
             if (!isPainting) {
                 return;
@@ -232,7 +771,20 @@
             activePointerId = null;
         };
         var leaveCanvas = function() {
-            if (isShapeToolMode()) {
+            if (!board.selectionMove) {
+                clearSelectionMoveCursor(board);
+            }
+
+            board.hoverGuidePointerPosition = null;
+            board.hoverGuideControlActive = false;
+            clearHoverGuide(board);
+
+            if (isPainting) {
+                clearBrushHoverPreview(board);
+                return;
+            }
+
+            if (isShapeToolMode() || isLassoSelectionToolMode()) {
                 return;
             }
 
@@ -242,7 +794,7 @@
             activePointerId = null;
             board.previewPointerPosition = null;
             board.previewModifierState = null;
-            clearRetroBrushPreview(board);
+            clearBrushHoverPreview(board);
         };
 
         element.id = boardId;
@@ -261,9 +813,14 @@
         layers.style.width = config.width + "px";
         layers.style.height = config.height + "px";
 
+        overlays.className = "paint-board-overlays";
+        overlays.style.width = config.width + "px";
+        overlays.style.height = config.height + "px";
+
         baseLayer.id = baseLayerId;
-        baseLayer.className = "paint-board-layer";
+        baseLayer.className = "paint-board-layer ACTIVE-LAYER";
         baseLayer.setAttribute("data-layer", baseLayerId);
+        baseLayer.setAttribute("data-type", "CANVAS");
         baseLayer.style.width = config.width + "px";
         baseLayer.style.height = config.height + "px";
 
@@ -276,8 +833,10 @@
 
         baseLayer.appendChild(canvas);
         layers.appendChild(baseLayer);
+        overlays.appendChild(tempLayer);
+        overlays.appendChild(selectionLayer);
         element.appendChild(layers);
-        element.appendChild(tempLayer);
+        element.appendChild(overlays);
         container.appendChild(element);
 
         context = canvas.getContext("2d");
@@ -288,9 +847,13 @@
             id: boardId,
             element: element,
             layersElement: layers,
+            overlaysElement: overlays,
+            selectionLayerElement: selectionLayer,
             tempLayerElement: tempLayer,
             activeLayerElement: baseLayer,
             activeLayerId: baseLayerId,
+            floatingPaste: null,
+            cropSession: null,
             canvas: canvas,
             context: context,
             width: config.width,
@@ -298,10 +861,261 @@
             backgroundColor: config.backgroundColor,
             paintColor: getOppositeColor(config.backgroundColor),
             brushSize: config.brushSize,
+            useLayers: config.useLayers,
+            layers: config.layers || (config.useLayers ? createInitialLayers(boardId) : []),
+            selectedLayerIds: [baseLayerId],
+            layerSequence: 1,
+            getLayers: function() {
+                return board.layers;
+            },
+            getTopLayerAtPoint: function(point) {
+                return getTopLayerAtPoint(board, point);
+            },
+            addLayer: function(options) {
+                var previousCanvas = board.canvas;
+                var layer;
+
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.addLayer) {
+                    layer = global.PaintBoardLayersManager.addLayer(board, options);
+
+                    if (config.paintOnPointer && layer) {
+                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                            startPainting: startPainting,
+                            continuePainting: continuePainting,
+                            leaveCanvas: leaveCanvas,
+                            rememberHoverGuidePointer: rememberHoverGuidePointer,
+                            finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                        }, supportsPointerEvents);
+                    }
+
+                    return layer;
+                }
+
+                return null;
+            },
+            duplicateActiveLayer: function() {
+                var previousCanvas = board.canvas;
+                var duplicatedLayer;
+
+                if (global.PaintBoardLayersManager &&
+                    global.PaintBoardLayersManager.duplicateActiveLayer) {
+                    duplicatedLayer =
+                        global.PaintBoardLayersManager.duplicateActiveLayer(board);
+
+                    if (config.paintOnPointer && duplicatedLayer) {
+                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                            startPainting: startPainting,
+                            continuePainting: continuePainting,
+                            leaveCanvas: leaveCanvas,
+                            rememberHoverGuidePointer: rememberHoverGuidePointer,
+                            finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                        }, supportsPointerEvents);
+                    }
+                    if (duplicatedLayer) {
+                        notifyContentChange(board);
+                    }
+
+                    return duplicatedLayer;
+                }
+
+                return null;
+            },
+            removeLayer: function(layerId) {
+                var previousCanvas = board.canvas;
+                var removed;
+
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.removeLayer) {
+                    removed = global.PaintBoardLayersManager.removeLayer(board, layerId);
+
+                    if (config.paintOnPointer && removed) {
+                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                            startPainting: startPainting,
+                            continuePainting: continuePainting,
+                            leaveCanvas: leaveCanvas,
+                            rememberHoverGuidePointer: rememberHoverGuidePointer,
+                            finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                        }, supportsPointerEvents);
+                    }
+
+                    return removed;
+                }
+
+                return false;
+            },
+            removeLayers: function(layerIds) {
+                var previousCanvas = board.canvas;
+                var removed;
+
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.removeLayers) {
+                    removed = global.PaintBoardLayersManager.removeLayers(board, layerIds);
+
+                    if (config.paintOnPointer && removed) {
+                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                            startPainting: startPainting,
+                            continuePainting: continuePainting,
+                            leaveCanvas: leaveCanvas,
+                            rememberHoverGuidePointer: rememberHoverGuidePointer,
+                            finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                        }, supportsPointerEvents);
+                    }
+
+                    return removed;
+                }
+
+                return false;
+            },
+            setActiveLayer: function(layerId) {
+                var previousCanvas = board.canvas;
+                var activated;
+
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setActiveLayer) {
+                    activated = global.PaintBoardLayersManager.setActiveLayer(board, layerId);
+
+                    if (config.paintOnPointer && activated) {
+                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                            startPainting: startPainting,
+                            continuePainting: continuePainting,
+                            leaveCanvas: leaveCanvas,
+                            rememberHoverGuidePointer: rememberHoverGuidePointer,
+                            finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                        }, supportsPointerEvents);
+                    }
+
+                    return activated;
+                }
+
+                return false;
+            },
+            setLayerSelection: function(layerIds, activeLayerId) {
+                var previousCanvas = board.canvas;
+                var selected;
+
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayerSelection) {
+                    selected = global.PaintBoardLayersManager.setLayerSelection(
+                        board,
+                        layerIds,
+                        activeLayerId
+                    );
+
+                    if (config.paintOnPointer && selected) {
+                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                            startPainting: startPainting,
+                            continuePainting: continuePainting,
+                            leaveCanvas: leaveCanvas,
+                            rememberHoverGuidePointer: rememberHoverGuidePointer,
+                            finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                        }, supportsPointerEvents);
+                    }
+
+                    return selected;
+                }
+
+                return false;
+            },
+            setLayerVisibility: function(layerId, visible) {
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayerVisibility) {
+                    return global.PaintBoardLayersManager.setLayerVisibility(board, layerId, visible);
+                }
+
+                return false;
+            },
+            setLayerBlocked: function(layerId, blocked) {
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayerBlocked) {
+                    return global.PaintBoardLayersManager.setLayerBlocked(board, layerId, blocked);
+                }
+
+                return false;
+            },
+            setLayerOpacity: function(layerId, opacity) {
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayerOpacity) {
+                    return global.PaintBoardLayersManager.setLayerOpacity(board, layerId, opacity);
+                }
+
+                return false;
+            },
+            setLayerMask: function(layerId, mask) {
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayerMask) {
+                    return global.PaintBoardLayersManager.setLayerMask(board, layerId, mask);
+                }
+
+                return false;
+            },
+            setLayersOrder: function(layers) {
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.setLayersOrder) {
+                    return global.PaintBoardLayersManager.setLayersOrder(board, layers);
+                }
+
+                return false;
+            },
+            mergeSelectedLayers: function() {
+                var previousCanvas = board.canvas;
+                var mergedLayer;
+
+                if (global.PaintBoardLayersManager &&
+                    global.PaintBoardLayersManager.mergeSelectedLayers) {
+                    mergedLayer = global.PaintBoardLayersManager.mergeSelectedLayers(board);
+
+                    if (config.paintOnPointer && mergedLayer) {
+                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                            startPainting: startPainting,
+                            continuePainting: continuePainting,
+                            leaveCanvas: leaveCanvas,
+                            rememberHoverGuidePointer: rememberHoverGuidePointer,
+                            finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                        }, supportsPointerEvents);
+                    }
+                    if (mergedLayer) {
+                        notifyContentChange(board);
+                    }
+
+                    return mergedLayer;
+                }
+
+                return false;
+            },
+            createFlattenedCanvas: function() {
+                if (global.PaintBoardLayersManager &&
+                    global.PaintBoardLayersManager.createFlattenedCanvas) {
+                    return global.PaintBoardLayersManager.createFlattenedCanvas(board);
+                }
+
+                return null;
+            },
+            flattenImage: function() {
+                var previousCanvas = board.canvas;
+                var flattened;
+
+                if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.flattenImage) {
+                    flattened = global.PaintBoardLayersManager.flattenImage(board);
+
+                    if (config.paintOnPointer && flattened) {
+                        rebindCanvasPaintHandlers(previousCanvas, board.canvas, {
+                            startPainting: startPainting,
+                            continuePainting: continuePainting,
+                            leaveCanvas: leaveCanvas,
+                            rememberHoverGuidePointer: rememberHoverGuidePointer,
+                            finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                        }, supportsPointerEvents);
+                    }
+                    if (flattened) {
+                        notifyContentChange(board);
+                    }
+
+                    return flattened;
+                }
+
+                return false;
+            },
             lastPointerPosition: null,
             previewPointerPosition: null,
             previewModifierState: null,
+            axisLockMode: null,
+            hoverGuidePointerPosition: null,
+            hoverGuideControlActive: false,
             designedBrush2Stroke: null,
+            lassoSelectionStroke: null,
+            polygonalSelectionPath: null,
+            selection: null,
             pointerStartPosition: null,
             undoSnapshot: null,
             pendingUndoSnapshot: null,
@@ -309,14 +1123,89 @@
             clear: function() {
                 clear(board);
             },
+            clearSelection: function() {
+                clearSelection(board);
+            },
+            hasSelection: function() {
+                return hasActiveSelection(board);
+            },
+            selectAll: function() {
+                return selectAll(board);
+            },
+            reverseSelection: function() {
+                return reverseSelection(board);
+            },
+            getClipboardCanvas: function() {
+                return getClipboardCanvas(board);
+            },
+            fillSelectionWithFrontColor: function() {
+                return fillSelectionWithFrontColor(board);
+            },
+            fillSelectionOrActiveLayerWithColor: function(color) {
+                return fillSelectionOrActiveLayerWithColor(board, color);
+            },
+            deleteSelection: function() {
+                return deleteSelection(board);
+            },
             paintAt: function(x, y) {
                 paintAt(board, x, y);
             },
             drawImage: function(image, x, y) {
                 drawImage(board, image, x, y);
             },
+            startFloatingPaste: function(image, metadata) {
+                startFloatingPaste(board, image, metadata);
+            },
+            transformActiveLayer: function() {
+                return transformActiveLayer(board);
+            },
+            commitFloatingPaste: function() {
+                return commitFloatingPaste(board);
+            },
+            cancelFloatingPaste: function() {
+                return cancelFloatingPaste(board);
+            },
+            cancelFloatingPasteDistortion: function() {
+                return cancelFloatingPasteDistortion(board);
+            },
+            setFloatingPasteTransformAlgorithm: function(algorithm) {
+                return setFloatingPasteTransformAlgorithm(board, algorithm);
+            },
+            setFloatingPasteWarpRoundBehavior: function(active) {
+                return setFloatingPasteWarpRoundBehavior(board, active);
+            },
+            setFloatingPasteTransformOperation: function(operation) {
+                return setFloatingPasteTransformOperation(board, operation);
+            },
+            setFloatingPasteDistortMode: function(active) {
+                return setFloatingPasteDistortMode(board, active);
+            },
             setSize: function(width, height) {
                 setSize(board, width, height);
+            },
+            resizeTo: function(width, height, options) {
+                return resizeTo(board, width, height, options);
+            },
+            cropToSelection: function() {
+                return cropToSelection(board);
+            },
+            startCrop: function() {
+                return startCropSession(board);
+            },
+            commitCrop: function() {
+                return commitCropSession(board);
+            },
+            cancelCrop: function() {
+                return cancelCropSession(board);
+            },
+            setCropSquareAspectRatio: function(active) {
+                return applyCropSquareAspectRatio(board, active);
+            },
+            refreshCrop: function() {
+                return renderCropSession(board);
+            },
+            isCropping: function() {
+                return !!board.cropSession;
             },
             setBackgroundColor: function(backgroundColor) {
                 setBackgroundColor(board, backgroundColor);
@@ -334,32 +1223,58 @@
                 destroy(board, {
                     supportsPointerEvents: supportsPointerEvents,
                     startPainting: startPainting,
+                    startPaintingFromOutside: startPaintingFromOutside,
+                    container: container,
                     continuePainting: continuePainting,
+                    rememberHoverGuidePointer: rememberHoverGuidePointer,
                     endPainting: endPainting,
                     leaveCanvas: leaveCanvas,
-                    updatePreviewModifier: updatePreviewModifier
-                }, clearPreviewOnPaintToolChange);
+                    finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent,
+                    updatePreviewModifier: updatePreviewModifier,
+                    clearHoverGuideOnBlur: clearHoverGuideOnBlur,
+                    refreshSelectionOnZoomChange: refreshSelectionOnZoomChange
+                }, {
+                    clearPreviewOnPaintToolChange: clearPreviewOnPaintToolChange,
+                    clearSelectionDraftOnToolChange: clearSelectionDraftOnToolChange,
+                    clearSelectionDraftOnSelectionToolChange: clearSelectionDraftOnSelectionToolChange
+                });
             }
         };
 
         if (config.paintOnPointer) {
             if (supportsPointerEvents) {
-                canvas.addEventListener("pointerdown", startPainting);
-                canvas.addEventListener("pointermove", continuePainting);
+                bindCanvasPaintHandlers(canvas, {
+                    startPainting: startPainting,
+                    continuePainting: continuePainting,
+                    leaveCanvas: leaveCanvas,
+                    rememberHoverGuidePointer: rememberHoverGuidePointer,
+                    finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                }, true, true);
+                container.addEventListener("pointerdown", startPaintingFromOutside);
+                document.addEventListener("pointermove", continuePainting, true);
                 document.addEventListener("pointerup", endPainting, true);
                 document.addEventListener("pointercancel", endPainting, true);
-                canvas.addEventListener("pointerleave", leaveCanvas);
             } else {
-                canvas.addEventListener("mousedown", startPainting);
-                canvas.addEventListener("mousemove", continuePainting);
+                bindCanvasPaintHandlers(canvas, {
+                    startPainting: startPainting,
+                    continuePainting: continuePainting,
+                    leaveCanvas: leaveCanvas,
+                    rememberHoverGuidePointer: rememberHoverGuidePointer,
+                    finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent
+                }, false, true);
+                container.addEventListener("mousedown", startPaintingFromOutside);
+                document.addEventListener("mousemove", continuePainting, true);
                 document.addEventListener("mouseup", endPainting, true);
-                canvas.addEventListener("mouseleave", leaveCanvas);
             }
 
             document.addEventListener("keydown", updatePreviewModifier);
             document.addEventListener("keyup", updatePreviewModifier);
+            global.addEventListener("blur", clearHoverGuideOnBlur);
             global.addEventListener("paint-tools-change", clearPreviewOnPaintToolChange);
+            global.addEventListener("paint-tools-change", clearSelectionDraftOnToolChange);
+            global.addEventListener("paint-selection-tool-change", clearSelectionDraftOnSelectionToolChange);
         }
+        global.addEventListener("paint-board-zoom-change", refreshSelectionOnZoomChange);
 
         return board;
     }
@@ -384,6 +1299,7 @@
     }
 
     function clear(board) {
+        cancelFloatingPaste(board);
         beginUndoableAction(board);
         markUndoableChange(board);
         board.context.clearRect(0, 0, board.canvas.width, board.canvas.height);
@@ -403,13 +1319,28 @@
         return document.createElement("div");
     }
 
+    function createSelectionLayer(width, height) {
+        var selectionLayer = document.createElement("div");
+
+        selectionLayer.className = "paint-board-selection-layer";
+        selectionLayer.style.width = width + "px";
+        selectionLayer.style.height = height + "px";
+
+        return selectionLayer;
+    }
+
     function setSize(board, width, height) {
+        cancelFloatingPaste(board);
+        cancelCropSession(board);
         board.width = width;
         board.height = height;
         board.element.style.width = width + "px";
         board.element.style.height = height + "px";
         board.layersElement.style.width = width + "px";
         board.layersElement.style.height = height + "px";
+        board.overlaysElement.style.width = width + "px";
+        board.overlaysElement.style.height = height + "px";
+        setSelectionLayerSize(board.selectionLayerElement, width, height);
         setTempLayerSize(board.tempLayerElement, width, height);
         board.activeLayerElement.style.width = width + "px";
         board.activeLayerElement.style.height = height + "px";
@@ -418,6 +1349,7 @@
         board.canvas.style.width = width + "px";
         board.canvas.style.height = height + "px";
         updateBoardRulesSize(board, width, height);
+        clearSelection(board);
         clear(board);
     }
 
@@ -433,6 +1365,427 @@
 
         tempLayer.style.width = width + "px";
         tempLayer.style.height = height + "px";
+    }
+
+    function setSelectionLayerSize(selectionLayer, width, height) {
+        if (!selectionLayer) {
+            return;
+        }
+
+        selectionLayer.style.width = width + "px";
+        selectionLayer.style.height = height + "px";
+    }
+
+    var MAX_CANVAS_PIXELS = 9000000;
+
+    function isCanvasSizeAllowed(width, height) {
+        return width > 0 &&
+            height > 0 &&
+            (width * height) <= MAX_CANVAS_PIXELS;
+    }
+
+    // Resizes the board to the given pixel size while keeping the painted image
+    // of every layer (anchored at the top-left corner). Throwaway, non-document
+    // state (the active selection, any floating paste and the temp preview layer)
+    // is discarded on purpose, since it must not survive a resize. Returns true
+    // when the resize was applied, or false when the requested size is rejected
+    // (non-positive or above MAX_CANVAS_PIXELS).
+    function resizeTo(board, width, height, options) {
+        width = Math.floor(width);
+        height = Math.floor(height);
+
+        if (!board || !isCanvasSizeAllowed(width, height)) {
+            return false;
+        }
+
+        // Drop temporary, non-document state before changing dimensions.
+        cancelFloatingPaste(board);
+        cancelCropSession(board);
+        clearSelection(board);
+        clearTempSquare(board);
+
+        applyBoardScaleResize(board, width, height, options || {});
+        return true;
+    }
+
+    function applyBoardScaleResize(board, width, height, options) {
+        var layerCanvases;
+        var i;
+
+        layerCanvases = board.layersElement ?
+            board.layersElement.querySelectorAll(".paint-board-canvas") : [];
+
+        for (i = 0; i < layerCanvases.length; i++) {
+            resizeCanvasScalingContent(
+                layerCanvases[i],
+                width,
+                height,
+                normalizeResizeResampling(options.resample || options.interpolation)
+            );
+        }
+
+        board.width = width;
+        board.height = height;
+        board.element.style.width = width + "px";
+        board.element.style.height = height + "px";
+        board.layersElement.style.width = width + "px";
+        board.layersElement.style.height = height + "px";
+        board.overlaysElement.style.width = width + "px";
+        board.overlaysElement.style.height = height + "px";
+        setSelectionLayerSize(board.selectionLayerElement, width, height);
+        setTempLayerSize(board.tempLayerElement, width, height);
+        resizeLayerElements(board, width, height);
+        board.context = board.canvas.getContext("2d");
+        updateBoardRulesSize(board, width, height);
+        resizeBoardWindowToContent(board, width, height);
+
+        if (global.Zoom && global.Zoom.updateBoardLayout) {
+            global.Zoom.updateBoardLayout(board.element);
+        }
+    }
+
+    function normalizeResizeResampling(resampling) {
+        var value = String(resampling || "").toLowerCase();
+
+        // Honor any algorithm that has a real implementation in the scale
+        // engine (nearest-neighbor, bilinear, bicubic, area-average,
+        // pixel-art, ...). Everything else falls back to Bicubic.
+        if (global.ScaleTransformAlgorithms &&
+            global.ScaleTransformAlgorithms.hasAlgorithm &&
+            global.ScaleTransformAlgorithms.hasAlgorithm(value)) {
+            return value;
+        }
+
+        return "bicubic";
+    }
+
+    function resizeCanvasScalingContent(canvas, width, height, resampling) {
+        var snapshot;
+        var snapshotContext;
+        var context;
+
+        if (!canvas) {
+            return;
+        }
+
+        snapshot = document.createElement("canvas");
+        snapshot.width = canvas.width;
+        snapshot.height = canvas.height;
+        snapshotContext = snapshot.getContext("2d");
+        snapshotContext.drawImage(canvas, 0, 0);
+
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+
+        context = canvas.getContext("2d");
+        if (global.ScaleTransformAlgorithms &&
+            global.ScaleTransformAlgorithms.hasAlgorithm &&
+            global.ScaleTransformAlgorithms.hasAlgorithm(resampling)) {
+            global.ScaleTransformAlgorithms.render(context, snapshot, [
+                { x: 0, y: 0 },
+                { x: width, y: 0 },
+                { x: width, y: height },
+                { x: 0, y: height }
+            ], resampling);
+            return;
+        }
+
+        context.save();
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = "high";
+        context.drawImage(snapshot, 0, 0, width, height);
+        context.restore();
+    }
+
+    // Crops (or extends) the board so its new top-left origin is (cropX, cropY)
+    // and its new size is width x height, all measured in current board pixels.
+    // The painted image of every layer is kept and shifted by (-cropX, -cropY):
+    // pixels outside the crop rectangle are discarded and any area beyond the old
+    // board edges is expanded according to the selected crop fill mode
+    // (transparent/white/black/front/background). cropX/cropY may be negative (the board
+    // grows on the top/left) and the rectangle may reach past the old board edges
+    // (the board grows on the right/bottom). Returns true when applied, or false
+    // when the requested size is rejected (non-positive or above MAX_CANVAS_PIXELS).
+    function cropBoardTo(board, cropX, cropY, width, height) {
+        var fillColor;
+
+        cropX = Math.round(cropX);
+        cropY = Math.round(cropY);
+        width = Math.floor(width);
+        height = Math.floor(height);
+
+        if (!board || !isCanvasSizeAllowed(width, height)) {
+            return false;
+        }
+
+        // Drop temporary, non-document state before changing dimensions.
+        cancelFloatingPaste(board);
+        clearSelection(board);
+        clearTempSquare(board);
+
+        fillColor = getCropExpansionBackgroundColor(board);
+
+        applyBoardResize(board, width, height, -cropX, -cropY, {
+            fillExpansionWithBackground: fillColor !== null,
+            fillColor: fillColor
+        });
+        return true;
+    }
+
+    function cropToSelection(board) {
+        var bounds;
+
+        if (!hasActiveSelection(board)) {
+            return false;
+        }
+
+        bounds = getSelectionMaskBounds(board.selection.maskCanvas);
+        if (!bounds || !bounds.width || !bounds.height) {
+            return false;
+        }
+
+        if (!cropBoardTo(board, bounds.left, bounds.top, bounds.width, bounds.height)) {
+            return false;
+        }
+
+        notifyContentChange(board);
+        return true;
+    }
+
+    function getCropExpansionBackgroundColor(board) {
+        var fillMode = getCropExpansionFillMode();
+
+        if (fillMode === "transparent") {
+            return null;
+        }
+
+        if (fillMode === "white") {
+            return "#ffffff";
+        }
+
+        if (fillMode === "black") {
+            return "#000000";
+        }
+
+        if (fillMode === "front-color") {
+            if (global.AppOpenWindows &&
+                typeof global.AppOpenWindows.getFrontColor === "function") {
+                return global.AppOpenWindows.getFrontColor();
+            }
+
+            if (global.App && global.App.memory && global.App.memory.currentColor) {
+                return global.App.memory.currentColor;
+            }
+        }
+
+        if (global.AppOpenWindows &&
+            typeof global.AppOpenWindows.getBackgroundColor === "function") {
+            return global.AppOpenWindows.getBackgroundColor();
+        }
+
+        return board && board.backgroundColor ? board.backgroundColor : "#ffffff";
+    }
+
+    function getCropExpansionFillMode() {
+        var mode = global.App && global.App.memory ?
+            String(global.App.memory.cropExpansionFillMode || "") : "";
+
+        if (mode === "transparent" ||
+            mode === "white" ||
+            mode === "black" ||
+            mode === "front-color" ||
+            mode === "background-color") {
+            return mode;
+        }
+
+        return "background-color";
+    }
+
+    // Shared core that resizes the board element, every layer canvas and the
+    // overlay layers to the new size, keeping each layer's pixels anchored at the
+    // given offset, then updates the rulers, the containing window and the zoom
+    // layout.
+    function applyBoardResize(board, width, height, offsetX, offsetY, options) {
+        var layerCanvases;
+        var backgroundCanvas;
+        var fillColor;
+        var i;
+
+        // Preserve each layer's pixels while its backing canvas is resized.
+        layerCanvases = board.layersElement ?
+            board.layersElement.querySelectorAll(".paint-board-canvas") : [];
+        backgroundCanvas = getBoardBackgroundCanvas(board, layerCanvases);
+        fillColor = options && options.fillExpansionWithBackground ?
+            (options.fillColor || board.backgroundColor) : null;
+        for (i = 0; i < layerCanvases.length; i++) {
+            resizeCanvasPreservingContent(
+                layerCanvases[i],
+                width,
+                height,
+                offsetX,
+                offsetY,
+                layerCanvases[i] === backgroundCanvas ? fillColor : null
+            );
+        }
+
+        board.width = width;
+        board.height = height;
+        board.element.style.width = width + "px";
+        board.element.style.height = height + "px";
+        board.layersElement.style.width = width + "px";
+        board.layersElement.style.height = height + "px";
+        board.overlaysElement.style.width = width + "px";
+        board.overlaysElement.style.height = height + "px";
+        setSelectionLayerSize(board.selectionLayerElement, width, height);
+        setTempLayerSize(board.tempLayerElement, width, height);
+        resizeLayerElements(board, width, height);
+        updateBoardRulesSize(board, width, height);
+        resizeBoardWindowToContent(board, width, height);
+
+        if (global.Zoom && global.Zoom.updateBoardLayout) {
+            global.Zoom.updateBoardLayout(board.element);
+        }
+    }
+
+    // Grows/shrinks the containing window so the new board (plus its rulers) fits
+    // its content area, mirroring how the window is sized when first created.
+    // No-op for boards that are not hosted inside a window.
+    function resizeBoardWindowToContent(board, width, height) {
+        var ruleSize;
+
+        if (!board.window || typeof board.window.scaleToContent !== "function") {
+            return;
+        }
+
+        ruleSize = (board.rules && typeof board.rules.ruleSize === "number") ?
+            board.rules.ruleSize : 0;
+        board.window.scaleToContent(width + ruleSize, height + ruleSize);
+    }
+
+    function getBoardBackgroundCanvas(board, layerCanvases) {
+        var layers = board && board.layers ? board.layers : [];
+        var layerElement;
+        var backgroundLayerId = null;
+        var i;
+
+        for (i = 0; i < layers.length; i++) {
+            if (layers[i] && layers[i].background) {
+                backgroundLayerId = layers[i].id;
+                break;
+            }
+        }
+
+        if (backgroundLayerId && board && board.layersElement) {
+            layerElement = board.layersElement.querySelector('[data-layer="' + backgroundLayerId + '"]');
+            if (layerElement) {
+                return layerElement.querySelector(".paint-board-canvas") || null;
+            }
+        }
+
+        return layerCanvases && layerCanvases.length ? layerCanvases[0] : null;
+    }
+
+    // Resizes a single canvas, keeping its current content anchored at the given
+    // offset (defaults to the top-left corner). Shrinking clips the overflow.
+    // When fillColor is provided, only the newly exposed area is filled with that
+    // color before the previous image is drawn back (used by crop expansion on
+    // the background layer).
+    function resizeCanvasPreservingContent(canvas, width, height, offsetX, offsetY, fillColor) {
+        var snapshot = null;
+        var snapshotContext;
+        var context;
+        var previousWidth;
+        var previousHeight;
+
+        if (!canvas) {
+            return;
+        }
+
+        offsetX = offsetX || 0;
+        offsetY = offsetY || 0;
+        previousWidth = canvas.width;
+        previousHeight = canvas.height;
+
+        if (previousWidth > 0 && previousHeight > 0) {
+            snapshot = document.createElement("canvas");
+            snapshot.width = previousWidth;
+            snapshot.height = previousHeight;
+            snapshotContext = snapshot.getContext("2d");
+            snapshotContext.drawImage(canvas, 0, 0);
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+
+        context = canvas.getContext("2d");
+
+        if (fillColor) {
+            fillExpandedArea(context, width, height, previousWidth, previousHeight, offsetX, offsetY, fillColor);
+        }
+
+        if (snapshot) {
+            context.drawImage(snapshot, offsetX, offsetY);
+        }
+    }
+
+    function fillExpandedArea(context, width, height, previousWidth, previousHeight, offsetX, offsetY, fillColor) {
+        var overlapLeft;
+        var overlapTop;
+        var overlapRight;
+        var overlapBottom;
+
+        if (!context || !fillColor || width <= 0 || height <= 0) {
+            return;
+        }
+
+        overlapLeft = clamp(offsetX, 0, width);
+        overlapTop = clamp(offsetY, 0, height);
+        overlapRight = clamp(offsetX + previousWidth, 0, width);
+        overlapBottom = clamp(offsetY + previousHeight, 0, height);
+
+        context.save();
+        context.fillStyle = fillColor;
+
+        // No overlap means the previous image sits fully outside the new canvas.
+        if (overlapRight <= overlapLeft || overlapBottom <= overlapTop) {
+            context.fillRect(0, 0, width, height);
+            context.restore();
+            return;
+        }
+
+        if (overlapTop > 0) {
+            context.fillRect(0, 0, width, overlapTop);
+        }
+        if (overlapBottom < height) {
+            context.fillRect(0, overlapBottom, width, height - overlapBottom);
+        }
+        if (overlapLeft > 0) {
+            context.fillRect(0, overlapTop, overlapLeft, overlapBottom - overlapTop);
+        }
+        if (overlapRight < width) {
+            context.fillRect(overlapRight, overlapTop, width - overlapRight, overlapBottom - overlapTop);
+        }
+
+        context.restore();
+    }
+
+    function resizeLayerElements(board, width, height) {
+        var layerItems;
+        var i;
+
+        if (!board || !board.layersElement) {
+            return;
+        }
+
+        layerItems = board.layersElement.querySelectorAll(".paint-board-layer");
+        for (i = 0; i < layerItems.length; i++) {
+            layerItems[i].style.width = width + "px";
+            layerItems[i].style.height = height + "px";
+        }
     }
 
     function setBackgroundColor(board, backgroundColor) {
@@ -459,6 +1812,8 @@
             return false;
         }
 
+        cancelFloatingPaste(board);
+        cancelCropSession(board);
         board.width = snapshot.width;
         board.height = snapshot.height;
         board.backgroundColor = snapshot.backgroundColor;
@@ -468,6 +1823,9 @@
         board.element.style.backgroundColor = snapshot.backgroundColor;
         board.layersElement.style.width = snapshot.width + "px";
         board.layersElement.style.height = snapshot.height + "px";
+        board.overlaysElement.style.width = snapshot.width + "px";
+        board.overlaysElement.style.height = snapshot.height + "px";
+        setSelectionLayerSize(board.selectionLayerElement, snapshot.width, snapshot.height);
         setTempLayerSize(board.tempLayerElement, snapshot.width, snapshot.height);
         board.activeLayerElement.style.width = snapshot.width + "px";
         board.activeLayerElement.style.height = snapshot.height + "px";
@@ -476,6 +1834,7 @@
         board.canvas.style.width = snapshot.width + "px";
         board.canvas.style.height = snapshot.height + "px";
         updateBoardRulesSize(board, snapshot.width, snapshot.height);
+        clearSelection(board);
         board.context.putImageData(snapshot.imageData, 0, 0);
         return true;
     }
@@ -498,17 +1857,24 @@
     }
 
     function commitUndoableAction(board) {
+        var contentChanged;
+
         if (!board) {
             return;
         }
 
-        if (board.pendingUndoSnapshot && board.actionHasChanges) {
+        contentChanged = !!(board.pendingUndoSnapshot && board.actionHasChanges);
+
+        if (contentChanged) {
             board.undoSnapshot = board.pendingUndoSnapshot;
         }
 
         board.pendingUndoSnapshot = null;
         board.actionHasChanges = false;
         notifyUndoStateChange(board);
+        if (contentChanged) {
+            notifyContentChange(board);
+        }
     }
 
     function undo(board) {
@@ -527,15 +1893,47 @@
         board.pointerStartPosition = null;
         clearTempSquare(board);
         notifyUndoStateChange(board);
-        return restoreBoardSnapshot(board, snapshot);
+        if (!restoreBoardSnapshot(board, snapshot)) {
+            return false;
+        }
+        notifyContentChange(board, {
+            refreshLayersPanel: true
+        });
+        return true;
     }
 
     function getPointerPosition(board, event) {
-        return getClampedPointerPosition(board, event);
+        return applyAxisLock(board, getClampedPointerPosition(board, event));
+    }
+
+    function getPreviewPointerPosition(board, event) {
+        if (isLassoSelectionToolMode() ||
+            isShapeToolMode() ||
+            isStraightLineToolMode() ||
+            currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
+            return getSelectionPointerPosition(board, event);
+        }
+
+        return getPointerPosition(board, event);
+    }
+
+    function getSelectionPointerPosition(board, event) {
+        return applyAxisLock(board, getUnclampedPointerPosition(board, event));
+    }
+
+    function getUnclampedPointerPosition(board, event) {
+        var rect = getBoardInputRect(board);
+        var scaleX = board.canvas.width / rect.width;
+        var scaleY = board.canvas.height / rect.height;
+
+        return {
+            x: Math.floor((event.clientX - rect.left) * scaleX),
+            y: Math.floor((event.clientY - rect.top) * scaleY)
+        };
     }
 
     function getClampedPointerPosition(board, event) {
-        var rect = board.canvas.getBoundingClientRect();
+        var rect = getBoardInputRect(board);
         var scaleX = board.canvas.width / rect.width;
         var scaleY = board.canvas.height / rect.height;
 
@@ -546,7 +1944,7 @@
     }
 
     function getCanvasPointerPosition(board, event) {
-        var rect = board.canvas.getBoundingClientRect();
+        var rect = getBoardInputRect(board);
         var scaleX;
         var scaleY;
         var x;
@@ -571,12 +1969,82 @@
         };
     }
 
+    function getBoardInputRect(board) {
+        var rect;
+
+        if (!board || !board.element || !board.element.getBoundingClientRect) {
+            return {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: 1,
+                height: 1
+            };
+        }
+
+        rect = board.element.getBoundingClientRect();
+        if (!rect.width || !rect.height) {
+            return {
+                left: rect.left || 0,
+                top: rect.top || 0,
+                right: rect.right || rect.left || 0,
+                bottom: rect.bottom || rect.top || 0,
+                width: 1,
+                height: 1
+            };
+        }
+        return rect;
+    }
+
+    function getPointerCaptureTarget(board) {
+        var canvasRect;
+
+        if (!board || !board.canvas) {
+            return board && board.element;
+        }
+
+        canvasRect = board.canvas.getBoundingClientRect();
+        if (canvasRect.width && canvasRect.height) {
+            return board.canvas;
+        }
+        return board.element;
+    }
+
+    function getStrokePointerPosition(board, event) {
+        if (!event || typeof event.clientX !== "number" || typeof event.clientY !== "number") {
+            return null;
+        }
+
+        return applyAxisLock(board, getUnclampedPointerPosition(board, event));
+    }
+
     function getEventPointerPosition(board, event) {
         if (!event || typeof event.clientX !== "number" || typeof event.clientY !== "number") {
             return board.previewPointerPosition || board.pointerStartPosition;
         }
 
         return getPointerPosition(board, event);
+    }
+
+    function getPaintPointerPosition(board, event) {
+        return applyAxisLock(board, getCanvasPointerPosition(board, event));
+    }
+
+    function getStrokePaintPointerPosition(board, event) {
+        if (isDragPaintToolMode()) {
+            return getStrokePointerPosition(board, event);
+        }
+
+        return getPaintPointerPosition(board, event);
+    }
+
+    function isPointInsideCanvas(board, point) {
+        return !!(board && point &&
+            point.x >= 0 &&
+            point.y >= 0 &&
+            point.x <= board.canvas.width &&
+            point.y <= board.canvas.height);
     }
 
     function rememberPreviewInput(board, event, preserveModifiers) {
@@ -587,7 +2055,7 @@
         }
 
         if (typeof event.clientX === "number" && typeof event.clientY === "number") {
-            point = getCanvasPointerPosition(board, event);
+            point = getPaintPointerPosition(board, event);
 
             if (point) {
                 board.previewPointerPosition = point;
@@ -639,6 +2107,113 @@
         };
     }
 
+    function applyAxisLock(board, point) {
+        var anchor;
+
+        if (!board || !point || !board.axisLockMode) {
+            return point;
+        }
+
+        anchor = getAxisLockAnchor(board);
+
+        if (!anchor) {
+            return point;
+        }
+
+        if (board.axisLockMode === "x") {
+            return {
+                x: point.x,
+                y: clamp(anchor.y, 0, board.canvas.height)
+            };
+        }
+
+        if (board.axisLockMode === "y") {
+            return {
+                x: clamp(anchor.x, 0, board.canvas.width),
+                y: point.y
+            };
+        }
+
+        return point;
+    }
+
+    function getAxisLockAnchor(board) {
+        return board.pointerStartPosition || board.lastPointerPosition || null;
+    }
+
+    function updateAxisLockState(board, event) {
+        var key;
+
+        if (!board || !event || !isAxisLockKey(event)) {
+            return;
+        }
+
+        key = String(event.key || "").toLowerCase();
+
+        if (event.type === "keyup") {
+            if (board.axisLockMode === key) {
+                board.axisLockMode = null;
+            }
+            return;
+        }
+
+        board.axisLockMode = key;
+    }
+
+    function isAxisLockKey(event) {
+        var key = event && String(event.key || "").toLowerCase();
+
+        return key === "x" || key === "y";
+    }
+
+    function updateHoverGuideFromPointer(board, event, syncControlState) {
+        var point;
+
+        if (!board || !event) {
+            return;
+        }
+
+        point = getCanvasPointerPosition(board, event);
+
+        if (!point) {
+            board.hoverGuidePointerPosition = null;
+            clearHoverGuide(board);
+            return;
+        }
+
+        board.hoverGuidePointerPosition = point;
+        if (syncControlState) {
+            board.hoverGuideControlActive = !!event.ctrlKey;
+        }
+        updateHoverGuide(board);
+    }
+
+    function updateHoverGuideFromKey(board, event) {
+        if (!board || !event || event.key !== "Control") {
+            return;
+        }
+
+        board.hoverGuideControlActive = event.type !== "keyup";
+        updateHoverGuide(board);
+    }
+
+    function updateHoverGuide(board) {
+        if (!board || !board.rules || !board.hoverGuideControlActive || !board.hoverGuidePointerPosition) {
+            clearHoverGuide(board);
+            return;
+        }
+
+        if (typeof board.rules.setPointerGuide === "function") {
+            board.rules.setPointerGuide(board.hoverGuidePointerPosition);
+        }
+    }
+
+    function clearHoverGuide(board) {
+        if (board && board.rules && typeof board.rules.clearPointerGuide === "function") {
+            board.rules.clearPointerGuide();
+        }
+    }
+
     function isPointerInsideCanvas(board, event) {
         var rect;
 
@@ -646,7 +2221,7 @@
             return false;
         }
 
-        rect = board.canvas.getBoundingClientRect();
+        rect = getBoardInputRect(board);
 
         return event.clientX >= rect.left &&
             event.clientX <= rect.right &&
@@ -717,7 +2292,7 @@
     }
 
     function updateTempPreview(board, event) {
-        board.previewPointerPosition = getPointerPosition(board, event);
+        board.previewPointerPosition = getPreviewPointerPosition(board, event);
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
             updateGradientPreview(board, event);
@@ -747,6 +2322,15 @@
             return;
         }
 
+        if (isLassoSelectionToolMode() && isBoxSelectionTool() && board.pointerStartPosition) {
+            renderBoxSelectionPreview(
+                board,
+                board.pointerStartPosition,
+                getBoxSelectionEndPoint(board, board.pointerStartPosition, board.previewPointerPosition, event)
+            );
+            return;
+        }
+
         updateTempSquareToPoint(board, board.previewPointerPosition, event);
     }
 
@@ -756,7 +2340,7 @@
         }
 
         if (global.PaintBoardTempLayer && global.PaintBoardTempLayer.startShape) {
-            global.PaintBoardTempLayer.startShape(board.tempLayerElement, getPointerPosition(board, event), {
+            global.PaintBoardTempLayer.startShape(board.tempLayerElement, getPreviewPointerPosition(board, event), {
                 oval: isOvalToolMode()
             });
             return;
@@ -766,11 +2350,11 @@
             return;
         }
 
-        global.PaintBoardTempLayer.startSquare(board.tempLayerElement, getPointerPosition(board, event));
+        global.PaintBoardTempLayer.startSquare(board.tempLayerElement, getPreviewPointerPosition(board, event));
     }
 
     function updateTempSquare(board, event) {
-        updateTempSquareToPoint(board, getPointerPosition(board, event), event);
+        updateTempSquareToPoint(board, getPreviewPointerPosition(board, event), event);
     }
 
     function updateTempSquareToPoint(board, rawPoint, event) {
@@ -804,6 +2388,10 @@
     }
 
     function clearTempSquare(board) {
+        if (board && board.cropSession) {
+            return;
+        }
+
         if (!global.PaintBoardTempLayer || !global.PaintBoardTempLayer.clear) {
             return;
         }
@@ -816,11 +2404,11 @@
             return;
         }
 
-        global.PaintBoardTempLayer.startLine(board.tempLayerElement, getPointerPosition(board, event));
+        global.PaintBoardTempLayer.startLine(board.tempLayerElement, getSelectionPointerPosition(board, event));
     }
 
     function updateGradientPreview(board, event) {
-        updateGradientPreviewToPoint(board, getPointerPosition(board, event), event);
+        updateGradientPreviewToPoint(board, getSelectionPointerPosition(board, event), event);
     }
 
     function updateGradientPreviewToPoint(board, rawPoint, event) {
@@ -844,11 +2432,11 @@
             return;
         }
 
-        global.PaintBoardTempLayer.startLine(board.tempLayerElement, getPointerPosition(board, event));
+        global.PaintBoardTempLayer.startLine(board.tempLayerElement, getSelectionPointerPosition(board, event), getStraightLinePreviewOptions(board));
     }
 
     function updateStraightLinePreview(board, event) {
-        updateStraightLinePreviewToPoint(board, getPointerPosition(board, event), event);
+        updateStraightLinePreviewToPoint(board, getSelectionPointerPosition(board, event), event);
     }
 
     function updateStraightLinePreviewToPoint(board, rawPoint, event) {
@@ -864,14 +2452,35 @@
         }
 
         toPoint = getGradientEndPoint(fromPoint, rawPoint, event);
-        global.PaintBoardTempLayer.updateLine(board.tempLayerElement, toPoint);
+        global.PaintBoardTempLayer.updateLine(board.tempLayerElement, toPoint, getStraightLinePreviewOptions(board));
     }
 
-    function updateRetroBrushPreview(board, event) {
-        var point;
-        var brush;
+    function getStraightLinePreviewOptions(board) {
+        var lineDesign = getCurrentStoredLineDesign();
+        var designWeight = lineDesign ? Number(lineDesign.weight) : NaN;
 
-        if (currentPaintToolMode !== PAINT_TOOL_MODES.OLD_BRUSH) {
+        return {
+            styled: true,
+            weight: isNaN(designWeight) ? Math.max(1, getCurrentBrushSize(board)) : Math.max(1, designWeight),
+            color: lineDesign && lineDesign.color ? lineDesign.color : getCurrentPreviewPaintColor(board),
+            cap: lineDesign && lineDesign.cap ? lineDesign.cap : "butt",
+            dashes: lineDesign && lineDesign.dashed && Array.isArray(lineDesign.dashes) ? lineDesign.dashes : null,
+            antialiasing: lineDesign ? lineDesign.antialiasing : true,
+            opacity: 0.8
+        };
+    }
+
+    function updateBrushHoverPreview(board, event) {
+        var point;
+        var radius;
+        var size;
+
+        if (isSpacePanModeActive() || isSpacePanKey(event)) {
+            clearBrushHoverPreview(board);
+            return;
+        }
+
+        if (!isBrushHoverPreviewToolMode()) {
             return;
         }
 
@@ -882,22 +2491,1697 @@
         point = getCanvasPointerPosition(board, event);
 
         if (!point) {
-            clearRetroBrushPreview(board);
+            clearBrushHoverPreview(board);
             return;
         }
 
-        brush = getCurrentRetroBrush();
-        global.PaintBoardTempLayer.showCircle(board.tempLayerElement, point, Math.max(1, brush.size / 2));
+        if (isSquareBrushHoverPreviewToolMode()) {
+            if (!global.PaintBoardTempLayer.showSquare) {
+                return;
+            }
+
+            size = getCurrentHoverBrushSize(board);
+            global.PaintBoardTempLayer.showSquare(board.tempLayerElement, point, size);
+            return;
+        }
+
+        radius = getCurrentHoverBrushSize(board) / 2;
+        global.PaintBoardTempLayer.showCircle(board.tempLayerElement, point, radius);
     }
 
-    function clearRetroBrushPreview(board) {
+    function clearBrushHoverPreview(board) {
         clearTempSquare(board);
     }
 
+    function isBrushHoverPreviewToolMode(mode) {
+        var toolMode = mode || currentPaintToolMode;
+
+        return toolMode === PAINT_TOOL_MODES.OLD_BRUSH ||
+            toolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH ||
+            toolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2 ||
+            toolMode === PAINT_TOOL_MODES.PENCIL_TOOL ||
+            toolMode === PAINT_TOOL_MODES.SQUARED_POINTS ||
+            toolMode === PAINT_TOOL_MODES.ROUND_POINTS ||
+            toolMode === PAINT_TOOL_MODES.SQUARED_LINES ||
+            toolMode === PAINT_TOOL_MODES.ROUND_LINES;
+    }
+
+    function isSquareBrushHoverPreviewToolMode(mode) {
+        var toolMode = mode || currentPaintToolMode;
+
+        return toolMode === PAINT_TOOL_MODES.SQUARED_POINTS ||
+            toolMode === PAINT_TOOL_MODES.PENCIL_TOOL ||
+            toolMode === PAINT_TOOL_MODES.SQUARED_LINES;
+    }
+
+    function getCurrentHoverBrushSize(board) {
+        var brush = null;
+        var width;
+        var height;
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH) {
+            return Math.max(1, getCurrentRetroBrush().size);
+        }
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH) {
+            brush = getCurrentDesignedBrush();
+        }
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2) {
+            brush = getCurrentDesignedBrush2();
+        }
+
+        if (!brush) {
+            return Math.max(1, getCurrentBrushSize(board));
+        }
+
+        width = brush.naturalWidth || brush.width || getCurrentBrushSize(board);
+        height = brush.naturalHeight || brush.height || width;
+
+        return Math.max(1, Math.max(width, height));
+    }
+
+    function isSpacePanModeActive() {
+        return !!(document.body && document.body.className.indexOf("paint-board-pan-mode") !== -1);
+    }
+
+    function isSpacePanKey(event) {
+        return !!(event && (event.key === " " || event.key === "Spacebar" || event.code === "Space"));
+    }
+
+    function isEscapeKey(event) {
+        return !!(event && (event.key === "Escape" || event.key === "Esc" || event.code === "Escape"));
+    }
+
+    function isLassoSelectionToolMode() {
+        return currentPaintToolMode === PAINT_TOOL_MODES.LASSO_SELECTION;
+    }
+
+    function isPointerToolMode() {
+        return currentPaintToolMode === PAINT_TOOL_MODES.POINTER_TOOL;
+    }
+
+    function isFreehandSelectionTool() {
+        return currentSelectionToolType === SELECTION_TOOL_TYPES.FREEHAND;
+    }
+
+    function isPolygonalSelectionTool() {
+        return currentSelectionToolType === SELECTION_TOOL_TYPES.POLYGONAL;
+    }
+
+    function isRectangleSelectionTool() {
+        return currentSelectionToolType === SELECTION_TOOL_TYPES.RECTANGLE;
+    }
+
+    function isOvalSelectionTool() {
+        return currentSelectionToolType === SELECTION_TOOL_TYPES.OVAL;
+    }
+
+    function isBoxSelectionTool() {
+        return isRectangleSelectionTool() || isOvalSelectionTool();
+    }
+
+    function startLassoSelection(board, event) {
+        if (canMoveSelectionWithPointer(board, event)) {
+            startSelectionMove(board, event);
+            return;
+        }
+
+        if (isPolygonalSelectionTool()) {
+            addPolygonalSelectionPoint(board, event);
+            return;
+        }
+
+        if (isBoxSelectionTool()) {
+            startBoxSelection(board, event);
+            return;
+        }
+
+        startFreehandSelection(board, event);
+    }
+
+    function updateLassoSelection(board, event) {
+        if (board.selectionMove) {
+            updateSelectionMove(board, event);
+            return;
+        }
+
+        if (isPolygonalSelectionTool()) {
+            updatePolygonalSelectionPreview(board, event);
+            return;
+        }
+
+        if (isBoxSelectionTool()) {
+            updateBoxSelectionPreview(board, event);
+            return;
+        }
+
+        updateFreehandSelection(board, event);
+    }
+
+    function startFreehandSelection(board, event) {
+        var point = getSelectionPointerPosition(board, event);
+
+        clearSelectionDraft(board);
+        if (currentSelectionBehavior === SELECTION_BEHAVIORS.NORMAL) {
+            clearSelection(board);
+        }
+        board.lassoSelectionStroke = {
+            points: [point],
+            lastPoint: point
+        };
+        board.pointerStartPosition = point;
+        board.previewPointerPosition = point;
+        renderLassoSelectionPreview(board, board.lassoSelectionStroke.points);
+    }
+
+    function updateFreehandSelection(board, event) {
+        var stroke = board.lassoSelectionStroke;
+        var point;
+
+        if (!stroke) {
+            return;
+        }
+
+        point = getSelectionPointerPosition(board, event);
+
+        if (getPointDistance(stroke.lastPoint, point) >= 2) {
+            stroke.points.push(point);
+            stroke.lastPoint = point;
+        }
+
+        board.previewPointerPosition = point;
+        renderLassoSelectionPreview(board, stroke.points);
+    }
+
+    function finishFreehandSelection(board, event) {
+        var stroke = board.lassoSelectionStroke;
+        var point;
+        var points;
+
+        if (!stroke) {
+            return;
+        }
+
+        point = getSelectionPointerPosition(board, event);
+
+        if (getPointDistance(stroke.lastPoint, point) >= 2) {
+            stroke.points.push(point);
+        }
+
+        points = simplifyLassoPoints(stroke.points);
+        board.lassoSelectionStroke = null;
+        clearTempSquare(board);
+
+        if (points.length < 3) {
+            clearSelection(board);
+            return;
+        }
+
+        setPolygonSelection(board, "freehand", points);
+        renderLassoSelection(board);
+    }
+
+    function addPolygonalSelectionPoint(board, event) {
+        var point = getSelectionPointerPosition(board, event);
+        var path = board.polygonalSelectionPath;
+
+        if (!path) {
+            clearSelectionDraft(board);
+            if (currentSelectionBehavior === SELECTION_BEHAVIORS.NORMAL) {
+                clearSelection(board);
+            }
+            board.polygonalSelectionPath = {
+                points: [point],
+                previewPoint: point
+            };
+            renderPolygonalSelectionPreview(board);
+            return;
+        }
+
+        if (path.points.length >= 3 && getPointDistance(path.points[0], point) <= 8) {
+            finishPolygonalSelection(board, event);
+            return;
+        }
+
+        path.points.push(point);
+        path.previewPoint = point;
+        renderPolygonalSelectionPreview(board);
+    }
+
+    function updatePolygonalSelectionPreview(board, event) {
+        var path = board.polygonalSelectionPath;
+
+        if (!path) {
+            return;
+        }
+
+        path.previewPoint = getSelectionPointerPosition(board, event);
+        renderPolygonalSelectionPreview(board);
+    }
+
+    function finishPolygonalSelection(board, event) {
+        var path = board.polygonalSelectionPath;
+        var points;
+
+        if (!path) {
+            return;
+        }
+
+        if (event && event.detail < 2 && path.points.length >= 3) {
+            path.previewPoint = getSelectionPointerPosition(board, event);
+        }
+
+        points = simplifyLassoPoints(path.points);
+        board.polygonalSelectionPath = null;
+        clearTempSquare(board);
+
+        if (points.length < 3) {
+            clearSelection(board);
+            return;
+        }
+
+        setPolygonSelection(board, "polygonal", points);
+        renderLassoSelection(board);
+    }
+
+    function renderPolygonalSelectionPreview(board) {
+        var path = board.polygonalSelectionPath;
+        var points;
+
+        if (!path || !path.points.length) {
+            return;
+        }
+
+        points = path.points.slice();
+
+        if (path.previewPoint && getPointDistance(points[points.length - 1], path.previewPoint) > 0) {
+            points.push(path.previewPoint);
+        }
+
+        renderLassoSelectionPreview(board, points);
+    }
+
+    function startBoxSelection(board, event) {
+        var point = getSelectionPointerPosition(board, event);
+
+        clearSelectionDraft(board);
+        if (currentSelectionBehavior === SELECTION_BEHAVIORS.NORMAL) {
+            clearSelection(board);
+        }
+        board.pointerStartPosition = point;
+        board.previewPointerPosition = point;
+        renderBoxSelectionPreview(board, point, point);
+    }
+
+    function updateBoxSelectionPreview(board, event) {
+        var fromPoint = board.pointerStartPosition;
+        var toPoint;
+
+        if (!fromPoint) {
+            return;
+        }
+
+        toPoint = getSelectionPointerPosition(board, event);
+        board.previewPointerPosition = toPoint;
+        renderBoxSelectionPreview(board, fromPoint, getBoxSelectionEndPoint(board, fromPoint, toPoint, event));
+    }
+
+    function getBoxSelectionEndPoint(board, fromPoint, toPoint, event) {
+        var modifierEvent = getPreviewModifierEvent(board, event);
+
+        if (fromPoint && toPoint && modifierEvent.shiftKey) {
+            return getSquareEndPoint(fromPoint, toPoint);
+        }
+
+        return toPoint;
+    }
+
+    function finishBoxSelection(board, event) {
+        var fromPoint = board.pointerStartPosition;
+        var toPoint;
+        var bounds;
+
+        if (!fromPoint) {
+            return;
+        }
+
+        toPoint = getBoxSelectionEndPoint(board, fromPoint, getSelectionPointerPosition(board, event), event);
+        bounds = getSelectionBoundsFromPoints(fromPoint, toPoint);
+        clearTempSquare(board);
+
+        if (bounds.width < 1 || bounds.height < 1) {
+            clearSelection(board);
+            return;
+        }
+
+        if (isOvalSelectionTool()) {
+            setOvalSelection(board, bounds);
+            return;
+        }
+
+        setRectangleSelection(board, bounds);
+    }
+
+    function renderBoxSelectionPreview(board, fromPoint, toPoint) {
+        var bounds = getSelectionBoundsFromPoints(fromPoint, toPoint);
+
+        if (!board || !board.tempLayerElement) {
+            return;
+        }
+
+        board.tempLayerElement.innerHTML = getBoxSelectionSvgString(board, bounds, isOvalSelectionTool());
+    }
+
+    function setPolygonSelection(board, type, points) {
+        var maskCanvas = createPolygonSelectionMask(board, points);
+
+        if (isSelectionMaskEmpty(maskCanvas)) {
+            clearSelection(board);
+            return;
+        }
+
+        applySelectionBehavior(board, {
+            type: type,
+            points: points,
+            bounds: getLassoBounds(points),
+            maskCanvas: maskCanvas
+        });
+    }
+
+    function setRectangleSelection(board, bounds) {
+        var maskCanvas = createRectangleSelectionMask(board, bounds);
+
+        if (isSelectionMaskEmpty(maskCanvas)) {
+            clearSelection(board);
+            return;
+        }
+
+        applySelectionBehavior(board, {
+            type: "rectangle",
+            bounds: bounds,
+            maskCanvas: maskCanvas
+        });
+        renderLassoSelection(board);
+    }
+
+    function setOvalSelection(board, bounds) {
+        var maskCanvas = createOvalSelectionMask(board, bounds);
+
+        if (isSelectionMaskEmpty(maskCanvas)) {
+            clearSelection(board);
+            return;
+        }
+
+        applySelectionBehavior(board, {
+            type: "oval",
+            bounds: bounds,
+            maskCanvas: maskCanvas
+        });
+        renderLassoSelection(board);
+    }
+
+    function applySelectionBehavior(board, nextSelection) {
+        var combinedMask;
+
+        if (!board.selection || currentSelectionBehavior === SELECTION_BEHAVIORS.NORMAL) {
+            board.selection = nextSelection;
+            notifySelectionStateChange(board);
+            return;
+        }
+
+        if (currentSelectionBehavior === SELECTION_BEHAVIORS.ADD) {
+            combinedMask = combineSelectionMasks(board, board.selection.maskCanvas, nextSelection.maskCanvas, "source-over");
+        } else if (currentSelectionBehavior === SELECTION_BEHAVIORS.REMOVE) {
+            combinedMask = combineSelectionMasks(board, board.selection.maskCanvas, nextSelection.maskCanvas, "destination-out");
+        }
+
+        if (!combinedMask || isSelectionMaskEmpty(combinedMask)) {
+            clearSelection(board);
+            return;
+        }
+
+        board.selection = {
+            type: "mask",
+            bounds: getSelectionMaskBounds(combinedMask),
+            maskCanvas: combinedMask
+        };
+        notifySelectionStateChange(board);
+    }
+
+    function clearSelection(board) {
+        if (!board) {
+            return;
+        }
+
+        board.selection = null;
+        board.lassoSelectionStroke = null;
+        board.polygonalSelectionPath = null;
+        board.selectionMove = null;
+
+        if (board.selectionLayerElement) {
+            board.selectionLayerElement.innerHTML = "";
+        }
+
+        clearTempSquare(board);
+        clearSelectionMoveCursor(board);
+        notifySelectionStateChange(board);
+    }
+
+    function selectAll(board) {
+        var maskCanvas;
+        var maskContext;
+        var bounds;
+
+        if (!board || !board.canvas ||
+            board.canvas.width <= 0 || board.canvas.height <= 0) {
+            return false;
+        }
+
+        maskCanvas = createSelectionMaskCanvas(board);
+        maskContext = maskCanvas.getContext("2d");
+        maskContext.fillStyle = "#ffffff";
+        maskContext.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+        bounds = {
+            left: 0,
+            top: 0,
+            right: maskCanvas.width,
+            bottom: maskCanvas.height,
+            width: maskCanvas.width,
+            height: maskCanvas.height
+        };
+
+        board.selection = {
+            type: "rectangle",
+            bounds: bounds,
+            maskCanvas: maskCanvas
+        };
+        clearSelectionDraft(board);
+        renderLassoSelection(board);
+        notifySelectionStateChange(board);
+        return true;
+    }
+
+    function reverseSelection(board) {
+        var reversedMask;
+        var reversedContext;
+
+        if (!hasActiveSelection(board)) {
+            return false;
+        }
+
+        reversedMask = createSelectionMaskCanvas(board);
+        reversedContext = reversedMask.getContext("2d");
+        reversedContext.fillStyle = "#ffffff";
+        reversedContext.fillRect(0, 0, reversedMask.width, reversedMask.height);
+        reversedContext.globalCompositeOperation = "destination-out";
+        reversedContext.drawImage(board.selection.maskCanvas, 0, 0);
+        reversedContext.globalCompositeOperation = "source-over";
+
+        if (isSelectionMaskEmpty(reversedMask)) {
+            clearSelection(board);
+            return true;
+        }
+
+        board.selection = {
+            type: "mask",
+            bounds: getSelectionMaskBounds(reversedMask),
+            maskCanvas: reversedMask
+        };
+        clearSelectionDraft(board);
+        renderLassoSelection(board);
+        notifySelectionStateChange(board);
+        return true;
+    }
+
+    function clearSelectionDraft(board) {
+        if (!board) {
+            return;
+        }
+
+        board.lassoSelectionStroke = null;
+        board.polygonalSelectionPath = null;
+        board.pointerStartPosition = null;
+        board.previewPointerPosition = null;
+        clearTempSquare(board);
+    }
+
+    function offsetBounds(bounds, dx, dy) {
+        if (!bounds) {
+            return bounds;
+        }
+
+        return {
+            left: bounds.left + dx,
+            top: bounds.top + dy,
+            right: bounds.right + dx,
+            bottom: bounds.bottom + dy,
+            width: bounds.width,
+            height: bounds.height
+        };
+    }
+
+    function buildTranslatedSelection(board, baseSelection, dx, dy) {
+        var movedMask;
+        var movedContext;
+        var moved;
+
+        if (!baseSelection || !baseSelection.maskCanvas) {
+            return null;
+        }
+
+        movedMask = createSelectionMaskCanvas(board);
+        movedContext = movedMask.getContext("2d");
+        movedContext.drawImage(baseSelection.maskCanvas, dx, dy);
+
+        if (isSelectionMaskEmpty(movedMask)) {
+            return null;
+        }
+
+        moved = {
+            type: baseSelection.type,
+            maskCanvas: movedMask,
+            bounds: baseSelection.bounds ?
+                offsetBounds(baseSelection.bounds, dx, dy) :
+                getSelectionMaskBounds(movedMask)
+        };
+
+        if (baseSelection.points) {
+            moved.points = baseSelection.points.map(function(point) {
+                return {
+                    x: point.x + dx,
+                    y: point.y + dy
+                };
+            });
+        }
+
+        return moved;
+    }
+
+    function nudgeSelection(board, dx, dy) {
+        var moved;
+
+        if (!hasActiveSelection(board) || (!dx && !dy)) {
+            return false;
+        }
+
+        moved = buildTranslatedSelection(board, board.selection, dx, dy);
+
+        if (!moved) {
+            return false;
+        }
+
+        board.selection = moved;
+        renderLassoSelection(board);
+        notifySelectionStateChange(board);
+        return true;
+    }
+
+    function canMoveSelectionWithPointer(board, event) {
+        var isSelectionMoveMode = isLassoSelectionToolMode() || isPointerToolMode();
+
+        if (isPointerAutoSelectLayerEnabled()) {
+            return !!getPointerAutoSelectLayer(board, event);
+        }
+
+        if (isPointerToolMode() && !hasActiveSelection(board)) {
+            return !isLayerLockedForPointerMove(getActiveLayer(board)) &&
+                !!getCanvasPointerPosition(board, event);
+        }
+
+        return isSelectionMoveMode &&
+            (isPointerToolMode() || currentSelectionBehavior === SELECTION_BEHAVIORS.NORMAL) &&
+            hasActiveSelection(board) &&
+            isPointInSelection(board, getSelectionPointerPosition(board, event));
+    }
+
+    function getActiveLayer(board) {
+        var i;
+
+        if (!board || !board.layers || !board.activeLayerId) {
+            return null;
+        }
+
+        for (i = 0; i < board.layers.length; i++) {
+            if (board.layers[i] && board.layers[i].id === board.activeLayerId) {
+                return board.layers[i];
+            }
+        }
+
+        return null;
+    }
+
+    function isLayerLockedForPointerMove(layer) {
+        return !!(layer && layer.blocked);
+    }
+
+    function getLayerCanvas(board, layerId) {
+        var layerElement;
+
+        if (!board || !board.layersElement || !layerId) {
+            return null;
+        }
+
+        layerElement = board.layersElement.querySelector('[data-layer="' + layerId + '"]');
+        return layerElement ? layerElement.querySelector("canvas") : null;
+    }
+
+    function isLayerVisibleAtPoint(board, layer, point) {
+        var canvas;
+        var context;
+        var pixel;
+        var x;
+        var y;
+
+        if (!board || !layer || layer.visible === false || !point || isLayerLockedForPointerMove(layer)) {
+            return false;
+        }
+
+        if (typeof layer.opacity === "number" && layer.opacity <= 0) {
+            return false;
+        }
+
+        canvas = getLayerCanvas(board, layer.id);
+        if (!canvas) {
+            return false;
+        }
+
+        x = Math.floor(point.x);
+        y = Math.floor(point.y);
+        if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) {
+            return false;
+        }
+
+        context = canvas.getContext("2d");
+        pixel = context.getImageData(x, y, 1, 1).data;
+        return pixel[3] > 0;
+    }
+
+    function getTopLayerAtPoint(board, point) {
+        var ordered;
+        var i;
+
+        if (!board || !board.layers || !point) {
+            return null;
+        }
+
+        ordered = board.layers.slice().sort(function(a, b) {
+            return getLayerOrderFromBottom(b) - getLayerOrderFromBottom(a);
+        });
+
+        for (i = 0; i < ordered.length; i++) {
+            if (isLayerVisibleAtPoint(board, ordered[i], point)) {
+                return ordered[i];
+            }
+        }
+
+        return null;
+    }
+
+    function getLayerOrderFromBottom(layer) {
+        return typeof layer["order-from-the-bottom"] === "number" ?
+            layer["order-from-the-bottom"] :
+            0;
+    }
+
+    function isPointerAutoSelectLayerEnabled() {
+        return !!(isPointerToolMode() &&
+            global.App &&
+            global.App.memory &&
+            global.App.memory.pointerAutoSelectLayer);
+    }
+
+    function getPointerAutoSelectLayer(board, event) {
+        if (!isPointerAutoSelectLayerEnabled()) {
+            return null;
+        }
+
+        return getTopLayerAtPoint(board, getCanvasPointerPosition(board, event));
+    }
+
+    function activatePointerAutoSelectLayer(board, event) {
+        var layer = getPointerAutoSelectLayer(board, event);
+
+        if (!layer) {
+            return null;
+        }
+
+        if (layer.id !== board.activeLayerId && board.setActiveLayer(layer.id)) {
+            if (global.AppOpenWindows && global.AppOpenWindows.refreshLayersPanel) {
+                global.AppOpenWindows.refreshLayersPanel(board);
+            }
+        }
+
+        return layer;
+    }
+
+    function getPointerSelectionSourceFillColor(board) {
+        var activeLayer = getActiveLayer(board);
+
+        if (!activeLayer || !activeLayer.background) {
+            return null;
+        }
+
+        if (global.AppOpenWindows && typeof global.AppOpenWindows.getBackgroundColor === "function") {
+            return global.AppOpenWindows.getBackgroundColor();
+        }
+
+        return board && board.backgroundColor ? board.backgroundColor : "#ffffff";
+    }
+
+    function createSelectionMoveImageLayer(board, selection) {
+        var selectedCanvas = document.createElement("canvas");
+        var selectedContext;
+
+        selectedCanvas.width = board.canvas.width;
+        selectedCanvas.height = board.canvas.height;
+        selectedContext = selectedCanvas.getContext("2d");
+        selectedContext.drawImage(board.canvas, 0, 0);
+        selectedContext.globalCompositeOperation = "destination-in";
+        selectedContext.drawImage(selection.maskCanvas, 0, 0);
+        selectedContext.globalCompositeOperation = "source-over";
+
+        return selectedCanvas;
+    }
+
+    function clearSelectionPixelsWithFill(board, selection, fillColor) {
+        var fillCanvas;
+        var fillContext;
+
+        board.context.save();
+        board.context.globalCompositeOperation = "destination-out";
+        board.context.drawImage(selection.maskCanvas, 0, 0);
+        board.context.restore();
+
+        if (!fillColor) {
+            return;
+        }
+
+        fillCanvas = document.createElement("canvas");
+        fillCanvas.width = board.canvas.width;
+        fillCanvas.height = board.canvas.height;
+        fillContext = fillCanvas.getContext("2d");
+        fillContext.drawImage(selection.maskCanvas, 0, 0);
+        fillContext.globalCompositeOperation = "source-in";
+        fillContext.fillStyle = fillColor;
+        fillContext.fillRect(0, 0, fillCanvas.width, fillCanvas.height);
+        fillContext.globalCompositeOperation = "source-over";
+        board.context.drawImage(fillCanvas, 0, 0);
+    }
+
+    function createFullLayerMoveSelection(board) {
+        var maskCanvas;
+        var maskContext;
+
+        if (!board || !board.canvas || board.canvas.width <= 0 || board.canvas.height <= 0) {
+            return null;
+        }
+
+        maskCanvas = createSelectionMaskCanvas(board);
+        maskContext = maskCanvas.getContext("2d");
+        maskContext.fillStyle = "#ffffff";
+        maskContext.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+
+        return {
+            type: "layer",
+            bounds: {
+                left: 0,
+                top: 0,
+                right: maskCanvas.width,
+                bottom: maskCanvas.height,
+                width: maskCanvas.width,
+                height: maskCanvas.height
+            },
+            maskCanvas: maskCanvas
+        };
+    }
+
+    function startSelectionMove(board, event) {
+        var originSelection;
+        var fullLayerMove = false;
+        var autoSelectedLayer;
+
+        clearSelectionDraft(board);
+        autoSelectedLayer = activatePointerAutoSelectLayer(board, event);
+        if (autoSelectedLayer) {
+            if (hasActiveSelection(board)) {
+                originSelection = board.selection;
+            } else {
+                originSelection = createFullLayerMoveSelection(board);
+                fullLayerMove = true;
+            }
+        } else if (isPointerAutoSelectLayerEnabled()) {
+            return;
+        } else if (hasActiveSelection(board)) {
+            originSelection = board.selection;
+        } else if (isPointerToolMode()) {
+            if (isLayerLockedForPointerMove(getActiveLayer(board))) {
+                return;
+            }
+            originSelection = createFullLayerMoveSelection(board);
+            fullLayerMove = true;
+        }
+
+        if (!originSelection) {
+            return;
+        }
+
+        board.selectionMove = {
+            startPoint: getSelectionPointerPosition(board, event),
+            originSelection: originSelection,
+            moveContent: isPointerToolMode(),
+            fullLayerMove: fullLayerMove,
+            moved: false
+        };
+
+        if (board.selectionMove.moveContent) {
+            beginUndoableAction(board);
+            board.selectionMove.selectionPixelsCanvas = createSelectionMoveImageLayer(board, originSelection);
+            clearSelectionPixelsWithFill(board, originSelection, getPointerSelectionSourceFillColor(board));
+            board.selectionMove.baseCanvas = copyBoardCanvas(board);
+            board.context.drawImage(board.selectionMove.selectionPixelsCanvas, 0, 0);
+            markUndoableChange(board);
+            board.selectionMove.moved = true;
+        }
+
+        setSelectionMoveCursor(board, true);
+    }
+
+    function updateSelectionMove(board, event) {
+        var move = board.selectionMove;
+        var point;
+        var moved;
+        var offsetX;
+        var offsetY;
+
+        if (!move) {
+            return;
+        }
+
+        point = getSelectionPointerPosition(board, event);
+        offsetX = point.x - move.startPoint.x;
+        offsetY = point.y - move.startPoint.y;
+
+        if (move.fullLayerMove) {
+            if (move.moveContent && move.baseCanvas && move.selectionPixelsCanvas) {
+                board.context.clearRect(0, 0, board.canvas.width, board.canvas.height);
+                board.context.drawImage(move.baseCanvas, 0, 0);
+                board.context.drawImage(move.selectionPixelsCanvas, offsetX, offsetY);
+                move.moved = true;
+            }
+            return;
+        }
+
+        moved = buildTranslatedSelection(
+            board,
+            move.originSelection,
+            offsetX,
+            offsetY
+        );
+
+        if (moved) {
+            board.selection = moved;
+            if (move.moveContent && move.baseCanvas && move.selectionPixelsCanvas) {
+                board.context.clearRect(0, 0, board.canvas.width, board.canvas.height);
+                board.context.drawImage(move.baseCanvas, 0, 0);
+                board.context.drawImage(move.selectionPixelsCanvas, offsetX, offsetY);
+                move.moved = true;
+            }
+            renderLassoSelection(board);
+            notifySelectionStateChange(board);
+        }
+    }
+
+    function finishSelectionMove(board, event) {
+        var movedContent;
+
+        if (!board.selectionMove) {
+            return;
+        }
+
+        movedContent = !!(board.selectionMove.moveContent && board.selectionMove.moved);
+        updateSelectionMove(board, event);
+        board.selectionMove = null;
+        setSelectionMoveCursor(board, false);
+
+        if (movedContent) {
+            commitUndoableAction(board);
+        }
+    }
+
+    function setSelectionMoveCursor(board, grabbing) {
+        if (!board || !board.canvas) {
+            return;
+        }
+
+        board.canvas.style.cursor = grabbing ? "grabbing" : "grab";
+    }
+
+    function clearSelectionMoveCursor(board) {
+        if (!board || !board.canvas) {
+            return;
+        }
+
+        board.canvas.style.cursor = "";
+    }
+
+    function updateSelectionHoverCursor(board, event) {
+        if (board.selectionMove) {
+            setSelectionMoveCursor(board, true);
+            return;
+        }
+
+        if (canMoveSelectionWithPointer(board, event)) {
+            setSelectionMoveCursor(board, false);
+            return;
+        }
+
+        clearSelectionMoveCursor(board);
+    }
+
+    function isArrowKey(event) {
+        return !!(event && (
+            event.key === "ArrowLeft" ||
+            event.key === "ArrowRight" ||
+            event.key === "ArrowUp" ||
+            event.key === "ArrowDown"
+        ));
+    }
+
+    function getArrowKeyDelta(event) {
+        if (event.key === "ArrowLeft") {
+            return { dx: -1, dy: 0 };
+        }
+
+        if (event.key === "ArrowRight") {
+            return { dx: 1, dy: 0 };
+        }
+
+        if (event.key === "ArrowUp") {
+            return { dx: 0, dy: -1 };
+        }
+
+        if (event.key === "ArrowDown") {
+            return { dx: 0, dy: 1 };
+        }
+
+        return { dx: 0, dy: 0 };
+    }
+
+    function isEditableEventTarget(target) {
+        var tagName;
+
+        if (!target) {
+            return false;
+        }
+
+        if (target.isContentEditable) {
+            return true;
+        }
+
+        tagName = target.tagName ? target.tagName.toLowerCase() : "";
+
+        return tagName === "input" || tagName === "textarea" || tagName === "select";
+    }
+
+    function renderLassoSelectionPreview(board, points) {
+        if (!board || !board.tempLayerElement) {
+            return;
+        }
+
+        board.tempLayerElement.innerHTML = getLassoSvgString(points, false);
+    }
+
+    function renderLassoSelection(board) {
+        if (!board || !board.selectionLayerElement || !board.selection) {
+            return;
+        }
+
+        if (board.selection.type === "mask") {
+            board.selectionLayerElement.innerHTML = getMaskSelectionHtml(board.selection.maskCanvas);
+            return;
+        }
+
+        if (board.selection.points) {
+            board.selectionLayerElement.innerHTML = getLassoSvgString(board.selection.points, true);
+            return;
+        }
+
+        if (board.selection.bounds) {
+            board.selectionLayerElement.innerHTML = getBoxSelectionSvgString(board, board.selection.bounds, board.selection.type === "oval");
+        }
+    }
+
+    function getLassoSvgString(points, closed) {
+        var pointString;
+        var shapeTag;
+
+        if (!points || !points.length) {
+            return "";
+        }
+
+        pointString = points.map(function(point) {
+            return escapeHtml(point.x) + "," + escapeHtml(point.y);
+        }).join(" ");
+
+        shapeTag = closed ? "polygon" : "polyline";
+
+        return "<svg class=\"paint-board-lasso-svg\" xmlns=\"http://www.w3.org/2000/svg\">" +
+            (closed ? "<polygon class=\"paint-board-lasso-fill\" points=\"" + pointString + "\"></polygon>" : "") +
+            "<" + shapeTag + " class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" points=\"" + pointString + "\"></" + shapeTag + ">" +
+            "<" + shapeTag + " class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" points=\"" + pointString + "\"></" + shapeTag + ">" +
+            "</svg>";
+    }
+
+    function getBoxSelectionSvgString(board, bounds, oval) {
+        var shape;
+        var zoom = getBoardRenderZoom(board);
+        var inset = 0.5 / zoom;
+        var strokeLeft;
+        var strokeTop;
+        var strokeWidth;
+        var strokeHeight;
+
+        if (!bounds) {
+            return "";
+        }
+
+        strokeLeft = bounds.left + inset;
+        strokeTop = bounds.top + inset;
+        strokeWidth = Math.max(0, bounds.width - (inset * 2));
+        strokeHeight = Math.max(0, bounds.height - (inset * 2));
+
+        if (oval) {
+            shape = "<ellipse class=\"paint-board-lasso-fill\" cx=\"" + escapeHtml(bounds.left + (bounds.width / 2)) + "\" cy=\"" + escapeHtml(bounds.top + (bounds.height / 2)) + "\" rx=\"" + escapeHtml(bounds.width / 2) + "\" ry=\"" + escapeHtml(bounds.height / 2) + "\"></ellipse>" +
+                "<ellipse class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" cx=\"" + escapeHtml(strokeLeft + (strokeWidth / 2)) + "\" cy=\"" + escapeHtml(strokeTop + (strokeHeight / 2)) + "\" rx=\"" + escapeHtml(strokeWidth / 2) + "\" ry=\"" + escapeHtml(strokeHeight / 2) + "\"></ellipse>" +
+                "<ellipse class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" cx=\"" + escapeHtml(strokeLeft + (strokeWidth / 2)) + "\" cy=\"" + escapeHtml(strokeTop + (strokeHeight / 2)) + "\" rx=\"" + escapeHtml(strokeWidth / 2) + "\" ry=\"" + escapeHtml(strokeHeight / 2) + "\"></ellipse>";
+        } else {
+            shape = "<rect class=\"paint-board-lasso-fill\" x=\"" + escapeHtml(bounds.left) + "\" y=\"" + escapeHtml(bounds.top) + "\" width=\"" + escapeHtml(bounds.width) + "\" height=\"" + escapeHtml(bounds.height) + "\"></rect>" +
+                "<rect class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" x=\"" + escapeHtml(strokeLeft) + "\" y=\"" + escapeHtml(strokeTop) + "\" width=\"" + escapeHtml(strokeWidth) + "\" height=\"" + escapeHtml(strokeHeight) + "\"></rect>" +
+                "<rect class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" x=\"" + escapeHtml(strokeLeft) + "\" y=\"" + escapeHtml(strokeTop) + "\" width=\"" + escapeHtml(strokeWidth) + "\" height=\"" + escapeHtml(strokeHeight) + "\"></rect>";
+        }
+
+        return "<svg class=\"paint-board-lasso-svg\" xmlns=\"http://www.w3.org/2000/svg\">" + shape + "</svg>";
+    }
+
+    function getBoardRenderZoom(board) {
+        var zoom = parseFloat(board && board.element && board.element.getAttribute("data-zoom"));
+
+        if (isNaN(zoom) || zoom <= 0) {
+            return 1;
+        }
+
+        return zoom;
+    }
+
+    function getMaskSelectionHtml(maskCanvas) {
+        var pathData;
+
+        if (!maskCanvas) {
+            return "";
+        }
+
+        pathData = getSelectionMaskPathData(maskCanvas);
+
+        if (!pathData) {
+            return "";
+        }
+
+        return "<svg class=\"paint-board-lasso-svg\" xmlns=\"http://www.w3.org/2000/svg\">" +
+            "<path class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" d=\"" + escapeHtml(pathData) + "\"></path>" +
+            "<path class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" d=\"" + escapeHtml(pathData) + "\"></path>" +
+            "</svg>";
+    }
+
+    function simplifyLassoPoints(points) {
+        var simplified = [];
+        var i;
+
+        for (i = 0; i < points.length; i++) {
+            if (!simplified.length || getPointDistance(simplified[simplified.length - 1], points[i]) >= 1) {
+                simplified.push({
+                    x: points[i].x,
+                    y: points[i].y
+                });
+            }
+        }
+
+        return simplified;
+    }
+
+    function getPointDistance(a, b) {
+        var dx;
+        var dy;
+
+        if (!a || !b) {
+            return 0;
+        }
+
+        dx = b.x - a.x;
+        dy = b.y - a.y;
+
+        return Math.sqrt((dx * dx) + (dy * dy));
+    }
+
+    function getLassoBounds(points) {
+        var left = points[0].x;
+        var top = points[0].y;
+        var right = points[0].x;
+        var bottom = points[0].y;
+        var i;
+
+        for (i = 1; i < points.length; i++) {
+            left = Math.min(left, points[i].x);
+            top = Math.min(top, points[i].y);
+            right = Math.max(right, points[i].x);
+            bottom = Math.max(bottom, points[i].y);
+        }
+
+        return {
+            left: left,
+            top: top,
+            right: right,
+            bottom: bottom,
+            width: right - left,
+            height: bottom - top
+        };
+    }
+
+    function getSelectionBoundsFromPoints(fromPoint, toPoint) {
+        var left = Math.min(fromPoint.x, toPoint.x);
+        var top = Math.min(fromPoint.y, toPoint.y);
+        var right = Math.max(fromPoint.x, toPoint.x);
+        var bottom = Math.max(fromPoint.y, toPoint.y);
+
+        return {
+            left: left,
+            top: top,
+            right: right,
+            bottom: bottom,
+            width: right - left,
+            height: bottom - top
+        };
+    }
+
+    function createSelectionMaskCanvas(board) {
+        var maskCanvas = document.createElement("canvas");
+
+        maskCanvas.width = board.canvas.width;
+        maskCanvas.height = board.canvas.height;
+
+        return maskCanvas;
+    }
+
+    function createPolygonSelectionMask(board, points) {
+        var maskCanvas = createSelectionMaskCanvas(board);
+        var maskContext = maskCanvas.getContext("2d");
+        var i;
+
+        maskContext.fillStyle = "#ffffff";
+        maskContext.beginPath();
+        maskContext.moveTo(points[0].x, points[0].y);
+
+        for (i = 1; i < points.length; i++) {
+            maskContext.lineTo(points[i].x, points[i].y);
+        }
+
+        maskContext.closePath();
+        maskContext.fill();
+
+        return maskCanvas;
+    }
+
+    function createRectangleSelectionMask(board, bounds) {
+        var maskCanvas = createSelectionMaskCanvas(board);
+        var maskContext = maskCanvas.getContext("2d");
+
+        maskContext.fillStyle = "#ffffff";
+        maskContext.fillRect(bounds.left, bounds.top, bounds.width, bounds.height);
+
+        return maskCanvas;
+    }
+
+    function createOvalSelectionMask(board, bounds) {
+        var maskCanvas = createSelectionMaskCanvas(board);
+        var maskContext = maskCanvas.getContext("2d");
+
+        maskContext.fillStyle = "#ffffff";
+        maskContext.beginPath();
+        maskContext.ellipse(
+            bounds.left + (bounds.width / 2),
+            bounds.top + (bounds.height / 2),
+            bounds.width / 2,
+            bounds.height / 2,
+            0,
+            0,
+            Math.PI * 2
+        );
+        maskContext.fill();
+
+        return maskCanvas;
+    }
+
+    function combineSelectionMasks(board, baseMaskCanvas, nextMaskCanvas, operation) {
+        var combinedMask = createSelectionMaskCanvas(board);
+        var combinedContext = combinedMask.getContext("2d");
+
+        combinedContext.drawImage(baseMaskCanvas, 0, 0);
+        combinedContext.globalCompositeOperation = operation;
+        combinedContext.drawImage(nextMaskCanvas, 0, 0);
+        combinedContext.globalCompositeOperation = "source-over";
+
+        return combinedMask;
+    }
+
+    function isSelectionMaskEmpty(maskCanvas) {
+        return !getSelectionMaskBounds(maskCanvas);
+    }
+
+    function getSelectionMaskBounds(maskCanvas) {
+        var maskContext = maskCanvas.getContext("2d");
+        var imageData = maskContext.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+        var data = imageData.data;
+        var left = maskCanvas.width;
+        var top = maskCanvas.height;
+        var right = -1;
+        var bottom = -1;
+        var x;
+        var y;
+        var index;
+
+        for (y = 0; y < maskCanvas.height; y++) {
+            for (x = 0; x < maskCanvas.width; x++) {
+                index = ((y * maskCanvas.width) + x) * 4;
+
+                if (data[index + 3] === 0) {
+                    continue;
+                }
+
+                left = Math.min(left, x);
+                top = Math.min(top, y);
+                right = Math.max(right, x);
+                bottom = Math.max(bottom, y);
+            }
+        }
+
+        if (right < left || bottom < top) {
+            return null;
+        }
+
+        return {
+            left: left,
+            top: top,
+            right: right + 1,
+            bottom: bottom + 1,
+            width: (right - left) + 1,
+            height: (bottom - top) + 1
+        };
+    }
+
+    function getSelectionMaskPathData(maskCanvas) {
+        var loops = getSelectionMaskBoundaryLoops(maskCanvas);
+        var pathParts = [];
+        var i;
+
+        for (i = 0; i < loops.length; i++) {
+            if (loops[i].length < 2) {
+                continue;
+            }
+
+            pathParts.push(getSelectionBoundaryLoopPathData(loops[i]));
+        }
+
+        return pathParts.join(" ");
+    }
+
+    function getSelectionBoundaryLoopPathData(loop) {
+        var commands = ["M " + loop[0].x + " " + loop[0].y];
+        var i;
+
+        for (i = 1; i < loop.length; i++) {
+            commands.push("L " + loop[i].x + " " + loop[i].y);
+        }
+
+        commands.push("Z");
+
+        return commands.join(" ");
+    }
+
+    function getSelectionMaskBoundaryLoops(maskCanvas) {
+        var maskContext = maskCanvas.getContext("2d");
+        var maskImageData = maskContext.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+        var maskData = maskImageData.data;
+        var edgesByStart = {};
+        var loops = [];
+        var x;
+        var y;
+
+        for (y = 0; y < maskCanvas.height; y++) {
+            for (x = 0; x < maskCanvas.width; x++) {
+                if (!isSelectionMaskPixelFilled(maskData, maskCanvas.width, maskCanvas.height, x, y)) {
+                    continue;
+                }
+
+                if (!isSelectionMaskPixelFilled(maskData, maskCanvas.width, maskCanvas.height, x, y - 1)) {
+                    addSelectionBoundaryEdge(edgesByStart, x, y, x + 1, y);
+                }
+
+                if (!isSelectionMaskPixelFilled(maskData, maskCanvas.width, maskCanvas.height, x + 1, y)) {
+                    addSelectionBoundaryEdge(edgesByStart, x + 1, y, x + 1, y + 1);
+                }
+
+                if (!isSelectionMaskPixelFilled(maskData, maskCanvas.width, maskCanvas.height, x, y + 1)) {
+                    addSelectionBoundaryEdge(edgesByStart, x + 1, y + 1, x, y + 1);
+                }
+
+                if (!isSelectionMaskPixelFilled(maskData, maskCanvas.width, maskCanvas.height, x - 1, y)) {
+                    addSelectionBoundaryEdge(edgesByStart, x, y + 1, x, y);
+                }
+            }
+        }
+
+        while (true) {
+            var startKey = getFirstSelectionBoundaryEdgeKey(edgesByStart);
+
+            if (!startKey) {
+                break;
+            }
+
+            loops.push(traceSelectionBoundaryLoop(edgesByStart, startKey));
+        }
+
+        return loops;
+    }
+
+    function addSelectionBoundaryEdge(edgesByStart, startX, startY, endX, endY) {
+        var key = getSelectionPointKey(startX, startY);
+
+        if (!edgesByStart[key]) {
+            edgesByStart[key] = [];
+        }
+
+        edgesByStart[key].push({
+            start: {
+                x: startX,
+                y: startY
+            },
+            end: {
+                x: endX,
+                y: endY
+            }
+        });
+    }
+
+    function getFirstSelectionBoundaryEdgeKey(edgesByStart) {
+        var key;
+
+        for (key in edgesByStart) {
+            if (Object.prototype.hasOwnProperty.call(edgesByStart, key) && edgesByStart[key].length) {
+                return key;
+            }
+        }
+
+        return null;
+    }
+
+    function traceSelectionBoundaryLoop(edgesByStart, startKey) {
+        var edge = removeSelectionBoundaryEdge(edgesByStart, startKey);
+        var firstPoint = edge.start;
+        var loop = [firstPoint, edge.end];
+        var currentPoint = edge.end;
+        var currentKey;
+        var guard = 0;
+
+        while ((currentPoint.x !== firstPoint.x || currentPoint.y !== firstPoint.y) && guard < 100000) {
+            currentKey = getSelectionPointKey(currentPoint.x, currentPoint.y);
+            edge = removeSelectionBoundaryEdge(edgesByStart, currentKey);
+
+            if (!edge) {
+                break;
+            }
+
+            currentPoint = edge.end;
+            loop.push(currentPoint);
+            guard++;
+        }
+
+        return simplifySelectionBoundaryLoop(loop);
+    }
+
+    function removeSelectionBoundaryEdge(edgesByStart, key) {
+        var edges = edgesByStart[key];
+        var edge;
+
+        if (!edges || !edges.length) {
+            return null;
+        }
+
+        edge = edges.shift();
+
+        if (!edges.length) {
+            delete edgesByStart[key];
+        }
+
+        return edge;
+    }
+
+    function simplifySelectionBoundaryLoop(loop) {
+        var simplified = [];
+        var i;
+        var previous;
+        var current;
+        var next;
+
+        if (!loop.length) {
+            return simplified;
+        }
+
+        simplified.push(loop[0]);
+
+        for (i = 1; i < loop.length - 1; i++) {
+            previous = simplified[simplified.length - 1];
+            current = loop[i];
+            next = loop[i + 1];
+
+            if ((previous.x === current.x && current.x === next.x) ||
+                (previous.y === current.y && current.y === next.y)) {
+                continue;
+            }
+
+            simplified.push(current);
+        }
+
+        simplified.push(loop[loop.length - 1]);
+
+        return simplified;
+    }
+
+    function getSelectionPointKey(x, y) {
+        return x + "," + y;
+    }
+
+    function isSelectionMaskPixelFilled(maskData, width, height, x, y) {
+        var index;
+
+        if (x < 0 || y < 0 || x >= width || y >= height) {
+            return false;
+        }
+
+        index = ((y * width) + x) * 4;
+
+        return maskData[index + 3] > 0;
+    }
+
+    function hasActiveSelection(board) {
+        return !!(board && board.selection && board.selection.maskCanvas);
+    }
+
+    function isPointInSelection(board, point) {
+        var maskContext;
+        var pixel;
+
+        if (!hasActiveSelection(board) || !point) {
+            return true;
+        }
+
+        if (point.x < 0 || point.y < 0 || point.x >= board.canvas.width || point.y >= board.canvas.height) {
+            return false;
+        }
+
+        maskContext = board.selection.maskCanvas.getContext("2d");
+        pixel = maskContext.getImageData(Math.floor(point.x), Math.floor(point.y), 1, 1).data;
+
+        return pixel[3] > 0;
+    }
+
+    function paintWithSelection(board, paintCallback) {
+        var beforeCanvas;
+
+        if (!hasActiveSelection(board)) {
+            paintCallback();
+            return;
+        }
+
+        beforeCanvas = copyBoardCanvas(board);
+        paintCallback();
+        applySelectionMaskToPaint(board, beforeCanvas);
+    }
+
+    function copyBoardCanvas(board) {
+        var copyCanvas = document.createElement("canvas");
+        var copyContext;
+
+        copyCanvas.width = board.canvas.width;
+        copyCanvas.height = board.canvas.height;
+        copyContext = copyCanvas.getContext("2d");
+        copyContext.drawImage(board.canvas, 0, 0);
+
+        return copyCanvas;
+    }
+
+    function getClipboardCanvas(board) {
+        var bounds;
+        var clipboardCanvas;
+        var clipboardContext;
+
+        if (!hasActiveSelection(board)) {
+            return board.canvas;
+        }
+
+        bounds = getSelectionMaskBounds(board.selection.maskCanvas);
+        if (!bounds) {
+            return board.canvas;
+        }
+
+        clipboardCanvas = document.createElement("canvas");
+        clipboardCanvas.width = bounds.width;
+        clipboardCanvas.height = bounds.height;
+        clipboardContext = clipboardCanvas.getContext("2d");
+        clipboardContext.drawImage(
+            board.canvas,
+            bounds.left,
+            bounds.top,
+            bounds.width,
+            bounds.height,
+            0,
+            0,
+            bounds.width,
+            bounds.height
+        );
+        clipboardContext.globalCompositeOperation = "destination-in";
+        clipboardContext.drawImage(
+            board.selection.maskCanvas,
+            bounds.left,
+            bounds.top,
+            bounds.width,
+            bounds.height,
+            0,
+            0,
+            bounds.width,
+            bounds.height
+        );
+        clipboardContext.globalCompositeOperation = "source-over";
+
+        return clipboardCanvas;
+    }
+
+    function applySelectionMaskToPaint(board, beforeCanvas) {
+        var selectedCanvas = document.createElement("canvas");
+        var selectedContext;
+
+        selectedCanvas.width = board.canvas.width;
+        selectedCanvas.height = board.canvas.height;
+        selectedContext = selectedCanvas.getContext("2d");
+        selectedContext.drawImage(board.canvas, 0, 0);
+        selectedContext.globalCompositeOperation = "destination-in";
+        selectedContext.drawImage(board.selection.maskCanvas, 0, 0);
+
+        board.context.clearRect(0, 0, board.canvas.width, board.canvas.height);
+        board.context.drawImage(beforeCanvas, 0, 0);
+        board.context.drawImage(selectedCanvas, 0, 0);
+    }
+
+    function fillSelectionWithFrontColor(board) {
+        if (!hasActiveSelection(board)) {
+            return false;
+        }
+
+        beginUndoableAction(board);
+        markUndoableChange(board);
+        paintWithSelection(board, function() {
+            board.context.fillStyle = getCurrentPaintColor(board);
+            board.context.fillRect(0, 0, board.canvas.width, board.canvas.height);
+        });
+        commitUndoableAction(board);
+
+        return true;
+    }
+
+    function fillSelectionOrActiveLayerWithColor(board, color) {
+        beginUndoableAction(board);
+        markUndoableChange(board);
+        paintWithSelection(board, function() {
+            board.context.fillStyle = color;
+            board.context.fillRect(0, 0, board.canvas.width, board.canvas.height);
+        });
+        commitUndoableAction(board);
+
+        return true;
+    }
+
+    function deleteSelection(board) {
+        if (!hasActiveSelection(board)) {
+            return false;
+        }
+
+        beginUndoableAction(board);
+        markUndoableChange(board);
+        board.context.save();
+        board.context.globalCompositeOperation = "destination-out";
+        board.context.drawImage(board.selection.maskCanvas, 0, 0);
+        board.context.restore();
+        commitUndoableAction(board);
+
+        return true;
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
     function startPointerAction(board, event) {
+        if (currentPaintToolMode === PAINT_TOOL_MODES.CROP_BOARD) {
+            event.preventDefault();
+            return;
+        }
+
         if (currentPaintToolMode === PAINT_TOOL_MODES.INK_DROPPER) {
             event.preventDefault();
             inkDropperPointerEvent(board, event);
+            return;
+        }
+
+        if (isLassoSelectionToolMode()) {
+            event.preventDefault();
+            startLassoSelection(board, event);
+            return;
+        }
+
+        if (isPointerToolMode()) {
+            event.preventDefault();
+            if (canMoveSelectionWithPointer(board, event)) {
+                startSelectionMove(board, event);
+            }
+            return;
+        }
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.MAGIC_WAND) {
+            event.preventDefault();
+            magicWandPointerEvent(board, event);
             return;
         }
 
@@ -917,21 +4201,21 @@
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT) {
             event.preventDefault();
-            board.pointerStartPosition = getPointerPosition(board, event);
+            board.pointerStartPosition = getSelectionPointerPosition(board, event);
             board.previewPointerPosition = board.pointerStartPosition;
             return;
         }
 
         if (isStraightLineToolMode()) {
             event.preventDefault();
-            board.pointerStartPosition = getPointerPosition(board, event);
+            board.pointerStartPosition = getSelectionPointerPosition(board, event);
             board.previewPointerPosition = board.pointerStartPosition;
             return;
         }
 
         if (isShapeToolMode()) {
             event.preventDefault();
-            board.pointerStartPosition = getPointerPosition(board, event);
+            board.pointerStartPosition = getSelectionPointerPosition(board, event);
             board.previewPointerPosition = board.pointerStartPosition;
             return;
         }
@@ -940,6 +4224,10 @@
     }
 
     function continuePointerAction(board, event) {
+        if (currentPaintToolMode === PAINT_TOOL_MODES.CROP_BOARD) {
+            return;
+        }
+
         if (currentPaintToolMode === PAINT_TOOL_MODES.INK_DROPPER) {
             return;
         }
@@ -949,6 +4237,22 @@
         }
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.PATTERN_BUCKET) {
+            return;
+        }
+
+        if (isLassoSelectionToolMode()) {
+            updateLassoSelection(board, event);
+            return;
+        }
+
+        if (isPointerToolMode()) {
+            if (board.selectionMove) {
+                updateSelectionMove(board, event);
+            }
+            return;
+        }
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.MAGIC_WAND) {
             return;
         }
 
@@ -968,7 +4272,7 @@
     }
 
     function paintPointerEvent(board, event) {
-        var point = getCanvasPointerPosition(board, event);
+        var point = getStrokePaintPointerPosition(board, event);
 
         event.preventDefault();
 
@@ -980,38 +4284,62 @@
 
         if (isContinuousLineToolMode() && !board.lastPointerPosition) {
             markUndoableChange(board);
-            paintContinuousLineStart(board, point);
+            paintWithSelection(board, function() {
+                paintContinuousLineStart(board, point);
+            });
             board.lastPointerPosition = point;
             return;
         }
 
         markUndoableChange(board);
 
-        if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH && board.lastPointerPosition) {
-            paintOldBrushLine(board, board.lastPointerPosition, point);
-        } else if (currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES && board.lastPointerPosition) {
-            paintSquaredLine(board, board.lastPointerPosition, point);
-        } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES && board.lastPointerPosition) {
-            paintRoundLine(board, board.lastPointerPosition, point);
-        } else if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH) {
-            paintDesignedBrush(board, point.x, point.y);
-        } else if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2) {
-            paintDesignedBrush2(board, point.x, point.y);
-        } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS) {
-            paintRoundPoint(board, point.x, point.y);
-        } else if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH) {
-            paintOldBrushStamp(board, point.x, point.y);
-        } else {
-            paintSquaredPoint(board, point.x, point.y);
-        }
+        paintWithSelection(board, function() {
+            if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH && board.lastPointerPosition) {
+                paintOldBrushLine(board, board.lastPointerPosition, point);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES && board.lastPointerPosition) {
+                paintSquaredLine(board, board.lastPointerPosition, point);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.PENCIL_TOOL && board.lastPointerPosition) {
+                paintSquaredLine(board, board.lastPointerPosition, point);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES && board.lastPointerPosition) {
+                paintRoundLine(board, board.lastPointerPosition, point);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH) {
+                paintDesignedBrush(board, point.x, point.y);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2) {
+                paintDesignedBrush2(board, point.x, point.y);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS) {
+                if (isPointInsideCanvas(board, point)) {
+                    paintRoundPoint(board, point.x, point.y);
+                }
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH) {
+                if (isPointInsideCanvas(board, point)) {
+                    paintOldBrushStamp(board, point.x, point.y);
+                }
+            } else {
+                if (isPointInsideCanvas(board, point)) {
+                    paintSquaredPoint(board, point.x, point.y);
+                }
+            }
+        });
 
         board.lastPointerPosition = point;
     }
 
     function isContinuousLineToolMode() {
         return currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.PENCIL_TOOL ||
             currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES ||
             currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH;
+    }
+
+    function isDragPaintToolMode() {
+        return currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_POINTS ||
+            currentPaintToolMode === PAINT_TOOL_MODES.PENCIL_TOOL ||
+            currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS ||
+            currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES ||
+            currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH ||
+            currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH ||
+            currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2;
     }
 
     function paintContinuousLineStart(board, point) {
@@ -1037,18 +4365,20 @@
             return;
         }
 
-        rawPoint = getEventPointerPosition(board, event);
+        rawPoint = getSelectionPointerPosition(board, event);
         points = getShapeDrawPoints(fromPoint, rawPoint, getPreviewModifierEvent(board, event));
         if (event && typeof event.preventDefault === "function") {
             event.preventDefault();
         }
         markUndoableChange(board);
-        paintShape(board, points.from, points.to);
+        paintWithSelection(board, function() {
+            paintShape(board, points.from, points.to);
+        });
     }
 
     function paintGradientPointerEvent(board, event) {
         var fromPoint = board.pointerStartPosition;
-        var toPoint = getGradientEndPoint(fromPoint, getPointerPosition(board, event), event);
+        var toPoint = getGradientEndPoint(fromPoint, getSelectionPointerPosition(board, event), event);
 
         if (!fromPoint) {
             return;
@@ -1056,7 +4386,9 @@
 
         event.preventDefault();
         markUndoableChange(board);
-        paintGradient(board, fromPoint, toPoint);
+        paintWithSelection(board, function() {
+            paintGradient(board, fromPoint, toPoint);
+        });
     }
 
     function paintStraightLinePointerEvent(board, event) {
@@ -1069,14 +4401,16 @@
             return;
         }
 
-        rawPoint = getEventPointerPosition(board, event);
+        rawPoint = getSelectionPointerPosition(board, event);
         toPoint = getGradientEndPoint(fromPoint, rawPoint, event);
         lineDesign = getCurrentStoredLineDesign();
         if (event && typeof event.preventDefault === "function") {
             event.preventDefault();
         }
         markUndoableChange(board);
-        paintLine(board, fromPoint, toPoint, "butt", "miter", lineDesign);
+        paintWithSelection(board, function() {
+            paintLine(board, fromPoint, toPoint, "butt", "miter", lineDesign);
+        });
     }
 
     function getGradientEndPoint(fromPoint, toPoint, event) {
@@ -1111,13 +4445,25 @@
     function paintBucketPointerEvent(board, event) {
         var point = getPointerPosition(board, event);
 
-        paintBucket(board, point.x, point.y);
+        if (!isPointInSelection(board, point)) {
+            return;
+        }
+
+        paintWithSelection(board, function() {
+            paintBucket(board, point.x, point.y);
+        });
     }
 
     function patternBucketPointerEvent(board, event) {
         var point = getPointerPosition(board, event);
 
-        paintPatternBucket(board, point.x, point.y);
+        if (!isPointInSelection(board, point)) {
+            return;
+        }
+
+        paintWithSelection(board, function() {
+            paintPatternBucket(board, point.x, point.y);
+        });
     }
 
     function inkDropperPointerEvent(board, event) {
@@ -1128,10 +4474,418 @@
         notifyInkDropperColorSelected(color, board, point);
     }
 
+    function magicWandPointerEvent(board, event) {
+        var point = getPointerPosition(board, event);
+        var sampleX = clamp(Math.floor(point.x), 0, board.canvas.width - 1);
+        var sampleY = clamp(Math.floor(point.y), 0, board.canvas.height - 1);
+        var maskCanvas = createMagicWandMask(board, sampleX, sampleY, currentMagicWandOptions);
+
+        if (!maskCanvas || isSelectionMaskEmpty(maskCanvas)) {
+            if (currentSelectionBehavior === SELECTION_BEHAVIORS.NORMAL) {
+                clearSelection(board);
+            }
+
+            return;
+        }
+
+        applySelectionBehavior(board, {
+            type: "mask",
+            bounds: getSelectionMaskBounds(maskCanvas),
+            maskCanvas: maskCanvas
+        });
+
+        renderLassoSelection(board);
+    }
+
+    function createMagicWandMask(board, startX, startY, options) {
+        var width = board.canvas.width;
+        var height = board.canvas.height;
+        var sourceImageData;
+        var sourceData;
+        var reference;
+        var matcher;
+        var matched;
+        var maskCanvas;
+        var maskContext;
+        var maskImageData;
+
+        if (width <= 0 || height <= 0) {
+            return null;
+        }
+
+        sourceImageData = getMagicWandSourceImageData(board, width, height, options);
+        if (!sourceImageData || !sourceImageData.data) {
+            return null;
+        }
+
+        sourceData = sourceImageData.data;
+        reference = getMagicWandReferenceColor(sourceData, width, startX, startY);
+        matcher = createMagicWandMatcher(options, reference);
+
+        if (options && options.contiguous) {
+            matched = magicWandFloodFill(sourceData, width, height, startX, startY, matcher);
+        } else {
+            matched = magicWandGlobalMatch(sourceData, width, height, matcher);
+        }
+
+        maskCanvas = createSelectionMaskCanvas(board);
+        maskContext = maskCanvas.getContext("2d");
+        maskImageData = maskContext.createImageData(width, height);
+
+        fillMagicWandMask(maskImageData.data, matched, width, height);
+
+        if (options && options.antiAlias) {
+            applyMagicWandAntiAlias(maskImageData.data, matched, width, height);
+        }
+
+        maskContext.putImageData(maskImageData, 0, 0);
+
+        return maskCanvas;
+    }
+
+    function getMagicWandSourceImageData(board, width, height, options) {
+        var sourceCanvas;
+        var sourceContext;
+
+        if (options && options.sampleAllLayers) {
+            sourceCanvas = composeVisibleLayersForMagicWand(board, width, height);
+            sourceContext = sourceCanvas && sourceCanvas.getContext("2d");
+            if (sourceContext) {
+                return sourceContext.getImageData(0, 0, width, height);
+            }
+        }
+
+        return board.context.getImageData(0, 0, width, height);
+    }
+
+    function composeVisibleLayersForMagicWand(board, width, height) {
+        var doc;
+        var compositeCanvas;
+        var compositeContext;
+        var orderedLayers;
+
+        doc = (board.layersElement && board.layersElement.ownerDocument) || document;
+        compositeCanvas = board.magicWandSampleCanvas;
+
+        if (!compositeCanvas) {
+            compositeCanvas = doc.createElement("canvas");
+            board.magicWandSampleCanvas = compositeCanvas;
+        }
+
+        if (compositeCanvas.width !== width) {
+            compositeCanvas.width = width;
+        }
+        if (compositeCanvas.height !== height) {
+            compositeCanvas.height = height;
+        }
+
+        compositeContext = compositeCanvas.getContext("2d");
+        compositeContext.clearRect(0, 0, width, height);
+
+        if (!board.layers || !board.layers.length || !board.layersElement) {
+            return compositeCanvas;
+        }
+
+        orderedLayers = board.layers.slice().sort(function(a, b) {
+            var aOrder = typeof a["order-from-the-bottom"] === "number" ?
+                a["order-from-the-bottom"] : 0;
+            var bOrder = typeof b["order-from-the-bottom"] === "number" ?
+                b["order-from-the-bottom"] : 0;
+
+            return aOrder - bOrder;
+        });
+
+        orderedLayers.forEach(function(layer) {
+            var layerElement;
+            var layerCanvas;
+            var opacity;
+            var blendMode;
+
+            if (layer.visible === false) {
+                return;
+            }
+
+            layerElement = board.layersElement.querySelector('[data-layer="' + layer.id + '"]');
+            layerCanvas = layerElement && layerElement.querySelector("canvas");
+            if (!layerCanvas) {
+                return;
+            }
+
+            opacity = Number(layer.opacity);
+            if (!isFinite(opacity)) {
+                opacity = 100;
+            }
+            opacity = Math.max(0, Math.min(100, opacity));
+            if (opacity <= 0) {
+                return;
+            }
+
+            blendMode = layer.blendMode || layer["blend-mode"] || "source-over";
+
+            compositeContext.save();
+            compositeContext.globalCompositeOperation = blendMode;
+            compositeContext.globalAlpha = opacity / 100;
+            compositeContext.drawImage(layerCanvas, 0, 0);
+            compositeContext.restore();
+        });
+
+        return compositeCanvas;
+    }
+
+    function getMagicWandReferenceColor(data, width, x, y) {
+        var index = ((y * width) + x) * 4;
+        var reference = {
+            r: data[index],
+            g: data[index + 1],
+            b: data[index + 2],
+            a: data[index + 3]
+        };
+
+        reference.lab = rgbToLab(reference.r, reference.g, reference.b);
+
+        return reference;
+    }
+
+    function createMagicWandMatcher(options, reference) {
+        var tolerance = normalizeMagicWandTolerance(options ? options.tolerance : 0);
+        var mode = normalizeMagicWandMode(options ? options.mode : DEFAULT_MAGIC_WAND_MODE);
+
+        if (mode === MAGIC_WAND_MODES.PHOTOSHOP) {
+            return createMagicWandPhotoshopMatcher(tolerance, reference);
+        }
+
+        if (mode === MAGIC_WAND_MODES.PERCEPTUAL) {
+            return createMagicWandPerceptualMatcher(tolerance, reference);
+        }
+
+        return createMagicWandFastMatcher(tolerance, reference);
+    }
+
+    function createMagicWandFastMatcher(tolerance, reference) {
+        var maxDistance = (tolerance / 100) * MAGIC_WAND_MAX_DISTANCE;
+        var thresholdSquared = maxDistance * maxDistance;
+
+        return function(data, index) {
+            var dr = data[index] - reference.r;
+            var dg = data[index + 1] - reference.g;
+            var db = data[index + 2] - reference.b;
+            var da = data[index + 3] - reference.a;
+
+            return ((dr * dr) + (dg * dg) + (db * db) + (da * da)) <= thresholdSquared;
+        };
+    }
+
+    function createMagicWandPhotoshopMatcher(tolerance, reference) {
+        var channelTolerance = (tolerance / 100) * 255;
+
+        return function(data, index) {
+            return Math.abs(data[index] - reference.r) <= channelTolerance &&
+                Math.abs(data[index + 1] - reference.g) <= channelTolerance &&
+                Math.abs(data[index + 2] - reference.b) <= channelTolerance &&
+                Math.abs(data[index + 3] - reference.a) <= channelTolerance;
+        };
+    }
+
+    function createMagicWandPerceptualMatcher(tolerance, reference) {
+        var threshold = (tolerance / 100) * MAGIC_WAND_MAX_LAB_DISTANCE;
+        var referenceLab = reference.lab;
+
+        return function(data, index) {
+            var lab = rgbToLab(data[index], data[index + 1], data[index + 2]);
+            var dl = lab.l - referenceLab.l;
+            var da = lab.a - referenceLab.a;
+            var db = lab.b - referenceLab.b;
+            var alphaDiff = Math.abs(data[index + 3] - reference.a);
+
+            if (alphaDiff > (tolerance / 100) * 255) {
+                return false;
+            }
+
+            return Math.sqrt((dl * dl) + (da * da) + (db * db)) <= threshold;
+        };
+    }
+
+    function rgbToLab(r, g, b) {
+        var sr = magicWandSrgbToLinear(r / 255);
+        var sg = magicWandSrgbToLinear(g / 255);
+        var sb = magicWandSrgbToLinear(b / 255);
+        var x = ((sr * 0.4124) + (sg * 0.3576) + (sb * 0.1805)) / 0.95047;
+        var y = ((sr * 0.2126) + (sg * 0.7152) + (sb * 0.0722)) / 1;
+        var z = ((sr * 0.0193) + (sg * 0.1192) + (sb * 0.9505)) / 1.08883;
+        var fx = magicWandLabPivot(x);
+        var fy = magicWandLabPivot(y);
+        var fz = magicWandLabPivot(z);
+
+        return {
+            l: (116 * fy) - 16,
+            a: 500 * (fx - fy),
+            b: 200 * (fy - fz)
+        };
+    }
+
+    function magicWandSrgbToLinear(channel) {
+        if (channel <= 0.04045) {
+            return channel / 12.92;
+        }
+
+        return Math.pow((channel + 0.055) / 1.055, 2.4);
+    }
+
+    function magicWandLabPivot(value) {
+        if (value > 0.008856) {
+            return Math.pow(value, 1 / 3);
+        }
+
+        return (7.787 * value) + (16 / 116);
+    }
+
+    function magicWandFloodFill(data, width, height, startX, startY, matcher) {
+        var matched = new Uint8Array(width * height);
+        var stack = [(startY * width) + startX];
+        var pixel;
+        var x;
+        var y;
+
+        while (stack.length) {
+            pixel = stack.pop();
+
+            if (matched[pixel]) {
+                continue;
+            }
+
+            if (!matcher(data, pixel * 4)) {
+                continue;
+            }
+
+            matched[pixel] = 1;
+            x = pixel % width;
+            y = (pixel - x) / width;
+
+            if (x > 0) {
+                stack.push(pixel - 1);
+            }
+
+            if (x < width - 1) {
+                stack.push(pixel + 1);
+            }
+
+            if (y > 0) {
+                stack.push(pixel - width);
+            }
+
+            if (y < height - 1) {
+                stack.push(pixel + width);
+            }
+        }
+
+        return matched;
+    }
+
+    function magicWandGlobalMatch(data, width, height, matcher) {
+        var matched = new Uint8Array(width * height);
+        var total = width * height;
+        var pixel;
+
+        for (pixel = 0; pixel < total; pixel++) {
+            if (matcher(data, pixel * 4)) {
+                matched[pixel] = 1;
+            }
+        }
+
+        return matched;
+    }
+
+    function fillMagicWandMask(maskData, matched, width, height) {
+        var total = width * height;
+        var pixel;
+        var index;
+
+        for (pixel = 0; pixel < total; pixel++) {
+            if (!matched[pixel]) {
+                continue;
+            }
+
+            index = pixel * 4;
+            maskData[index] = 255;
+            maskData[index + 1] = 255;
+            maskData[index + 2] = 255;
+            maskData[index + 3] = 255;
+        }
+    }
+
+    function applyMagicWandAntiAlias(maskData, matched, width, height) {
+        var total = width * height;
+        var pixel;
+        var index;
+        var x;
+        var y;
+        var neighbors;
+
+        for (pixel = 0; pixel < total; pixel++) {
+            if (matched[pixel]) {
+                continue;
+            }
+
+            x = pixel % width;
+            y = (pixel - x) / width;
+            neighbors = countMagicWandMatchedNeighbors(matched, width, height, x, y);
+
+            if (neighbors === 0) {
+                continue;
+            }
+
+            index = pixel * 4;
+            maskData[index] = 255;
+            maskData[index + 1] = 255;
+            maskData[index + 2] = 255;
+            maskData[index + 3] = Math.round((neighbors / 8) * 160);
+        }
+    }
+
+    function countMagicWandMatchedNeighbors(matched, width, height, x, y) {
+        var count = 0;
+        var offsetX;
+        var offsetY;
+        var neighborX;
+        var neighborY;
+
+        for (offsetY = -1; offsetY <= 1; offsetY++) {
+            for (offsetX = -1; offsetX <= 1; offsetX++) {
+                if (offsetX === 0 && offsetY === 0) {
+                    continue;
+                }
+
+                neighborX = x + offsetX;
+                neighborY = y + offsetY;
+
+                if (neighborX < 0 || neighborY < 0 || neighborX >= width || neighborY >= height) {
+                    continue;
+                }
+
+                if (matched[(neighborY * width) + neighborX]) {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
+
     function paintAt(board, x, y) {
+        var point = {
+            x: x,
+            y: y
+        };
+
+        if (!isPointInSelection(board, point)) {
+            return;
+        }
+
         beginUndoableAction(board);
         markUndoableChange(board);
-        paintSquaredPoint(board, x, y);
+        paintWithSelection(board, function() {
+            paintSquaredPoint(board, x, y);
+        });
         commitUndoableAction(board);
     }
 
@@ -1305,7 +5059,7 @@
 
         board.context.save();
         board.context.beginPath();
-        board.context.strokeStyle = getCurrentPaintColor(board);
+        board.context.strokeStyle = lineDesign && lineDesign.color ? lineDesign.color : getCurrentPaintColor(board);
         board.context.lineWidth = size;
         board.context.lineCap = lineDesign ? lineDesign.cap : lineCap;
         board.context.lineJoin = lineDesign ? lineDesign.corner : lineJoin;
@@ -1321,7 +5075,7 @@
         var points = getHardLinePoints(fromPoint, toPoint);
         var width = Math.max(1, Math.round(size));
         var half = Math.floor(width / 2);
-        var color = getCurrentPaintColor(board);
+        var color = lineDesign && lineDesign.color ? lineDesign.color : getCurrentPaintColor(board);
         var dashState = createHardLineDashState(lineDesign);
 
         board.context.save();
@@ -1533,41 +5287,29 @@
     function paintBucket(board, x, y) {
         var imageData = board.context.getImageData(0, 0, board.canvas.width, board.canvas.height);
         var data = imageData.data;
-        var targetColor = getPixelColor(data, imageData.width, x, y);
         var fillColor = getRgb(getCurrentPaintColor(board));
-        var stack;
-        var point;
+        var maskData = getBucketMaskData(board, x, y);
+        var total;
+        var pixel;
         var index;
 
-        if (colorsMatch(targetColor, fillColor)) {
+        if (!maskData) {
             return;
         }
 
         fillColor.a = 255;
-        stack = [{ x: x, y: y }];
+        total = imageData.width * imageData.height;
 
-        while (stack.length) {
-            point = stack.pop();
-
-            if (point.x < 0 || point.x >= imageData.width || point.y < 0 || point.y >= imageData.height) {
+        for (pixel = 0; pixel < total; pixel++) {
+            if (maskData[(pixel * 4) + 3] <= 0) {
                 continue;
             }
 
-            index = getPixelIndex(imageData.width, point.x, point.y);
-
-            if (!colorsMatchAt(data, index, targetColor)) {
-                continue;
-            }
-
+            index = pixel * 4;
             data[index] = fillColor.r;
             data[index + 1] = fillColor.g;
             data[index + 2] = fillColor.b;
             data[index + 3] = 255;
-
-            stack.push({ x: point.x + 1, y: point.y });
-            stack.push({ x: point.x - 1, y: point.y });
-            stack.push({ x: point.x, y: point.y + 1 });
-            stack.push({ x: point.x, y: point.y - 1 });
         }
 
         board.context.putImageData(imageData, 0, 0);
@@ -1578,12 +5320,12 @@
         var patternData;
         var imageData;
         var data;
-        var targetColor;
-        var stack;
-        var visited;
-        var point;
+        var maskData;
+        var total;
+        var pixel;
         var index;
-        var pixelIndex;
+        var xPos;
+        var yPos;
         var patternColor;
         var frontColor = getRgb(getCurrentPaintColor(board));
         var useFrontColor = getCurrentPatternUseFrontColor();
@@ -1600,43 +5342,44 @@
 
         imageData = board.context.getImageData(0, 0, board.canvas.width, board.canvas.height);
         data = imageData.data;
-        targetColor = getPixelColor(data, imageData.width, x, y);
-        stack = [{ x: x, y: y }];
-        visited = new Uint8Array(imageData.width * imageData.height);
+        maskData = getBucketMaskData(board, x, y);
 
-        while (stack.length) {
-            point = stack.pop();
+        if (!maskData) {
+            return;
+        }
 
-            if (point.x < 0 || point.x >= imageData.width || point.y < 0 || point.y >= imageData.height) {
+        total = imageData.width * imageData.height;
+
+        for (pixel = 0; pixel < total; pixel++) {
+            if (maskData[(pixel * 4) + 3] <= 0) {
                 continue;
             }
 
-            pixelIndex = (point.y * imageData.width) + point.x;
-
-            if (visited[pixelIndex]) {
-                continue;
-            }
-
-            visited[pixelIndex] = 1;
-            index = getPixelIndex(imageData.width, point.x, point.y);
-
-            if (!colorsMatchAt(data, index, targetColor)) {
-                continue;
-            }
-
-            patternColor = getPatternPixelColor(patternData, point.x, point.y, frontColor, useFrontColor);
+            xPos = pixel % imageData.width;
+            yPos = (pixel - xPos) / imageData.width;
+            index = pixel * 4;
+            patternColor = getPatternPixelColor(patternData, xPos, yPos, frontColor, useFrontColor);
             data[index] = patternColor.r;
             data[index + 1] = patternColor.g;
             data[index + 2] = patternColor.b;
             data[index + 3] = patternColor.a;
-
-            stack.push({ x: point.x + 1, y: point.y });
-            stack.push({ x: point.x - 1, y: point.y });
-            stack.push({ x: point.x, y: point.y + 1 });
-            stack.push({ x: point.x, y: point.y - 1 });
         }
 
         board.context.putImageData(imageData, 0, 0);
+    }
+
+    function getBucketMaskData(board, x, y) {
+        var sampleX = clamp(Math.floor(x), 0, board.canvas.width - 1);
+        var sampleY = clamp(Math.floor(y), 0, board.canvas.height - 1);
+        var maskCanvas = createMagicWandMask(board, sampleX, sampleY, currentBucketOptions);
+        var maskContext;
+
+        if (!maskCanvas || isSelectionMaskEmpty(maskCanvas)) {
+            return null;
+        }
+
+        maskContext = maskCanvas.getContext("2d");
+        return maskContext.getImageData(0, 0, board.canvas.width, board.canvas.height).data;
     }
 
     function getPatternImageData(pattern) {
@@ -2259,7 +6002,7 @@
 
         board.context.fillStyle = getCurrentPaintColor(board);
         board.context.strokeStyle = getCurrentPaintColor(board);
-        board.context.lineWidth = Math.max(1, getCurrentBrushSize(board));
+        board.context.lineWidth = fill ? Math.max(1, getCurrentBrushSize(board)) : getCurrentShapeStrokeWidth(board);
 
         if (fill) {
             board.context.fillRect(rect.x, rect.y, rect.width, rect.height);
@@ -2274,7 +6017,7 @@
         board.context.beginPath();
         board.context.fillStyle = getCurrentPaintColor(board);
         board.context.strokeStyle = getCurrentPaintColor(board);
-        board.context.lineWidth = Math.max(1, getCurrentBrushSize(board));
+        board.context.lineWidth = fill ? Math.max(1, getCurrentBrushSize(board)) : getCurrentShapeStrokeWidth(board);
         board.context.ellipse(
             rect.x + rect.width / 2,
             rect.y + rect.height / 2,
@@ -2381,6 +6124,14 @@
         return currentPaintToolMode === PAINT_TOOL_MODES.STRAIGHT_LINE;
     }
 
+    function canStartActionOutsideCanvas() {
+        return isLassoSelectionToolMode() ||
+            isDragPaintToolMode() ||
+            isStraightLineToolMode() ||
+            isShapeToolMode() ||
+            currentPaintToolMode === PAINT_TOOL_MODES.GRADIENT;
+    }
+
     function isOvalToolMode() {
         return currentPaintToolMode === PAINT_TOOL_MODES.FILLED_CIRCLES ||
             currentPaintToolMode === PAINT_TOOL_MODES.FILLED_OVALS ||
@@ -2402,16 +6153,2092 @@
     function drawImage(board, image, x, y) {
         beginUndoableAction(board);
         markUndoableChange(board);
-        board.context.drawImage(image, x || 0, y || 0);
+        paintWithSelection(board, function() {
+            board.context.drawImage(image, x || 0, y || 0);
+        });
         commitUndoableAction(board);
     }
 
+    function transformActiveLayer(board) {
+        var activeLayer = null;
+        var sourceCanvas;
+        var snapshot;
+        var snapshotContext;
+        var i;
+
+        if (!board || !board.layers) {
+            return false;
+        }
+
+        for (i = 0; i < board.layers.length; i++) {
+            if (board.layers[i].id === board.activeLayerId) {
+                activeLayer = board.layers[i];
+                break;
+            }
+        }
+
+        if (!activeLayer || activeLayer.background) {
+            return false;
+        }
+
+        sourceCanvas = board.canvas;
+        if (!sourceCanvas) {
+            return false;
+        }
+
+        if (board.floatingPaste) {
+            commitFloatingPaste(board);
+        }
+
+        snapshot = document.createElement("canvas");
+        snapshot.width = sourceCanvas.width;
+        snapshot.height = sourceCanvas.height;
+        snapshotContext = snapshot.getContext("2d");
+        snapshotContext.drawImage(sourceCanvas, 0, 0);
+
+        // Lift the active layer content into a floating paste so it can be
+        // transformed with the same tools used when pasting a bitmap. The undo
+        // snapshot is captured before clearing the layer so committing or
+        // undoing the transform restores the original pixels.
+        beginUndoableAction(board);
+        markUndoableChange(board);
+        board.context.clearRect(0, 0, sourceCanvas.width, sourceCanvas.height);
+
+        startFloatingPaste(board, snapshot, {
+            liftedLayerId: activeLayer.id,
+            liftedCanvas: sourceCanvas,
+            liftedSnapshot: snapshot
+        });
+
+        return true;
+    }
+
+    function startFloatingPaste(board, image, metadata) {
+        var size;
+        var layer;
+        var canvas;
+        var context;
+        var handlesLayer;
+        var floatingPaste;
+
+        if (!board || !image) {
+            return;
+        }
+
+        cancelCropSession(board);
+        cancelFloatingPaste(board);
+        size = getImageDrawSize(image);
+        layer = document.createElement("div");
+        canvas = document.createElement("canvas");
+        context = canvas.getContext("2d");
+        handlesLayer = document.createElement("div");
+
+        layer.id = board.id + "-floating-paste-layer";
+        layer.className = "paint-board-floating-paste-layer";
+        layer.setAttribute("data-layer", layer.id);
+        layer.setAttribute("data-type", "TEMP");
+        layer.style.width = board.canvas.width + "px";
+        layer.style.height = board.canvas.height + "px";
+
+        canvas.className = "paint-board-floating-paste-canvas";
+        canvas.width = board.canvas.width;
+        canvas.height = board.canvas.height;
+        canvas.style.width = board.canvas.width + "px";
+        canvas.style.height = board.canvas.height + "px";
+
+        // Handles and the dashed outline live on a separate SVG overlay (like the
+        // lasso selection) so they can extend outside the official board area, up
+        // to the window content area. This is also the interactive surface.
+        handlesLayer.id = board.id + "-floating-paste-handles";
+        handlesLayer.className = "paint-board-floating-paste-handles";
+        handlesLayer.setAttribute("data-layer", handlesLayer.id);
+        handlesLayer.setAttribute("data-type", "TEMP");
+        handlesLayer.style.width = board.canvas.width + "px";
+        handlesLayer.style.height = board.canvas.height + "px";
+        handlesLayer.title = "Scale mode: press T to distort corners independently.";
+
+        layer.appendChild(canvas);
+        board.overlaysElement.insertBefore(layer, board.tempLayerElement);
+        board.overlaysElement.insertBefore(handlesLayer, board.tempLayerElement);
+        if (board.element && board.element.classList) {
+            board.element.classList.add("paint-board-has-floating-paste");
+        }
+
+        floatingPaste = {
+            image: image,
+            metadata: metadata || null,
+            layer: layer,
+            canvas: canvas,
+            context: context,
+            handlesLayer: handlesLayer,
+            x: 0,
+            y: 0,
+            width: size.width,
+            height: size.height,
+            corners: createFloatingPasteRectangleCorners(0, 0, size.width, size.height),
+            startCorners: null,
+            warpPoints: createFloatingPasteWarpGrid(
+                createFloatingPasteRectangleCorners(0, 0, size.width, size.height)
+            ),
+            startWarpPoints: null,
+            warpRoundBehavior: false,
+            transformOperation: "scale",
+            distortMode: false,
+            transformAlgorithms: {
+                scale: global.ImageTransformRegistry ?
+                    global.ImageTransformRegistry.getDefaultAlgorithm("scale") :
+                    "nearest-neighbor",
+                rotate: global.ImageTransformRegistry ?
+                    global.ImageTransformRegistry.getDefaultAlgorithm("rotate") :
+                    "smooth",
+                skew: global.ImageTransformRegistry ?
+                    global.ImageTransformRegistry.getDefaultAlgorithm("skew") :
+                    "smooth",
+                distort: global.ImageTransformRegistry ?
+                    global.ImageTransformRegistry.getDefaultAlgorithm("distort") :
+                    "pixel-warp",
+                perspective: global.ImageTransformRegistry ?
+                    global.ImageTransformRegistry.getDefaultAlgorithm("perspective") :
+                    "projective",
+                warp: global.ImageTransformRegistry ?
+                    global.ImageTransformRegistry.getDefaultAlgorithm("warp") :
+                    "smooth"
+            },
+            isDragging: false,
+            dragAction: null,
+            resizeHandle: null,
+            pointerId: null,
+            dragOffsetX: 0,
+            dragOffsetY: 0,
+            startX: 0,
+            startY: 0,
+            startWidth: 0,
+            startHeight: 0,
+            startPointerX: 0,
+            startPointerY: 0,
+            aspectRatio: size.height ? size.width / size.height : 1,
+            pointerDown: null,
+            pointerMove: null,
+            pointerUp: null,
+            pointerHover: null,
+            doubleClick: null,
+            keyDown: null
+        };
+
+        floatingPaste.pointerDown = function(event) {
+            startFloatingPasteDrag(board, event);
+        };
+        floatingPaste.pointerMove = function(event) {
+            moveFloatingPaste(board, event);
+        };
+        floatingPaste.pointerUp = function(event) {
+            stopFloatingPasteDrag(board, event);
+        };
+        floatingPaste.pointerHover = function(event) {
+            updateFloatingPasteCursor(board, event);
+        };
+        floatingPaste.doubleClick = function(event) {
+            event.preventDefault();
+            commitFloatingPaste(board);
+        };
+        floatingPaste.keyDown = function(event) {
+            handleFloatingPasteKeyDown(board, event);
+        };
+
+        board.floatingPaste = floatingPaste;
+        handlesLayer.addEventListener("pointerdown", floatingPaste.pointerDown);
+        handlesLayer.addEventListener("pointermove", floatingPaste.pointerHover);
+        handlesLayer.addEventListener("dblclick", floatingPaste.doubleClick);
+        document.addEventListener("pointermove", floatingPaste.pointerMove, true);
+        document.addEventListener("pointerup", floatingPaste.pointerUp, true);
+        document.addEventListener("pointercancel", floatingPaste.pointerUp, true);
+        document.addEventListener("keydown", floatingPaste.keyDown);
+        renderFloatingPaste(board);
+        notifyFloatingPasteChange(board, true);
+    }
+
+    function getImageDrawSize(image) {
+        return {
+            width: image.naturalWidth || image.videoWidth || image.width || 0,
+            height: image.naturalHeight || image.videoHeight || image.height || 0
+        };
+    }
+
+    function renderFloatingPaste(board) {
+        var paste = board && board.floatingPaste;
+
+        if (!paste) {
+            return;
+        }
+
+        paste.context.clearRect(0, 0, paste.canvas.width, paste.canvas.height);
+        drawFloatingPasteImage(paste.context, paste);
+        if (paste.transformOperation === "warp") {
+            drawFloatingPasteWarpGrid(
+                paste.context,
+                paste.warpPoints,
+                paste.warpRoundBehavior
+            );
+        }
+        paste.handlesLayer.innerHTML = getFloatingPasteHandlesSvg(paste);
+    }
+
+    function getFloatingPasteHandlesSvg(paste) {
+        var corners = paste.corners;
+        var outlinePoints;
+        var handles;
+        var handleClass;
+        var markup;
+        var i;
+
+        outlinePoints = corners.map(function(corner) {
+            return escapeHtml(corner.x) + "," + escapeHtml(corner.y);
+        }).join(" ");
+
+        handles = getFloatingPasteHandles(paste);
+        handleClass = paste.transformOperation === "scale" ?
+            "paint-board-floating-paste-handle paint-board-floating-paste-handle-scale" :
+            "paint-board-floating-paste-handle paint-board-floating-paste-handle-transform";
+
+        markup = "<svg class=\"paint-board-floating-paste-svg\" xmlns=\"http://www.w3.org/2000/svg\">" +
+            "<polygon class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" points=\"" + outlinePoints + "\"></polygon>" +
+            "<polygon class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" points=\"" + outlinePoints + "\"></polygon>";
+
+        for (i = 0; i < handles.length; i++) {
+            markup += "<rect class=\"" + handleClass + "\" x=\"" + escapeHtml(handles[i].left) +
+                "\" y=\"" + escapeHtml(handles[i].top) +
+                "\" width=\"" + escapeHtml(handles[i].size) +
+                "\" height=\"" + escapeHtml(handles[i].size) + "\"></rect>";
+        }
+
+        markup += "</svg>";
+        return markup;
+    }
+
+    function startFloatingPasteDrag(board, event) {
+        var paste = board && board.floatingPaste;
+        var point;
+        var handle;
+
+        if (!paste || !isPrimaryPaintInput(event)) {
+            return;
+        }
+
+        point = getSelectionPointerPosition(board, event);
+        handle = getFloatingPasteHandleAtPoint(paste, point);
+
+        if (!handle && !isPointInsideBounds(point, paste)) {
+            commitFloatingPaste(board);
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        paste.isDragging = true;
+        paste.dragAction = handle ? "resize" : "move";
+        paste.resizeHandle = handle;
+        paste.pointerId = typeof event.pointerId === "number" ? event.pointerId : null;
+        paste.dragOffsetX = point.x - paste.x;
+        paste.dragOffsetY = point.y - paste.y;
+        paste.startX = paste.x;
+        paste.startY = paste.y;
+        paste.startWidth = paste.width;
+        paste.startHeight = paste.height;
+        paste.startPointerX = point.x;
+        paste.startPointerY = point.y;
+        paste.startCorners = cloneFloatingPasteCorners(paste.corners);
+        paste.startWarpPoints = cloneFloatingPasteCorners(paste.warpPoints);
+        paste.aspectRatio = paste.height ? paste.width / paste.height : 1;
+        paste.handlesLayer.style.cursor = getFloatingPasteCursor(handle);
+        capturePointer(paste.handlesLayer, event.pointerId);
+    }
+
+    function moveFloatingPaste(board, event) {
+        var paste = board && board.floatingPaste;
+        var point;
+
+        if (!paste || !paste.isDragging) {
+            return;
+        }
+
+        if (paste.pointerId !== null && typeof event.pointerId === "number" && event.pointerId !== paste.pointerId) {
+            return;
+        }
+
+        event.preventDefault();
+        point = getSelectionPointerPosition(board, event);
+        if (paste.dragAction === "resize" && paste.transformOperation === "rotate") {
+            rotateFloatingPaste(board, point, event);
+        } else if (paste.dragAction === "resize" && paste.transformOperation === "skew") {
+            skewFloatingPaste(board, point);
+        } else if (paste.dragAction === "resize" && paste.transformOperation === "perspective") {
+            perspectiveFloatingPaste(board, point);
+        } else if (paste.dragAction === "resize" && paste.transformOperation === "warp") {
+            warpFloatingPaste(board, point);
+        } else if (paste.dragAction === "resize" && paste.transformOperation === "distort") {
+            distortFloatingPaste(board, point);
+        } else if (paste.dragAction === "resize") {
+            resizeFloatingPaste(board, point, event);
+        } else {
+            moveFloatingPasteBy(board, Math.round(point.x - paste.startPointerX), Math.round(point.y - paste.startPointerY));
+        }
+        renderFloatingPaste(board);
+    }
+
+    function resizeFloatingPaste(board, point, event) {
+        var paste = board && board.floatingPaste;
+        var handle;
+        var left;
+        var top;
+        var right;
+        var bottom;
+        var width;
+        var height;
+        var aspectWidth;
+        var aspectHeight;
+
+        if (!paste || !paste.resizeHandle) {
+            return;
+        }
+
+        handle = paste.resizeHandle;
+        left = paste.startX;
+        top = paste.startY;
+        right = paste.startX + paste.startWidth;
+        bottom = paste.startY + paste.startHeight;
+
+        if (handle.indexOf("w") !== -1) {
+            left = point.x;
+        }
+
+        if (handle.indexOf("e") !== -1) {
+            right = point.x;
+        }
+
+        if (handle.indexOf("n") !== -1) {
+            top = point.y;
+        }
+
+        if (handle.indexOf("s") !== -1) {
+            bottom = point.y;
+        }
+
+        width = Math.max(1, right - left);
+        height = Math.max(1, bottom - top);
+
+        if (event && event.shiftKey && paste.aspectRatio > 0 && handle.length === 2) {
+            if (width / height > paste.aspectRatio) {
+                aspectWidth = height * paste.aspectRatio;
+                if (handle.indexOf("w") !== -1) {
+                    left = right - aspectWidth;
+                } else {
+                    right = left + aspectWidth;
+                }
+            } else {
+                aspectHeight = width / paste.aspectRatio;
+                if (handle.indexOf("n") !== -1) {
+                    top = bottom - aspectHeight;
+                } else {
+                    bottom = top + aspectHeight;
+                }
+            }
+        }
+
+        if (right < left) {
+            aspectWidth = left;
+            left = right;
+            right = aspectWidth;
+        }
+
+        if (bottom < top) {
+            aspectHeight = top;
+            top = bottom;
+            bottom = aspectHeight;
+        }
+
+        paste.x = Math.round(left);
+        paste.y = Math.round(top);
+        paste.width = Math.max(1, Math.round(right - left));
+        paste.height = Math.max(1, Math.round(bottom - top));
+        paste.corners = scaleFloatingPasteCorners(
+            paste.startCorners,
+            paste.startX,
+            paste.startY,
+            paste.startWidth,
+            paste.startHeight,
+            paste.x,
+            paste.y,
+            paste.width,
+            paste.height
+        );
+    }
+
+    function distortFloatingPaste(board, point) {
+        var paste = board && board.floatingPaste;
+        var cornerIndex;
+
+        if (!paste || !paste.resizeHandle || !paste.startCorners) {
+            return;
+        }
+
+        cornerIndex = getFloatingPasteCornerIndex(paste.resizeHandle);
+        if (cornerIndex < 0) {
+            return;
+        }
+
+        paste.corners = cloneFloatingPasteCorners(paste.startCorners);
+        paste.corners[cornerIndex] = {
+            x: Math.round(point.x),
+            y: Math.round(point.y)
+        };
+        updateFloatingPasteBounds(paste);
+    }
+
+    function warpFloatingPaste(board, point) {
+        var paste = board && board.floatingPaste;
+        var pointIndex;
+
+        if (!paste || !paste.resizeHandle || !paste.startWarpPoints) {
+            return;
+        }
+
+        pointIndex = getFloatingPasteWarpPointIndex(paste.resizeHandle);
+        if (pointIndex < 0) {
+            return;
+        }
+
+        paste.warpPoints = cloneFloatingPasteCorners(paste.startWarpPoints);
+        paste.warpPoints[pointIndex] = {
+            x: Math.round(point.x),
+            y: Math.round(point.y)
+        };
+        syncFloatingPasteCornersFromWarp(paste);
+        updateFloatingPasteBoundsFromPoints(paste, paste.warpPoints);
+    }
+
+    function rotateFloatingPaste(board, point, event) {
+        var paste = board && board.floatingPaste;
+        var center;
+        var startAngle;
+        var currentAngle;
+        var angle;
+        var cosine;
+        var sine;
+
+        if (!paste || !paste.startCorners) {
+            return;
+        }
+
+        center = getCornersCenter(paste.startCorners);
+        startAngle = Math.atan2(paste.startPointerY - center.y, paste.startPointerX - center.x);
+        currentAngle = Math.atan2(point.y - center.y, point.x - center.x);
+        angle = currentAngle - startAngle;
+        if (event && event.shiftKey) {
+            angle = Math.round(angle / (Math.PI / 12)) * (Math.PI / 12);
+        }
+        cosine = Math.cos(angle);
+        sine = Math.sin(angle);
+        paste.corners = paste.startCorners.map(function(corner) {
+            var x = corner.x - center.x;
+            var y = corner.y - center.y;
+
+            return {
+                x: center.x + (x * cosine) - (y * sine),
+                y: center.y + (x * sine) + (y * cosine)
+            };
+        });
+        updateFloatingPasteBounds(paste);
+    }
+
+    function skewFloatingPaste(board, point) {
+        var paste = board && board.floatingPaste;
+        var deltaX;
+        var deltaY;
+        var indexes;
+
+        if (!paste || !paste.startCorners || !paste.resizeHandle) {
+            return;
+        }
+
+        deltaX = point.x - paste.startPointerX;
+        deltaY = point.y - paste.startPointerY;
+        paste.corners = cloneFloatingPasteCorners(paste.startCorners);
+        indexes = {
+            n: [0, 1],
+            e: [1, 2],
+            s: [2, 3],
+            w: [3, 0]
+        }[paste.resizeHandle];
+        if (!indexes) {
+            return;
+        }
+        indexes.forEach(function(index) {
+            if (paste.resizeHandle === "n" || paste.resizeHandle === "s") {
+                paste.corners[index].x += deltaX;
+            } else {
+                paste.corners[index].y += deltaY;
+            }
+        });
+        updateFloatingPasteBounds(paste);
+    }
+
+    function perspectiveFloatingPaste(board, point) {
+        var paste = board && board.floatingPaste;
+        var cornerIndex;
+        var deltaX;
+        var deltaY;
+        var partnerIndex;
+
+        if (!paste || !paste.startCorners || !paste.resizeHandle) {
+            return;
+        }
+
+        cornerIndex = getFloatingPasteCornerIndex(paste.resizeHandle);
+        if (cornerIndex < 0) {
+            return;
+        }
+        deltaX = point.x - paste.startPointerX;
+        deltaY = point.y - paste.startPointerY;
+        paste.corners = cloneFloatingPasteCorners(paste.startCorners);
+        paste.corners[cornerIndex] = {
+            x: paste.startCorners[cornerIndex].x + deltaX,
+            y: paste.startCorners[cornerIndex].y + deltaY
+        };
+
+        if (Math.abs(deltaX) >= Math.abs(deltaY)) {
+            partnerIndex = [3, 2, 1, 0][cornerIndex];
+            paste.corners[partnerIndex].x -= deltaX;
+        } else {
+            partnerIndex = [1, 0, 3, 2][cornerIndex];
+            paste.corners[partnerIndex].y -= deltaY;
+        }
+        updateFloatingPasteBounds(paste);
+    }
+
+    function moveFloatingPasteBy(board, deltaX, deltaY) {
+        var paste = board && board.floatingPaste;
+        var i;
+
+        if (!paste || !paste.startCorners) {
+            return;
+        }
+
+        paste.corners = cloneFloatingPasteCorners(paste.startCorners);
+        for (i = 0; i < paste.corners.length; i++) {
+            paste.corners[i].x += deltaX;
+            paste.corners[i].y += deltaY;
+        }
+        if (paste.transformOperation === "warp" && paste.startWarpPoints) {
+            paste.warpPoints = cloneFloatingPasteCorners(paste.startWarpPoints);
+            for (i = 0; i < paste.warpPoints.length; i++) {
+                paste.warpPoints[i].x += deltaX;
+                paste.warpPoints[i].y += deltaY;
+            }
+            syncFloatingPasteCornersFromWarp(paste);
+            updateFloatingPasteBoundsFromPoints(paste, paste.warpPoints);
+            return;
+        }
+        updateFloatingPasteBounds(paste);
+    }
+
+    function stopFloatingPasteDrag(board, event) {
+        var paste = board && board.floatingPaste;
+
+        if (!paste || !paste.isDragging) {
+            return;
+        }
+
+        if (paste.pointerId !== null && event && typeof event.pointerId === "number" && event.pointerId !== paste.pointerId) {
+            return;
+        }
+
+        paste.isDragging = false;
+        paste.dragAction = null;
+        paste.resizeHandle = null;
+        paste.startCorners = null;
+        paste.startWarpPoints = null;
+        paste.pointerId = null;
+        renderFloatingPaste(board);
+        if (event) {
+            updateFloatingPasteCursor(board, event);
+        }
+    }
+
+    function updateFloatingPasteCursor(board, event) {
+        var paste = board && board.floatingPaste;
+        var point;
+        var handle;
+
+        if (!paste || paste.isDragging) {
+            return;
+        }
+
+        point = getSelectionPointerPosition(board, event);
+        handle = getFloatingPasteHandleAtPoint(paste, point);
+        paste.handlesLayer.style.cursor = getFloatingPasteCursor(handle || (isPointInsideBounds(point, paste) ? "move" : null));
+    }
+
+    function handleFloatingPasteKeyDown(board, event) {
+        var paste = board && board.floatingPaste;
+
+        if (!paste || isEditableKeyboardTarget(event.target)) {
+            return;
+        }
+
+        if (String(event.key).toLowerCase() === "t" && !event.repeat && !paste.isDragging) {
+            event.preventDefault();
+            setFloatingPasteDistortMode(board, !paste.distortMode);
+            return;
+        }
+
+        if (event.key === "Enter") {
+            event.preventDefault();
+            commitFloatingPaste(board);
+            return;
+        }
+
+        if (event.key === "Escape") {
+            event.preventDefault();
+            cancelFloatingPaste(board);
+        }
+    }
+
+    function setFloatingPasteDistortMode(board, active) {
+        return setFloatingPasteTransformOperation(board, active ? "distort" : "scale");
+    }
+
+    function setFloatingPasteTransformOperation(board, operation) {
+        var paste = board && board.floatingPaste;
+
+        if (!paste || paste.isDragging) {
+            return false;
+        }
+
+        if (isImmediateTransformOperation(operation)) {
+            return applyImmediateFloatingPasteTransform(board, operation);
+        }
+
+        if (!global.ImageTransformRegistry ||
+            !global.ImageTransformRegistry.hasOperation(operation)) {
+            return false;
+        }
+
+        if (operation === "warp" && paste.transformOperation !== "warp") {
+            paste.warpPoints = createFloatingPasteWarpGrid(paste.corners);
+        }
+        paste.transformOperation = operation;
+        paste.distortMode = operation === "distort";
+        paste.layer.classList.toggle("paint-board-floating-paste-distort", operation !== "scale");
+        paste.layer.title = operation + " mode";
+        renderFloatingPaste(board);
+        notifyFloatingPasteTransformChange(board, operation);
+        return true;
+    }
+
+    function setFloatingPasteTransformAlgorithm(board, algorithm) {
+        var paste = board && board.floatingPaste;
+        var operation;
+
+        if (!paste || !global.ImageTransformRegistry ||
+            !global.ImageTransformRegistry.hasAlgorithm) {
+            return false;
+        }
+
+        operation = paste.transformOperation || "scale";
+        if (!global.ImageTransformRegistry.hasAlgorithm(operation, algorithm)) {
+            return false;
+        }
+
+        paste.transformAlgorithms[operation] = algorithm;
+        renderFloatingPaste(board);
+        return true;
+    }
+
+    function setFloatingPasteWarpRoundBehavior(board, active) {
+        var paste = board && board.floatingPaste;
+
+        if (!paste) {
+            return false;
+        }
+
+        paste.warpRoundBehavior = !!active;
+        if (paste.transformOperation === "warp") {
+            renderFloatingPaste(board);
+        }
+        return true;
+    }
+
+    function cancelFloatingPasteDistortion(board) {
+        var paste = board && board.floatingPaste;
+
+        if (!paste || paste.isDragging) {
+            return false;
+        }
+
+        paste.corners = createFloatingPasteRectangleCorners(
+            paste.x,
+            paste.y,
+            paste.width,
+            paste.height
+        );
+        paste.warpPoints = createFloatingPasteWarpGrid(paste.corners);
+        setFloatingPasteTransformOperation(board, "scale");
+        return true;
+    }
+
+    function notifyFloatingPasteTransformChange(board, operation) {
+        var detail = {
+            board: board.element,
+            paintBoard: board,
+            operation: operation
+        };
+        var event;
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-board-floating-paste-transform-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-board-floating-paste-transform-change", false, false, detail);
+        }
+
+        global.dispatchEvent(event);
+    }
+
+    function isEditableKeyboardTarget(target) {
+        var tagName = target && target.tagName ? target.tagName.toLowerCase() : "";
+
+        return tagName === "input" ||
+            tagName === "textarea" ||
+            tagName === "select" ||
+            Boolean(target && target.isContentEditable);
+    }
+
+    function isPointInsideBounds(point, bounds) {
+        return !!(point && bounds &&
+            point.x >= bounds.x &&
+            point.y >= bounds.y &&
+            point.x <= bounds.x + bounds.width &&
+            point.y <= bounds.y + bounds.height);
+    }
+
+    function getFloatingPasteHandles(paste) {
+        var size = 8;
+        var half = size / 2;
+        var corners = paste.corners;
+        var left;
+        var top;
+        var centerX;
+        var centerY;
+        var right;
+        var bottom;
+
+        if (paste.transformOperation === "warp") {
+            return paste.warpPoints.map(function(point, index) {
+                return createFloatingPasteHandle("warp-" + index, point.x, point.y, size, half);
+            });
+        }
+
+        if (paste.transformOperation === "rotate" ||
+            paste.transformOperation === "distort" ||
+            paste.transformOperation === "perspective") {
+            return [
+                createFloatingPasteHandle("nw", corners[0].x, corners[0].y, size, half),
+                createFloatingPasteHandle("ne", corners[1].x, corners[1].y, size, half),
+                createFloatingPasteHandle("se", corners[2].x, corners[2].y, size, half),
+                createFloatingPasteHandle("sw", corners[3].x, corners[3].y, size, half)
+            ];
+        }
+
+        if (paste.transformOperation === "skew") {
+            return [
+                createFloatingPasteHandle("n", (corners[0].x + corners[1].x) / 2, (corners[0].y + corners[1].y) / 2, size, half),
+                createFloatingPasteHandle("e", (corners[1].x + corners[2].x) / 2, (corners[1].y + corners[2].y) / 2, size, half),
+                createFloatingPasteHandle("s", (corners[2].x + corners[3].x) / 2, (corners[2].y + corners[3].y) / 2, size, half),
+                createFloatingPasteHandle("w", (corners[3].x + corners[0].x) / 2, (corners[3].y + corners[0].y) / 2, size, half)
+            ];
+        }
+
+        left = paste.x;
+        top = paste.y;
+        centerX = paste.x + (paste.width / 2);
+        centerY = paste.y + (paste.height / 2);
+        right = paste.x + paste.width;
+        bottom = paste.y + paste.height;
+
+        return [
+            createFloatingPasteHandle("nw", left, top, size, half),
+            createFloatingPasteHandle("n", centerX, top, size, half),
+            createFloatingPasteHandle("ne", right, top, size, half),
+            createFloatingPasteHandle("e", right, centerY, size, half),
+            createFloatingPasteHandle("se", right, bottom, size, half),
+            createFloatingPasteHandle("s", centerX, bottom, size, half),
+            createFloatingPasteHandle("sw", left, bottom, size, half),
+            createFloatingPasteHandle("w", left, centerY, size, half)
+        ];
+    }
+
+    function createFloatingPasteHandle(name, x, y, size, half) {
+        return {
+            name: name,
+            left: Math.round(x - half),
+            top: Math.round(y - half),
+            size: size
+        };
+    }
+
+    function getFloatingPasteHandleAtPoint(paste, point) {
+        var handles;
+        var i;
+        var handle;
+
+        if (!paste || !point) {
+            return null;
+        }
+
+        handles = getFloatingPasteHandles(paste);
+        for (i = 0; i < handles.length; i++) {
+            handle = handles[i];
+            if (point.x >= handle.left &&
+                point.x <= handle.left + handle.size &&
+                point.y >= handle.top &&
+                point.y <= handle.top + handle.size) {
+                return handle.name;
+            }
+        }
+
+        return null;
+    }
+
+    function getFloatingPasteCursor(handle) {
+        if (handle && handle.indexOf("warp-") === 0) {
+            return "move";
+        }
+
+        if (handle === "nw" || handle === "se") {
+            return "nwse-resize";
+        }
+
+        if (handle === "ne" || handle === "sw") {
+            return "nesw-resize";
+        }
+
+        if (handle === "n" || handle === "s") {
+            return "ns-resize";
+        }
+
+        if (handle === "e" || handle === "w") {
+            return "ew-resize";
+        }
+
+        if (handle === "move") {
+            return "move";
+        }
+
+        return "default";
+    }
+
+    function commitFloatingPaste(board) {
+        var paste = board && board.floatingPaste;
+
+        if (!paste) {
+            return false;
+        }
+
+        beginUndoableAction(board);
+        markUndoableChange(board);
+        paintWithSelection(board, function() {
+            drawFloatingPasteImage(board.context, paste);
+        });
+        removeFloatingPaste(board);
+        commitUndoableAction(board);
+        return true;
+    }
+
+    function createFloatingPasteRectangleCorners(x, y, width, height) {
+        return [
+            { x: x, y: y },
+            { x: x + width, y: y },
+            { x: x + width, y: y + height },
+            { x: x, y: y + height }
+        ];
+    }
+
+    function cloneFloatingPasteCorners(corners) {
+        return corners.map(function(corner) {
+            return {
+                x: corner.x,
+                y: corner.y
+            };
+        });
+    }
+
+    function getFloatingPasteCornerIndex(handle) {
+        var index = {
+            nw: 0,
+            ne: 1,
+            se: 2,
+            sw: 3
+        }[handle];
+
+        return typeof index === "number" ? index : -1;
+    }
+
+    function getFloatingPasteWarpPointIndex(handle) {
+        var match = /^warp-(\d+)$/.exec(handle || "");
+        var index = match ? Number(match[1]) : -1;
+
+        return index >= 0 && index < 16 ? index : -1;
+    }
+
+    function updateFloatingPasteBounds(paste) {
+        var xs = paste.corners.map(function(corner) {
+            return corner.x;
+        });
+        var ys = paste.corners.map(function(corner) {
+            return corner.y;
+        });
+        var right;
+        var bottom;
+
+        paste.x = Math.min.apply(Math, xs);
+        paste.y = Math.min.apply(Math, ys);
+        right = Math.max.apply(Math, xs);
+        bottom = Math.max.apply(Math, ys);
+        paste.width = Math.max(1, right - paste.x);
+        paste.height = Math.max(1, bottom - paste.y);
+    }
+
+    function updateFloatingPasteBoundsFromPoints(paste, points) {
+        var xs = points.map(function(point) {
+            return point.x;
+        });
+        var ys = points.map(function(point) {
+            return point.y;
+        });
+
+        paste.x = Math.min.apply(Math, xs);
+        paste.y = Math.min.apply(Math, ys);
+        paste.width = Math.max(1, Math.max.apply(Math, xs) - paste.x);
+        paste.height = Math.max(1, Math.max.apply(Math, ys) - paste.y);
+    }
+
+    function getCornersCenter(corners) {
+        var total = corners.reduce(function(result, corner) {
+            result.x += corner.x;
+            result.y += corner.y;
+            return result;
+        }, { x: 0, y: 0 });
+
+        return {
+            x: total.x / corners.length,
+            y: total.y / corners.length
+        };
+    }
+
+    function scaleFloatingPasteCorners(corners, fromX, fromY, fromWidth, fromHeight, toX, toY, toWidth, toHeight) {
+        var safeWidth = fromWidth || 1;
+        var safeHeight = fromHeight || 1;
+
+        return corners.map(function(corner) {
+            return {
+                x: toX + (((corner.x - fromX) / safeWidth) * toWidth),
+                y: toY + (((corner.y - fromY) / safeHeight) * toHeight)
+            };
+        });
+    }
+
+    function createFloatingPasteWarpGrid(corners) {
+        var points = [];
+        var row;
+        var column;
+        var u;
+        var v;
+
+        for (row = 0; row < 4; row += 1) {
+            v = row / 3;
+            for (column = 0; column < 4; column += 1) {
+                u = column / 3;
+                points.push({
+                    x: lerpNumber(
+                        lerpNumber(corners[0].x, corners[1].x, u),
+                        lerpNumber(corners[3].x, corners[2].x, u),
+                        v
+                    ),
+                    y: lerpNumber(
+                        lerpNumber(corners[0].y, corners[1].y, u),
+                        lerpNumber(corners[3].y, corners[2].y, u),
+                        v
+                    )
+                });
+            }
+        }
+        return points;
+    }
+
+    function syncFloatingPasteCornersFromWarp(paste) {
+        paste.corners = [
+            paste.warpPoints[0],
+            paste.warpPoints[3],
+            paste.warpPoints[15],
+            paste.warpPoints[12]
+        ].map(function(point) {
+            return {
+                x: point.x,
+                y: point.y
+            };
+        });
+    }
+
+    function lerpNumber(first, second, amount) {
+        return first + ((second - first) * amount);
+    }
+
+    function traceFloatingPasteOutline(context, corners) {
+        context.beginPath();
+        context.moveTo(Math.round(corners[0].x) + 0.5, Math.round(corners[0].y) + 0.5);
+        context.lineTo(Math.round(corners[1].x) + 0.5, Math.round(corners[1].y) + 0.5);
+        context.lineTo(Math.round(corners[2].x) + 0.5, Math.round(corners[2].y) + 0.5);
+        context.lineTo(Math.round(corners[3].x) + 0.5, Math.round(corners[3].y) + 0.5);
+        context.closePath();
+    }
+
+    function drawFloatingPasteWarpGrid(context, points, roundBehavior) {
+        var row;
+        var column;
+
+        if (!points || points.length !== 16) {
+            return;
+        }
+
+        context.save();
+        context.lineWidth = 1;
+        context.strokeStyle = roundBehavior ?
+            "rgba(255, 255, 255, 0.28)" :
+            "rgba(255, 255, 255, 0.65)";
+        context.setLineDash(roundBehavior ? [2, 3] : []);
+        context.beginPath();
+        for (row = 0; row < 4; row += 1) {
+            context.moveTo(points[row * 4].x, points[row * 4].y);
+            for (column = 1; column < 4; column += 1) {
+                context.lineTo(points[(row * 4) + column].x, points[(row * 4) + column].y);
+            }
+        }
+        for (column = 0; column < 4; column += 1) {
+            context.moveTo(points[column].x, points[column].y);
+            for (row = 1; row < 4; row += 1) {
+                context.lineTo(points[(row * 4) + column].x, points[(row * 4) + column].y);
+            }
+        }
+        context.stroke();
+
+        if (roundBehavior) {
+            drawFloatingPasteBezierGrid(context, points);
+        }
+        context.restore();
+    }
+
+    function drawFloatingPasteBezierGrid(context, points) {
+        var line;
+        var step;
+        var point;
+
+        context.strokeStyle = "rgba(255, 255, 255, 0.82)";
+        context.setLineDash([]);
+        context.beginPath();
+        for (line = 0; line < 4; line += 1) {
+            for (step = 0; step <= 24; step += 1) {
+                point = evaluateFloatingPasteBezierPoint(points, step / 24, line / 3);
+                if (step === 0) {
+                    context.moveTo(point.x, point.y);
+                } else {
+                    context.lineTo(point.x, point.y);
+                }
+            }
+        }
+        for (line = 0; line < 4; line += 1) {
+            for (step = 0; step <= 24; step += 1) {
+                point = evaluateFloatingPasteBezierPoint(points, line / 3, step / 24);
+                if (step === 0) {
+                    context.moveTo(point.x, point.y);
+                } else {
+                    context.lineTo(point.x, point.y);
+                }
+            }
+        }
+        context.stroke();
+    }
+
+    function evaluateFloatingPasteBezierPoint(points, u, v) {
+        var inverseU = 1 - u;
+        var inverseV = 1 - v;
+        var basisU = [
+            inverseU * inverseU * inverseU,
+            3 * inverseU * inverseU * u,
+            3 * inverseU * u * u,
+            u * u * u
+        ];
+        var basisV = [
+            inverseV * inverseV * inverseV,
+            3 * inverseV * inverseV * v,
+            3 * inverseV * v * v,
+            v * v * v
+        ];
+        var result = { x: 0, y: 0 };
+        var row;
+        var column;
+        var weight;
+
+        for (row = 0; row < 4; row += 1) {
+            for (column = 0; column < 4; column += 1) {
+                weight = basisU[column] * basisV[row];
+                result.x += points[(row * 4) + column].x * weight;
+                result.y += points[(row * 4) + column].y * weight;
+            }
+        }
+        return result;
+    }
+
+    function drawFloatingPasteImage(context, paste) {
+        var operation = paste.transformOperation || "scale";
+
+        if (global.ImageTransformRegistry && global.ImageTransformRegistry.render) {
+            global.ImageTransformRegistry.render(context, paste.image, paste.corners, {
+                operation: operation,
+                algorithm: paste.transformAlgorithms[operation],
+                warpPoints: paste.warpPoints,
+                roundBehavior: paste.warpRoundBehavior,
+                preview: paste.isDragging
+            });
+            return;
+        }
+
+        context.drawImage(paste.image, paste.x, paste.y, paste.width, paste.height);
+    }
+
+    function isImmediateTransformOperation(operation) {
+        return operation === "rotate-180" ||
+            operation === "rotate-90-cw" ||
+            operation === "rotate-90-ccw" ||
+            operation === "flip-horizontal" ||
+            operation === "flip-vertical";
+    }
+
+    function applyImmediateFloatingPasteTransform(board, operation) {
+        var paste = board && board.floatingPaste;
+        var rendered;
+        var transformed;
+        var transformedContext;
+        var center;
+        var width;
+        var height;
+        var localCorners;
+        var localWarpPoints;
+
+        if (!paste) {
+            return false;
+        }
+
+        width = Math.max(1, Math.ceil(paste.width));
+        height = Math.max(1, Math.ceil(paste.height));
+        rendered = document.createElement("canvas");
+        rendered.width = width;
+        rendered.height = height;
+        localCorners = paste.corners.map(function(corner) {
+            return {
+                x: corner.x - paste.x,
+                y: corner.y - paste.y
+            };
+        });
+        localWarpPoints = paste.warpPoints.map(function(point) {
+            return {
+                x: point.x - paste.x,
+                y: point.y - paste.y
+            };
+        });
+        if (global.ImageTransformRegistry && global.ImageTransformRegistry.render) {
+            global.ImageTransformRegistry.render(rendered.getContext("2d"), paste.image, localCorners, {
+                operation: paste.transformOperation || "scale",
+                algorithm: paste.transformAlgorithms[paste.transformOperation || "scale"],
+                warpPoints: localWarpPoints,
+                roundBehavior: paste.warpRoundBehavior
+            });
+        }
+
+        transformed = document.createElement("canvas");
+        if (operation === "rotate-90-cw" || operation === "rotate-90-ccw") {
+            transformed.width = height;
+            transformed.height = width;
+        } else {
+            transformed.width = width;
+            transformed.height = height;
+        }
+        transformedContext = transformed.getContext("2d");
+
+        if (operation === "rotate-180") {
+            transformedContext.translate(width, height);
+            transformedContext.rotate(Math.PI);
+        } else if (operation === "rotate-90-cw") {
+            transformedContext.translate(height, 0);
+            transformedContext.rotate(Math.PI / 2);
+        } else if (operation === "rotate-90-ccw") {
+            transformedContext.translate(0, width);
+            transformedContext.rotate(-Math.PI / 2);
+        } else if (operation === "flip-horizontal") {
+            transformedContext.translate(width, 0);
+            transformedContext.scale(-1, 1);
+        } else if (operation === "flip-vertical") {
+            transformedContext.translate(0, height);
+            transformedContext.scale(1, -1);
+        }
+        transformedContext.drawImage(rendered, 0, 0);
+
+        center = getCornersCenter(paste.corners);
+        paste.image = transformed;
+        paste.width = transformed.width;
+        paste.height = transformed.height;
+        paste.x = center.x - (paste.width / 2);
+        paste.y = center.y - (paste.height / 2);
+        paste.corners = createFloatingPasteRectangleCorners(paste.x, paste.y, paste.width, paste.height);
+        paste.warpPoints = createFloatingPasteWarpGrid(paste.corners);
+        paste.transformOperation = "scale";
+        paste.distortMode = false;
+        paste.layer.classList.remove("paint-board-floating-paste-distort");
+        renderFloatingPaste(board);
+        notifyFloatingPasteTransformChange(board, "scale");
+        return true;
+    }
+
+    function cancelFloatingPaste(board) {
+        var paste;
+        var metadata;
+        var liftedContext;
+
+        if (!board || !board.floatingPaste) {
+            return false;
+        }
+
+        paste = board.floatingPaste;
+        metadata = paste.metadata;
+        removeFloatingPaste(board, false);
+
+        if (metadata && metadata.liftedSnapshot && metadata.liftedCanvas) {
+            liftedContext = metadata.liftedCanvas.getContext("2d");
+            liftedContext.clearRect(
+                0, 0,
+                metadata.liftedCanvas.width,
+                metadata.liftedCanvas.height
+            );
+            liftedContext.drawImage(metadata.liftedSnapshot, 0, 0);
+            board.pendingUndoSnapshot = null;
+            board.actionHasChanges = false;
+        }
+
+        if (metadata &&
+            metadata.createdLayerId &&
+            board.removeLayer) {
+            board.removeLayer(metadata.createdLayerId);
+            if (metadata.previousActiveLayerId &&
+                board.setLayerSelection) {
+                board.setLayerSelection(
+                    metadata.previousSelectedLayerIds || [],
+                    metadata.previousActiveLayerId
+                );
+            }
+        }
+
+        notifyFloatingPasteChange(board, false);
+        return true;
+    }
+
+    function removeFloatingPaste(board, suppressNotification) {
+        var paste = board && board.floatingPaste;
+
+        if (!paste) {
+            return;
+        }
+
+        paste.handlesLayer.removeEventListener("pointerdown", paste.pointerDown);
+        paste.handlesLayer.removeEventListener("pointermove", paste.pointerHover);
+        paste.handlesLayer.removeEventListener("dblclick", paste.doubleClick);
+        document.removeEventListener("pointermove", paste.pointerMove, true);
+        document.removeEventListener("pointerup", paste.pointerUp, true);
+        document.removeEventListener("pointercancel", paste.pointerUp, true);
+        document.removeEventListener("keydown", paste.keyDown);
+
+        if (paste.layer.parentNode) {
+            paste.layer.parentNode.removeChild(paste.layer);
+        }
+
+        if (paste.handlesLayer.parentNode) {
+            paste.handlesLayer.parentNode.removeChild(paste.handlesLayer);
+        }
+
+        if (board.element && board.element.classList) {
+            board.element.classList.remove("paint-board-has-floating-paste");
+        }
+
+        if (paste.image && typeof paste.image.close === "function") {
+            paste.image.close();
+        }
+
+        board.floatingPaste = null;
+        if (!suppressNotification) {
+            notifyFloatingPasteChange(board, false);
+        }
+    }
+
+    function notifyFloatingPasteChange(board, active) {
+        var detail = {
+            board: board.element,
+            paintBoard: board,
+            active: !!active
+        };
+        var event;
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-board-floating-paste-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-board-floating-paste-change", false, false, detail);
+        }
+
+        global.dispatchEvent(event);
+    }
+
+    function notifyCropSessionChange(board, active) {
+        var crop = board && board.cropSession;
+        var detail = {
+            board: board && board.element,
+            paintBoard: board || null,
+            active: !!active
+        };
+        var event;
+
+        if (crop) {
+            detail.x = crop.x;
+            detail.y = crop.y;
+            detail.width = crop.width;
+            detail.height = crop.height;
+        }
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-board-crop-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-board-crop-change", false, false, detail);
+        }
+
+        global.dispatchEvent(event);
+    }
+
+    // ------------------------------------------------------------------
+    // Crop Board tool
+    //
+    // Shows an interactive crop rectangle (8 scale-style handles plus a
+    // marching-ants outline) on a dedicated overlay that can extend beyond the
+    // official board area, exactly like the floating paste handles. Pressing
+    // Enter applies the crop, resizing the board to the selected rectangle and
+    // shifting every layer's pixels accordingly. The rectangle may be larger,
+    // smaller or partly outside the old board, so the result can grow, shrink or
+    // cut the old board.
+    // ------------------------------------------------------------------
+
+    function startCropSession(board) {
+        var cropSession;
+
+        if (!board) {
+            return false;
+        }
+
+        cancelFloatingPaste(board);
+        clearSelection(board);
+        cancelCropSession(board);
+
+        clearTempSquare(board);
+        board.tempLayerElement.classList.add("paint-board-temp-layer-crop");
+        board.tempLayerElement.style.cursor = "default";
+        board.tempLayerElement.title = "Crop Board: drag the handles, press Enter to apply or Escape to cancel.";
+        if (board.element && board.element.classList) {
+            board.element.classList.add("paint-board-has-crop");
+        }
+
+        cropSession = {
+            overlay: board.tempLayerElement,
+            x: 0,
+            y: 0,
+            width: board.width,
+            height: board.height,
+            isDragging: false,
+            dragAction: null,
+            resizeHandle: null,
+            pointerId: null,
+            startX: 0,
+            startY: 0,
+            startWidth: 0,
+            startHeight: 0,
+            startPointerX: 0,
+            startPointerY: 0,
+            lastPointerPoint: null,
+            modifierState: {
+                shiftKey: false
+            },
+            squareAspectRatioStoredSize: null,
+            pointerDown: null,
+            pointerMove: null,
+            pointerUp: null,
+            pointerHover: null,
+            keyChange: null,
+            zoomChange: null
+        };
+
+        cropSession.pointerDown = function(event) {
+            startCropDrag(board, event);
+        };
+        cropSession.pointerMove = function(event) {
+            moveCrop(board, event);
+        };
+        cropSession.pointerUp = function(event) {
+            stopCropDrag(board, event);
+        };
+        cropSession.pointerHover = function(event) {
+            updateCropCursor(board, event);
+        };
+        cropSession.keyChange = function(event) {
+            handleCropKeyChange(board, event);
+        };
+        cropSession.zoomChange = function(event) {
+            if (event.detail && event.detail.board === board.element) {
+                renderCropSession(board);
+            }
+        };
+
+        board.cropSession = cropSession;
+        cropSession.overlay.addEventListener("pointermove", cropSession.pointerHover);
+        document.addEventListener("pointerdown", cropSession.pointerDown, true);
+        document.addEventListener("pointermove", cropSession.pointerMove, true);
+        document.addEventListener("pointerup", cropSession.pointerUp, true);
+        document.addEventListener("pointercancel", cropSession.pointerUp, true);
+        document.addEventListener("keydown", cropSession.keyChange);
+        document.addEventListener("keyup", cropSession.keyChange);
+        global.addEventListener("paint-board-zoom-change", cropSession.zoomChange);
+        if (isCropSquareAspectRatioEnabled()) {
+            applyCropSquareAspectRatioToSession(cropSession, true);
+        }
+        renderCropSession(board);
+        notifyCropSessionChange(board, true);
+        return true;
+    }
+
+    function renderCropSession(board) {
+        var crop = board && board.cropSession;
+
+        if (!crop) {
+            return;
+        }
+
+        crop.overlay.innerHTML = getCropHandlesSvg(board, crop);
+        notifyCropSessionChange(board, true);
+        return true;
+    }
+
+    function getCropHandlesSvg(board, crop) {
+        var corners = [
+            { x: crop.x, y: crop.y },
+            { x: crop.x + crop.width, y: crop.y },
+            { x: crop.x + crop.width, y: crop.y + crop.height },
+            { x: crop.x, y: crop.y + crop.height }
+        ];
+        var outlinePoints;
+        var handles;
+        var markup;
+        var i;
+
+        outlinePoints = corners.map(function(corner) {
+            return escapeHtml(corner.x) + "," + escapeHtml(corner.y);
+        }).join(" ");
+
+        handles = getCropHandles(crop, board);
+
+        markup = "<svg class=\"paint-board-crop-svg\" xmlns=\"http://www.w3.org/2000/svg\">";
+
+        if (isCropShieldBlack50Enabled()) {
+            markup += getCropShieldSvg(board, crop);
+        }
+
+        markup += "<polygon class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" points=\"" + outlinePoints + "\"></polygon>" +
+            "<polygon class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" points=\"" + outlinePoints + "\"></polygon>";
+
+        if (isCropRuleOfThirdsEnabled()) {
+            markup += getCropRuleOfThirdsSvg(crop);
+        }
+
+        if (crop.isDragging && crop.dragAction === "resize") {
+            markup += getCropGeometryIndicatorSvg(crop, board);
+        }
+
+        for (i = 0; i < handles.length; i++) {
+            markup += "<rect class=\"paint-board-crop-handle\" x=\"" + escapeHtml(handles[i].left) +
+                "\" y=\"" + escapeHtml(handles[i].top) +
+                "\" width=\"" + escapeHtml(handles[i].size) +
+                "\" height=\"" + escapeHtml(handles[i].size) + "\"></rect>";
+        }
+
+        markup += "</svg>";
+        return markup;
+    }
+
+    function getCropShieldSvg(board, crop) {
+        var boardWidth = Math.max(1, board && board.width ? board.width : 1);
+        var boardHeight = Math.max(1, board && board.height ? board.height : 1);
+        var cropRight = crop.x + crop.width;
+        var cropBottom = crop.y + crop.height;
+        var path = "M0 0H" + boardWidth + "V" + boardHeight + "H0Z" +
+            "M" + crop.x + " " + crop.y +
+            "H" + cropRight +
+            "V" + cropBottom +
+            "H" + crop.x + "Z";
+
+        return "<path class=\"paint-board-crop-shield\" fill-rule=\"evenodd\" d=\"" + escapeHtml(path) + "\"></path>";
+    }
+
+    function getCropRuleOfThirdsSvg(crop) {
+        var left = crop.x;
+        var top = crop.y;
+        var right = crop.x + crop.width;
+        var bottom = crop.y + crop.height;
+        var firstThirdX = crop.x + (crop.width / 3);
+        var secondThirdX = crop.x + ((crop.width * 2) / 3);
+        var firstThirdY = crop.y + (crop.height / 3);
+        var secondThirdY = crop.y + ((crop.height * 2) / 3);
+
+        return getCropGuideLineSvg(firstThirdX, top, firstThirdX, bottom) +
+            getCropGuideLineSvg(secondThirdX, top, secondThirdX, bottom) +
+            getCropGuideLineSvg(left, firstThirdY, right, firstThirdY) +
+            getCropGuideLineSvg(left, secondThirdY, right, secondThirdY);
+    }
+
+    function getCropGuideLineSvg(x1, y1, x2, y2) {
+        return "<line class=\"paint-board-crop-thirds-guide\" x1=\"" + escapeHtml(x1) +
+            "\" y1=\"" + escapeHtml(y1) +
+            "\" x2=\"" + escapeHtml(x2) +
+            "\" y2=\"" + escapeHtml(y2) + "\"></line>";
+    }
+
+    function getCropGeometryIndicatorSvg(crop, board) {
+        var scale = getBoardScreenPixelScale(board);
+        var text = crop.width + "x" + crop.height;
+        var fontSize = 12 * scale;
+        var paddingX = 6 * scale;
+        var paddingY = 4 * scale;
+        var textWidth = text.length * 7 * scale;
+        var boxWidth = textWidth + (paddingX * 2);
+        var boxHeight = fontSize + (paddingY * 2);
+        var centerX = crop.x + (crop.width / 2);
+        var centerY = crop.y + (crop.height / 2);
+        var left = centerX - (boxWidth / 2);
+        var top = centerY - (boxHeight / 2);
+
+        return "<g class=\"paint-board-crop-geometry-indicator\">" +
+            "<rect x=\"" + escapeHtml(left) +
+            "\" y=\"" + escapeHtml(top) +
+            "\" width=\"" + escapeHtml(boxWidth) +
+            "\" height=\"" + escapeHtml(boxHeight) + "\"></rect>" +
+            "<text x=\"" + escapeHtml(centerX) +
+            "\" y=\"" + escapeHtml(centerY) +
+            "\" font-size=\"" + escapeHtml(fontSize) + "\">" + escapeHtml(text) + "</text>" +
+            "</g>";
+    }
+
+    function getCropHandles(crop, board) {
+        var size = 8 * getBoardScreenPixelScale(board);
+        var half = size / 2;
+        var left = crop.x;
+        var top = crop.y;
+        var centerX = crop.x + (crop.width / 2);
+        var centerY = crop.y + (crop.height / 2);
+        var right = crop.x + crop.width;
+        var bottom = crop.y + crop.height;
+
+        return [
+            createFloatingPasteHandle("nw", left, top, size, half),
+            createFloatingPasteHandle("n", centerX, top, size, half),
+            createFloatingPasteHandle("ne", right, top, size, half),
+            createFloatingPasteHandle("e", right, centerY, size, half),
+            createFloatingPasteHandle("se", right, bottom, size, half),
+            createFloatingPasteHandle("s", centerX, bottom, size, half),
+            createFloatingPasteHandle("sw", left, bottom, size, half),
+            createFloatingPasteHandle("w", left, centerY, size, half)
+        ];
+    }
+
+    function getCropHandleAtPoint(crop, point, board) {
+        var handles;
+        var handle;
+        var i;
+
+        if (!crop || !point) {
+            return null;
+        }
+
+        handles = getCropHandles(crop, board);
+        for (i = 0; i < handles.length; i++) {
+            handle = handles[i];
+            if (point.x >= handle.left &&
+                point.x <= handle.left + handle.size &&
+                point.y >= handle.top &&
+                point.y <= handle.top + handle.size) {
+                return handle.name;
+            }
+        }
+
+        return null;
+    }
+
+    function getBoardScreenPixelScale(board) {
+        var element = board && board.element ? board.element : board;
+        var zoom;
+
+        if (!element || !element.getAttribute) {
+            return 1;
+        }
+
+        zoom = parseFloat(element.getAttribute("data-zoom"));
+
+        if (!zoom || isNaN(zoom)) {
+            return 1;
+        }
+
+        return 1 / zoom;
+    }
+
+    function startCropDrag(board, event) {
+        var crop = board && board.cropSession;
+        var point;
+        var handle;
+
+        if (!crop || !isPrimaryPaintInput(event)) {
+            return;
+        }
+
+        point = getSelectionPointerPosition(board, event);
+        handle = getCropHandleAtPoint(crop, point, board);
+
+        if (!handle && !isPointInsideBounds(point, crop)) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        crop.isDragging = true;
+        crop.dragAction = handle ? "resize" : "move";
+        crop.resizeHandle = handle;
+        crop.pointerId = typeof event.pointerId === "number" ? event.pointerId : null;
+        crop.startX = crop.x;
+        crop.startY = crop.y;
+        crop.startWidth = crop.width;
+        crop.startHeight = crop.height;
+        crop.startPointerX = point.x;
+        crop.startPointerY = point.y;
+        crop.lastPointerPoint = point;
+        crop.modifierState.shiftKey = !!event.shiftKey;
+        crop.overlay.style.cursor = getFloatingPasteCursor(handle || "move");
+        capturePointer(crop.overlay, event.pointerId);
+    }
+
+    function moveCrop(board, event) {
+        var crop = board && board.cropSession;
+        var point;
+
+        if (!crop || !crop.isDragging) {
+            return;
+        }
+
+        if (crop.pointerId !== null && typeof event.pointerId === "number" && event.pointerId !== crop.pointerId) {
+            return;
+        }
+
+        event.preventDefault();
+        point = getSelectionPointerPosition(board, event);
+        crop.lastPointerPoint = point;
+        crop.modifierState.shiftKey = !!event.shiftKey;
+
+        if (crop.dragAction === "resize") {
+            resizeCrop(crop, point, event);
+        } else {
+            crop.x = crop.startX + Math.round(point.x - crop.startPointerX);
+            crop.y = crop.startY + Math.round(point.y - crop.startPointerY);
+        }
+
+        renderCropSession(board);
+    }
+
+    function resizeCrop(crop, point, event) {
+        var handle = crop.resizeHandle;
+        var left = crop.startX;
+        var top = crop.startY;
+        var right = crop.startX + crop.startWidth;
+        var bottom = crop.startY + crop.startHeight;
+        var swap;
+
+        if (handle.indexOf("w") !== -1) {
+            left = point.x;
+        }
+
+        if (handle.indexOf("e") !== -1) {
+            right = point.x;
+        }
+
+        if (handle.indexOf("n") !== -1) {
+            top = point.y;
+        }
+
+        if (handle.indexOf("s") !== -1) {
+            bottom = point.y;
+        }
+
+        if (right < left) {
+            swap = left;
+            left = right;
+            right = swap;
+        }
+
+        if (bottom < top) {
+            swap = top;
+            top = bottom;
+            bottom = swap;
+        }
+
+        if (isCropSquareAspectRatioEnabled() || isCropShiftSquareAspectRatioActive(crop, event)) {
+            resizeCropBoundsToSquare(crop, handle, left, top, right, bottom);
+            return;
+        }
+
+        crop.x = Math.round(left);
+        crop.y = Math.round(top);
+        crop.width = Math.max(1, Math.round(right - left));
+        crop.height = Math.max(1, Math.round(bottom - top));
+    }
+
+    function isCropShiftSquareAspectRatioActive(crop, event) {
+        if (event && typeof event.shiftKey === "boolean") {
+            return !!event.shiftKey;
+        }
+
+        return !!(crop && crop.modifierState && crop.modifierState.shiftKey);
+    }
+
+    function resizeCropBoundsToSquare(crop, handle, left, top, right, bottom) {
+        var hasWest = handle.indexOf("w") !== -1;
+        var hasEast = handle.indexOf("e") !== -1;
+        var hasNorth = handle.indexOf("n") !== -1;
+        var hasSouth = handle.indexOf("s") !== -1;
+        var startRight = crop.startX + crop.startWidth;
+        var startBottom = crop.startY + crop.startHeight;
+        var centerX = crop.startX + (crop.startWidth / 2);
+        var centerY = crop.startY + (crop.startHeight / 2);
+        var size;
+
+        if ((hasWest || hasEast) && (hasNorth || hasSouth)) {
+            size = Math.max(1, Math.max(right - left, bottom - top));
+            left = hasWest ? startRight - size : crop.startX;
+            right = hasWest ? startRight : crop.startX + size;
+            top = hasNorth ? startBottom - size : crop.startY;
+            bottom = hasNorth ? startBottom : crop.startY + size;
+        } else if (hasWest || hasEast) {
+            size = Math.max(1, right - left);
+            left = hasWest ? startRight - size : crop.startX;
+            right = hasWest ? startRight : crop.startX + size;
+            top = centerY - (size / 2);
+            bottom = centerY + (size / 2);
+        } else {
+            size = Math.max(1, bottom - top);
+            left = centerX - (size / 2);
+            right = centerX + (size / 2);
+            top = hasNorth ? startBottom - size : crop.startY;
+            bottom = hasNorth ? startBottom : crop.startY + size;
+        }
+
+        crop.x = Math.round(left);
+        crop.y = Math.round(top);
+        crop.width = Math.max(1, Math.round(right - left));
+        crop.height = Math.max(1, Math.round(bottom - top));
+    }
+
+    function applyCropSquareAspectRatio(board, active) {
+        var crop = board && board.cropSession;
+
+        if (!crop) {
+            return false;
+        }
+
+        applyCropSquareAspectRatioToSession(crop, active);
+        renderCropSession(board);
+        return true;
+    }
+
+    function applyCropSquareAspectRatioToSession(crop, active) {
+        var size;
+
+        if (!crop) {
+            return;
+        }
+
+        if (active) {
+            if (!crop.squareAspectRatioStoredSize) {
+                crop.squareAspectRatioStoredSize = {
+                    width: crop.width,
+                    height: crop.height
+                };
+            }
+
+            size = Math.max(1, Math.min(crop.width, crop.height));
+            crop.width = size;
+            crop.height = size;
+            return;
+        }
+
+        if (crop.squareAspectRatioStoredSize) {
+            crop.width = Math.max(1, Math.round(crop.squareAspectRatioStoredSize.width));
+            crop.height = Math.max(1, Math.round(crop.squareAspectRatioStoredSize.height));
+            crop.squareAspectRatioStoredSize = null;
+        }
+    }
+
+    function isCropSquareAspectRatioEnabled() {
+        return !!(global.App && global.App.memory && global.App.memory.cropSquareAspectRatio);
+    }
+
+    function isCropRuleOfThirdsEnabled() {
+        return !!(global.App && global.App.memory && global.App.memory.cropRuleOfThirds);
+    }
+
+    function isCropShieldBlack50Enabled() {
+        return !!(global.App && global.App.memory && global.App.memory.cropShieldBlack50);
+    }
+
+    function stopCropDrag(board, event) {
+        var crop = board && board.cropSession;
+
+        if (!crop || !crop.isDragging) {
+            return;
+        }
+
+        if (crop.pointerId !== null && event && typeof event.pointerId === "number" && event.pointerId !== crop.pointerId) {
+            return;
+        }
+
+        crop.isDragging = false;
+        crop.dragAction = null;
+        crop.resizeHandle = null;
+        crop.pointerId = null;
+        renderCropSession(board);
+        if (event) {
+            updateCropCursor(board, event);
+        }
+    }
+
+    function updateCropCursor(board, event) {
+        var crop = board && board.cropSession;
+        var point;
+        var handle;
+
+        if (!crop || crop.isDragging) {
+            return;
+        }
+
+        point = getSelectionPointerPosition(board, event);
+        handle = getCropHandleAtPoint(crop, point, board);
+        crop.overlay.style.cursor = getFloatingPasteCursor(handle || (isPointInsideBounds(point, crop) ? "move" : null));
+    }
+
+    function handleCropKeyChange(board, event) {
+        var crop = board && board.cropSession;
+
+        if (!crop || isEditableKeyboardTarget(event.target)) {
+            return;
+        }
+
+        if (event.key === "Shift") {
+            crop.modifierState.shiftKey = event.type !== "keyup";
+            if (crop.isDragging && crop.dragAction === "resize" && crop.lastPointerPoint) {
+                resizeCrop(crop, crop.lastPointerPoint, null);
+                renderCropSession(board);
+            }
+            return;
+        }
+
+        if (event.key === "Enter") {
+            event.preventDefault();
+            commitCropSession(board);
+            return;
+        }
+
+        if (event.key === "Escape") {
+            event.preventDefault();
+            cancelCropSession(board);
+        }
+    }
+
+    function commitCropSession(board) {
+        var crop = board && board.cropSession;
+        var cropX;
+        var cropY;
+        var width;
+        var height;
+
+        if (!crop) {
+            return false;
+        }
+
+        cropX = crop.x;
+        cropY = crop.y;
+        width = crop.width;
+        height = crop.height;
+
+        // Remove the interactive overlay before resizing so it is not affected by
+        // the new board dimensions.
+        removeCropSession(board);
+
+        // The crop changes the board dimensions and every layer at once, which the
+        // single-layer snapshot undo cannot represent faithfully, so (like the
+        // resizeTo API) it is applied directly without an undo step.
+        if (!cropBoardTo(board, cropX, cropY, width, height)) {
+            return false;
+        }
+        notifyContentChange(board);
+        return true;
+    }
+
+    function cancelCropSession(board) {
+        if (!board || !board.cropSession) {
+            return false;
+        }
+
+        removeCropSession(board);
+        return true;
+    }
+
+    function removeCropSession(board) {
+        var crop = board && board.cropSession;
+
+        if (!crop) {
+            return;
+        }
+
+        crop.overlay.removeEventListener("pointermove", crop.pointerHover);
+        document.removeEventListener("pointerdown", crop.pointerDown, true);
+        document.removeEventListener("pointermove", crop.pointerMove, true);
+        document.removeEventListener("pointerup", crop.pointerUp, true);
+        document.removeEventListener("pointercancel", crop.pointerUp, true);
+        document.removeEventListener("keydown", crop.keyChange);
+        document.removeEventListener("keyup", crop.keyChange);
+        global.removeEventListener("paint-board-zoom-change", crop.zoomChange);
+
+        crop.overlay.innerHTML = "";
+        crop.overlay.title = "";
+        crop.overlay.style.cursor = "";
+        crop.overlay.classList.remove("paint-board-temp-layer-crop");
+
+        if (board.element && board.element.classList) {
+            board.element.classList.remove("paint-board-has-crop");
+        }
+
+        board.cropSession = null;
+        notifyCropSessionChange(board, false);
+    }
+
     function getCurrentPaintColor(board) {
+        var crazyColor = getCrazyPaintColor(board);
+
+        if (crazyColor) {
+            return crazyColor;
+        }
+
         if (global.App && global.App.memory && global.App.memory.currentColor) {
             return global.App.memory.currentColor;
         }
 
         return board.paintColor;
+    }
+
+    function getCurrentPreviewPaintColor(board) {
+        if (global.App && global.App.memory && global.App.memory.currentColor) {
+            return global.App.memory.currentColor;
+        }
+
+        return board.paintColor;
+    }
+
+    function getCrazyPaintColor(board) {
+        var algorithm;
+        var colorPickerApi;
+        var color = null;
+
+        if (!global.App || !global.App.memory || !global.App.memory.rainbowCrazyMode) {
+            return null;
+        }
+
+        algorithm = global.App.memory.rainbowCrazyAlgorithm || "random";
+
+        if (algorithm === "random") {
+            return getRandomPaintColor();
+        }
+
+        if (board &&
+                board.crazyPickerPaintColor &&
+                board.crazyPickerPaintColorAlgorithm === algorithm) {
+            return board.crazyPickerPaintColor;
+        }
+
+        colorPickerApi = global.SimpleColorPickerApi ||
+            (global.AppOpenWindows && global.AppOpenWindows.getSimpleColorPickerApi && global.AppOpenWindows.getSimpleColorPickerApi());
+
+        if (algorithm === "picker-vertical" && colorPickerApi && colorPickerApi.getNextColorDown) {
+            color = colorPickerApi.getNextColorDown({
+                jump: !!global.App.memory.rainbowCrazyJump,
+                loop: !!global.App.memory.rainbowCrazyLoop
+            });
+        }
+
+        if (algorithm === "picker-horizontal" && colorPickerApi && colorPickerApi.getNextColorRight) {
+            color = colorPickerApi.getNextColorRight({
+                jump: !!global.App.memory.rainbowCrazyJump,
+                loop: !!global.App.memory.rainbowCrazyLoop
+            });
+        }
+
+        if (color && global.AppOpenWindows && typeof global.AppOpenWindows.setActiveColor === "function") {
+            global.AppOpenWindows.setActiveColor(color);
+        }
+
+        if (board && color) {
+            board.crazyPickerPaintColor = color;
+            board.crazyPickerPaintColorAlgorithm = algorithm;
+            global.setTimeout(function() {
+                if (board.crazyPickerPaintColor === color && board.crazyPickerPaintColorAlgorithm === algorithm) {
+                    board.crazyPickerPaintColor = null;
+                    board.crazyPickerPaintColorAlgorithm = null;
+                }
+            }, 0);
+        }
+
+        return color;
+    }
+
+    function getRandomPaintColor() {
+        var value = Math.floor(Math.random() * 16777216).toString(16);
+
+        while (value.length < 6) {
+            value = "0" + value;
+        }
+
+        return "#" + value;
     }
 
     function getCurrentBrushSize(board) {
@@ -2420,6 +8247,22 @@
         }
 
         return board.brushSize;
+    }
+
+    function getCurrentShapeStrokeWidth(board) {
+        var lineDesign = getCurrentStoredLineDesign();
+        var designWeight = lineDesign ? Number(lineDesign.weight) : NaN;
+        var lineWidth = global.App && global.App.memory ? Number(global.App.memory.currentLineWidth) : NaN;
+
+        if (!isNaN(designWeight)) {
+            return Math.max(1, designWeight);
+        }
+
+        if (!isNaN(lineWidth)) {
+            return Math.max(1, lineWidth);
+        }
+
+        return Math.max(1, getCurrentBrushSize(board));
     }
 
     function getCurrentBrushStroke() {
@@ -2558,18 +8401,56 @@
         return data;
     }
 
-    function destroy(board, paintHandlers, clearPreviewOnPaintToolChange) {
+    function bindCanvasPaintHandlers(canvas, paintHandlers, supportsPointerEvents, bind) {
+        var method = bind ? "addEventListener" : "removeEventListener";
+
+        if (!canvas || !paintHandlers) {
+            return;
+        }
+
+        if (supportsPointerEvents) {
+            canvas[method]("pointerdown", paintHandlers.startPainting);
+            canvas[method]("dblclick", paintHandlers.finishPolygonalSelectionFromEvent);
+            canvas[method]("pointerenter", paintHandlers.rememberHoverGuidePointer);
+            canvas[method]("pointermove", paintHandlers.continuePainting);
+            canvas[method]("pointerleave", paintHandlers.leaveCanvas);
+        } else {
+            canvas[method]("mousedown", paintHandlers.startPainting);
+            canvas[method]("dblclick", paintHandlers.finishPolygonalSelectionFromEvent);
+            canvas[method]("mouseenter", paintHandlers.rememberHoverGuidePointer);
+            canvas[method]("mousemove", paintHandlers.continuePainting);
+            canvas[method]("mouseleave", paintHandlers.leaveCanvas);
+        }
+    }
+
+    function rebindCanvasPaintHandlers(previousCanvas, nextCanvas, paintHandlers, supportsPointerEvents) {
+        if (!paintHandlers || previousCanvas === nextCanvas) {
+            return;
+        }
+
+        bindCanvasPaintHandlers(previousCanvas, paintHandlers, supportsPointerEvents, false);
+        bindCanvasPaintHandlers(nextCanvas, paintHandlers, supportsPointerEvents, true);
+    }
+
+    function destroy(board, paintHandlers, paintToolChangeHandlers) {
+        cancelFloatingPaste(board);
+        cancelCropSession(board);
+
         if (paintHandlers && paintHandlers.supportsPointerEvents) {
-            board.canvas.removeEventListener("pointerdown", paintHandlers.startPainting);
-            board.canvas.removeEventListener("pointermove", paintHandlers.continuePainting);
+            bindCanvasPaintHandlers(board.canvas, paintHandlers, true, false);
+            if (paintHandlers.container) {
+                paintHandlers.container.removeEventListener("pointerdown", paintHandlers.startPaintingFromOutside);
+            }
+            document.removeEventListener("pointermove", paintHandlers.continuePainting, true);
             document.removeEventListener("pointerup", paintHandlers.endPainting, true);
             document.removeEventListener("pointercancel", paintHandlers.endPainting, true);
-            board.canvas.removeEventListener("pointerleave", paintHandlers.leaveCanvas);
         } else if (paintHandlers) {
-            board.canvas.removeEventListener("mousedown", paintHandlers.startPainting);
-            board.canvas.removeEventListener("mousemove", paintHandlers.continuePainting);
+            bindCanvasPaintHandlers(board.canvas, paintHandlers, false, false);
+            if (paintHandlers.container) {
+                paintHandlers.container.removeEventListener("mousedown", paintHandlers.startPaintingFromOutside);
+            }
+            document.removeEventListener("mousemove", paintHandlers.continuePainting, true);
             document.removeEventListener("mouseup", paintHandlers.endPainting, true);
-            board.canvas.removeEventListener("mouseleave", paintHandlers.leaveCanvas);
         }
 
         if (paintHandlers && paintHandlers.updatePreviewModifier) {
@@ -2577,7 +8458,19 @@
             document.removeEventListener("keyup", paintHandlers.updatePreviewModifier);
         }
 
-        global.removeEventListener("paint-tools-change", clearPreviewOnPaintToolChange);
+        if (paintHandlers && paintHandlers.clearHoverGuideOnBlur) {
+            global.removeEventListener("blur", paintHandlers.clearHoverGuideOnBlur);
+        }
+
+        if (paintHandlers && paintHandlers.refreshSelectionOnZoomChange) {
+            global.removeEventListener("paint-board-zoom-change", paintHandlers.refreshSelectionOnZoomChange);
+        }
+
+        if (paintToolChangeHandlers) {
+            global.removeEventListener("paint-tools-change", paintToolChangeHandlers.clearPreviewOnPaintToolChange);
+            global.removeEventListener("paint-tools-change", paintToolChangeHandlers.clearSelectionDraftOnToolChange);
+            global.removeEventListener("paint-selection-tool-change", paintToolChangeHandlers.clearSelectionDraftOnSelectionToolChange);
+        }
 
         if (board.rules && board.rules.element && board.rules.element.parentNode) {
             board.rules.element.parentNode.removeChild(board.rules.element);

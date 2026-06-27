@@ -43,6 +43,7 @@
         resizeGeometryIndicator: true,
         cornerRadius: 0,
         topBarGradient: null,
+        titleBarIcon: false,
         toolsRow: false,
         toolsFooter: false,
         contentCentered: true,
@@ -170,6 +171,8 @@
             '<div class="wm-bottom-right" data-wm-resize="se"></div>'
         ].join("");
 
+        applyTitleBarIcon(element, config.titleBarIcon);
+
         applyTopBarGradient(element, config.topBarGradient);
 
         currentWindow = {
@@ -282,6 +285,7 @@
         var topLeft;
         var top;
         var topRight;
+        var title;
 
         if (!topBarGradient || !topBarGradient.a || !topBarGradient.b) {
             return;
@@ -289,13 +293,24 @@
 
         colorA = topBarGradient.a;
         colorB = topBarGradient.b;
-        orientation = String(topBarGradient.orientation || topBarGradient.orientacion || "horizontal").toLowerCase();
+        orientation = String(topBarGradient.orientation || "horizontal").toLowerCase();
         topLeft = element.querySelector(".wm-top-left");
         top = element.querySelector(".wm-top");
         topRight = element.querySelector(".wm-top-right");
+        title = element.querySelector(".wm-title");
 
         if (!topLeft || !top || !topRight) {
             return;
+        }
+
+        if (title) {
+            if (isDarkColor(colorA)) {
+                title.style.color = "#ffffff";
+                title.style.textShadow = "0 1px #000000";
+            } else {
+                title.style.color = "#111111";
+                title.style.textShadow = "none";
+            }
         }
 
         if (orientation === "vertical") {
@@ -310,6 +325,80 @@
         topLeft.style.background = colorA;
         top.style.background = gradient;
         topRight.style.background = colorB;
+    }
+
+    function applyTitleBarIcon(element, titleBarIcon) {
+        var top = element.querySelector(".wm-top");
+        var title = element.querySelector(".wm-title");
+        var iconSlot;
+        var iconImg;
+
+        if (!top || !title || !titleBarIcon) {
+            return;
+        }
+
+        iconSlot = document.createElement("div");
+        iconSlot.className = "wm-title-icon";
+
+        if (titleBarIcon === true) {
+            iconSlot.className += " wm-title-icon-placeholder";
+            iconSlot.setAttribute("title", "Window icon pending");
+            top.insertBefore(iconSlot, title);
+            return;
+        }
+
+        iconImg = document.createElement("img");
+        iconImg.className = "wm-title-icon-image";
+
+        if (typeof titleBarIcon === "string") {
+            iconImg.src = titleBarIcon;
+            iconImg.alt = "Window icon";
+            iconSlot.appendChild(iconImg);
+            top.insertBefore(iconSlot, title);
+            return;
+        }
+
+        if (titleBarIcon && typeof titleBarIcon === "object" && (titleBarIcon.src || titleBarIcon.imageSrc)) {
+            iconImg.src = titleBarIcon.src || titleBarIcon.imageSrc;
+            iconImg.alt = titleBarIcon.alt || "Window icon";
+            iconSlot.appendChild(iconImg);
+            top.insertBefore(iconSlot, title);
+            return;
+        }
+
+        iconSlot.className += " wm-title-icon-placeholder";
+        iconSlot.setAttribute("title", "Window icon pending");
+        top.insertBefore(iconSlot, title);
+    }
+
+    function isDarkColor(color) {
+        var value = String(color || "").trim();
+        var match;
+        var red;
+        var green;
+        var blue;
+        var luminance;
+
+        if (/^#[0-9a-f]{3}$/i.test(value)) {
+            red = parseInt(value.charAt(1) + value.charAt(1), 16);
+            green = parseInt(value.charAt(2) + value.charAt(2), 16);
+            blue = parseInt(value.charAt(3) + value.charAt(3), 16);
+        } else if (/^#[0-9a-f]{6}$/i.test(value)) {
+            red = parseInt(value.slice(1, 3), 16);
+            green = parseInt(value.slice(3, 5), 16);
+            blue = parseInt(value.slice(5, 7), 16);
+        } else {
+            match = value.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+            if (!match) {
+                return false;
+            }
+            red = Math.min(255, parseInt(match[1], 10));
+            green = Math.min(255, parseInt(match[2], 10));
+            blue = Math.min(255, parseInt(match[3], 10));
+        }
+
+        luminance = (red * 299 + green * 587 + blue * 114) / 1000;
+        return luminance < 128;
     }
 
     function getWindowsByGroupName(windowGroupName) {
@@ -393,6 +482,9 @@
         var minimizeButton = element.querySelector(".wm-btn-minimize");
         var maximizeButton = element.querySelector(".wm-btn-maximize");
         var resizeHandles = element.querySelectorAll("[data-wm-resize]");
+        var lastTopBarPressTime = 0;
+        var lastTopBarPressX = 0;
+        var lastTopBarPressY = 0;
 
         element.addEventListener(getStartEventName(), function() {
             bringToFront(currentWindow.id);
@@ -428,20 +520,51 @@
                 event.stopPropagation();
                 currentWindow.maximize();
             });
+        }
 
-            topBar.addEventListener("dblclick", function(event) {
+        if (config.minimizable || config.maximizable) {
+            topBar.addEventListener(getStartEventName(), function(event) {
+                var now = Date.now();
+                var isDoublePress = now - lastTopBarPressTime <= 400 &&
+                    Math.abs(event.clientX - lastTopBarPressX) <= 6 &&
+                    Math.abs(event.clientY - lastTopBarPressY) <= 6;
+
                 if (event.target.closest(".wm-actions")) {
+                    lastTopBarPressTime = 0;
                     return;
                 }
 
+                if (!isPrimaryInputStart(event)) {
+                    return;
+                }
+
+                lastTopBarPressTime = now;
+                lastTopBarPressX = event.clientX;
+                lastTopBarPressY = event.clientY;
+
+                if (!isDoublePress) {
+                    return;
+                }
+
+                lastTopBarPressTime = 0;
                 event.preventDefault();
+
+                if (config.minimizable) {
+                    if (currentWindow.minimized) {
+                        currentWindow.restore();
+                    } else {
+                        currentWindow.minimize();
+                    }
+                    return;
+                }
+
                 currentWindow.maximize();
             });
         }
 
         if (config.movable) {
             topBar.addEventListener(getStartEventName(), function(event) {
-                if (event.target.closest(".wm-actions")) {
+                if (event.defaultPrevented || event.target.closest(".wm-actions")) {
                     return;
                 }
 

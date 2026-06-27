@@ -1,0 +1,64 @@
+.selection-behabiour {
+    margin: 0;
+    padding: 2px 7px 7px;
+    border: 1px solid #a0a0a0;
+}
+
+.selection-behabiour legend {
+    color: #111;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 0 4px;
+}
+
+.selection-behabiour-buttons {
+    display: block;
+}
+
+.selection-behabiour-button.sprite-div,
+.selection-behabiour-button {
+    background-color: #f0f0f0;
+    display: inline-block;
+    background-repeat: no-repeat;
+    border: 0;
+    cursor: pointer;
+    height: 32px;
+    margin: 5px;
+    padding: 0;
+    width: 32px;
+}
+
+.selection-behabiour-button:hover {
+    background-color: #8ff8ff;
+}
+
+.selection-behabiour-button.selected,
+.selection-behabiour-button-selected {
+    outline: 2px solid rgb(23, 147, 255);
+    background-color: #ffffff;
+}
+
+.selection-behabiour-button.selection-behavior-normal {
+    background-position: 0 -128px;
+}
+
+.selection-behabiour-button.selection-behavior-normal:hover {
+    background-position: 0 -160px;
+}
+
+.selection-behabiour-button.selection-behavior-add {
+    background-position: -32px -128px;
+}
+
+.selection-behabiour-button.selection-behavior-add:hover {
+    background-position: -32px -160px;
+}
+
+.selection-behabiour-button.selection-behavior-remove {
+    background-position: -64px -128px;
+}
+
+.selection-behabiour-button.selection-behavior-remove:hover {
+    background-position: -64px -160px;
+}

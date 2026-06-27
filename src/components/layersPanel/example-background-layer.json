@@ -1,0 +1,9 @@
+{
+    "id": "background",
+    "label": "Background",
+    "visible": true,
+    "blocked": true,
+    "order-from-the-bottom": 0,
+    "selected": false,
+    "background": true
+}

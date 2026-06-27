@@ -1,0 +1,242 @@
+.resize-image-dialog {
+    background: #eeeeee;
+    box-sizing: border-box;
+    color: #111111;
+    display: grid;
+    font: 11px Arial, sans-serif;
+    gap: 12px;
+    grid-template-columns: minmax(360px, 1fr) 160px;
+    height: 100%;
+    padding: 11px 4px;
+    width: 100%;
+}
+
+.resize-image-dialog *,
+.resize-image-dialog *::before,
+.resize-image-dialog *::after {
+    box-sizing: border-box;
+}
+
+.resize-image-body {
+    display: grid;
+    min-width: 0;
+}
+
+.resize-image-side {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-width: 0;
+}
+
+.resize-image-form {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+}
+
+.resize-image-fieldset {
+    border: 2px groove #ffffff;
+    margin: 0;
+    min-width: 0;
+    padding: 8px 8px 8px;
+}
+
+.resize-image-fieldset legend {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 0 6px;
+}
+
+.resize-image-fieldset-content {
+    display: grid;
+    gap: 8px;
+    padding-right: 31px;
+    position: relative;
+}
+
+.resize-image-row {
+    align-items: center;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 82px 92px minmax(112px, 1fr);
+}
+
+.resize-image-row-label {
+    text-align: right;
+}
+
+.resize-image-row input,
+.resize-image-row select {
+    background: #ffffff;
+    border: 1px solid #9f9f9f;
+    color: #111111;
+    font: 13px Arial, sans-serif;
+    height: 24px;
+    min-width: 0;
+    padding: 2px 5px;
+}
+
+.resize-image-row input {
+    text-align: right;
+}
+
+.resize-image-chain {
+    background: url("./chained.png") -22px 0 / 44px 48px no-repeat;
+    height: 48px;
+    pointer-events: none;
+    position: absolute;
+    right: 6px;
+    top: 4px;
+    width: 22px;
+}
+
+.resize-image-constrained .resize-image-chain {
+    background-position: 0 0;
+}
+
+.resize-image-check {
+    align-items: center;
+    display: flex;
+    gap: 7px;
+    min-height: 24px;
+    white-space: nowrap;
+}
+
+.resize-image-check input {
+    margin: 0;
+}
+
+.resize-image-resample-legend {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    margin-left: 8px;
+}
+
+.resize-image-resample-legend-item {
+    align-items: center;
+    display: inline-flex;
+    gap: 3px;
+}
+
+.resize-image-resample-legend-swatch {
+    display: inline-block;
+    flex: 0 0 auto;
+    height: 8px;
+    width: 8px;
+}
+
+.resize-image-resample-row {
+    display: grid;
+    font-size: 10px;
+    gap: 7px;
+    line-height: unset;
+}
+
+.resize-image-resample-row .resize-image-check > span {
+    font-size: 11px;
+}
+
+.resize-image-algorithm-radios {
+    display: grid;
+    gap: 1px 6px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-left: 4px;
+}
+
+.resize-image-algorithm-option {
+    align-items: flex-start;
+    display: flex;
+    gap: 5px;
+    line-height: 1.15;
+    min-width: 0;
+}
+
+.resize-image-algorithm-option input {
+    flex: 0 0 auto;
+    margin: 1px 0 0;
+}
+
+.resize-image-algorithm-option span {
+    min-width: 0;
+}
+
+.resize-image-resample-disabled .resize-image-algorithm-option span {
+    color: #777777;
+}
+
+.resize-image-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 2px;
+    width: 96px;
+}
+
+.resize-image-algorithm-description {
+    color: #222222;
+    line-height: 1.25;
+    margin-top: 177px;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0;
+    width: 160px;
+}
+
+.resize-image-algorithm-description-title {
+    font-weight: 700;
+    margin-bottom: 7px;
+}
+
+.resize-image-algorithm-description-text {
+    color: #333333;
+}
+
+.resize-image-algorithm-description-empty {
+    color: #777777;
+}
+
+.resize-image-actions button {
+    background: #ffffff;
+    border: 1px solid #a8a8a8;
+    border-radius: 5px;
+    color: #111111;
+    cursor: default;
+    font: 13px Arial, sans-serif;
+    height: 28px;
+    line-height: 1;
+}
+
+.resize-image-actions button:hover,
+.resize-image-actions button:focus {
+    border-color: #1087d7;
+    outline: 1px solid #1087d7;
+}
+
+.wm-window-resize-image .wm-center {
+    background: #eeeeee;
+}
+
+.wm-window-resize-image .wm-btn-minimize {
+    display: none;
+}
+
+@media (max-width: 560px) {
+    .resize-image-dialog {
+        grid-template-columns: 1fr;
+    }
+
+    .resize-image-actions {
+        flex-direction: row;
+        justify-content: flex-end;
+        width: auto;
+    }
+
+    .resize-image-side {
+        gap: 12px;
+    }
+
+    .resize-image-actions button {
+        min-width: 86px;
+    }
+}

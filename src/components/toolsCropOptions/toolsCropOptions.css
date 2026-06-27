@@ -1,0 +1,149 @@
+.tools-crop-options {
+    align-items: center;
+    border: 1px solid #a0a0a0;
+    display: flex;
+    gap: 6px;
+    margin: 0;
+    min-height: 56px;
+    padding: 2px 7px 7px;
+}
+
+.tools-crop-options legend,
+.tools-crop-options-label,
+.tools-crop-options-value {
+    color: #111;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.tools-crop-options legend {
+    font-size: 10px;
+    padding: 0 4px;
+}
+
+.tools-crop-options-layout {
+    align-items: center;
+    column-gap: 10px;
+    display: grid;
+    grid-template-columns: auto auto auto;
+    row-gap: 4px;
+}
+
+.tools-crop-options-line {
+    align-items: center;
+    display: inline-flex;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.tools-crop-options-pixels {
+    color: #00f;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: bold;
+    grid-column: 1 / span 2;
+    white-space: nowrap;
+}
+
+.tools-crop-options-pixels.OVER-LIMIT {
+    color: #c00;
+}
+
+.tools-crop-options-value {
+    background-color: #fff;
+    border: 1px solid #8b8b8b;
+    display: inline-block;
+    min-width: 78px;
+    padding: 2px 6px;
+    text-align: right;
+}
+
+.tools-crop-options-actions {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+    grid-column: 3;
+    grid-row: 1 / span 2;
+}
+
+.tools-crop-options-fill-modes {
+    align-items: center;
+    column-gap: 6px;
+    display: grid;
+    grid-template-columns: repeat(5, auto);
+    grid-column: 1 / span 2;
+    grid-row: 3;
+}
+
+.tools-crop-options-fill-mode {
+    align-items: center;
+    color: #111;
+    display: inline-flex;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: bold;
+    gap: 3px;
+    white-space: nowrap;
+}
+
+.tools-crop-options-fill-mode input {
+    margin: 0;
+}
+
+.tools-crop-options-checkboxes {
+    align-items: center;
+    column-gap: 10px;
+    display: grid;
+    grid-column: 1 / span 3;
+    grid-row: 4;
+    grid-template-columns: repeat(3, auto);
+}
+
+.tools-crop-options-checkbox {
+    align-items: center;
+    color: #111;
+    display: inline-flex;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: bold;
+    gap: 3px;
+    white-space: nowrap;
+}
+
+.tools-crop-options-checkbox input {
+    margin: 0;
+}
+
+.tools-crop-options-action {
+    background-color: transparent;
+    background-repeat: no-repeat;
+    border: 1px solid #8b8b8b;
+    cursor: pointer;
+    display: block;
+    height: 28px !important;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    margin: 0;
+    outline: none;
+    padding: 0;
+    width: 28px !important;
+}
+
+.tools-crop-options-accept {
+    background-position: -29px 0;
+}
+
+.tools-crop-options-cancel {
+    background-position: -1px -1px;
+}
+
+.tools-crop-options-action:hover {
+    background-color: transparent;
+    border-color: #4d4d4d;
+}
+
+/* .tools-bar */
+.tools-crop-options-action:active {
+    transform: translateY(1px);
+}

@@ -66,6 +66,22 @@
     text-shadow: 0 1px 0 #141719;
 }
 
+.board-rules-pointer-guide {
+    background: #00ff00;
+    display: none;
+    pointer-events: none;
+    position: absolute;
+    z-index: 5;
+}
+
+.board-rules-pointer-guide-x {
+    height: 1px;
+}
+
+.board-rules-pointer-guide-y {
+    width: 1px;
+}
+
 .board-rules-rule-horizontal .board-rules-label {
     top: 3px;
 }

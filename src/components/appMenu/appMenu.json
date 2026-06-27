@@ -1,0 +1,88 @@
+{
+  "menus": [
+    {
+      "label": "File",
+      "items": [
+        { "label": "New...", "action": "newDocument" },
+        { "label": "Quick New (800x600)", "action": "createPaintBoard" },
+        { "label": "Open", "action": "openImage" },
+        { "type": "separator" },
+        { "label": "Save", "action": "saveImage" },
+        { "label": "Download Flatten Image", "action": "downloadFlattenImage" },
+        { "label": "Save As...", "action": "saveImageAs" }
+      ]
+    },
+    {
+      "label": "Edit",
+      "items": [
+        { "label": "Copy", "action": "copyToClipboard" },
+        { "label": "Paste", "action": "pasteFromClipboard" },
+        { "label": "Paste as New Layer", "action": "pasteAsNewLayer" },
+        { "label": "Multi Paste", "action": "openMultiPaste" },
+        { "label": "Fill", "action": "openFillBigColorPicker" },
+        { "label": "Transform", "action": "transformLayer" },
+        { "type": "separator" },
+        { "label": "Clear", "action": "clearSelectionContent", "enabled": false },
+        { "label": "Clear Board", "action": "clearBoard" }
+      ]
+    },
+    {
+      "label": "Image",
+      "items": [
+        { "label": "Image Size", "action": "openResizeImage" },
+        { "label": "Crop", "action": "cropToSelection", "enabled": false }
+      ]
+    },
+    {
+      "label": "Layer",
+      "items": [
+        { "label": "Add", "action": "addLayer" },
+        { "label": "Duplicate", "action": "duplicateLayer" },
+        { "label": "Delete", "action": "deleteLayer" },
+        { "type": "separator" },
+        { "label": "Merge Selected Layers", "action": "mergeSelectedLayers" },
+        { "label": "Merge Visible", "action": "mergeVisibleLayers" },
+        { "label": "Flatten Image", "action": "flattenImage" }
+      ]
+    },
+    {
+      "label": "Select",
+      "items": [
+        { "label": "All", "action": "selectAll" },
+        { "label": "Unselect", "action": "unselect", "enabled": false },
+        { "type": "separator" },
+        { "label": "Fill Selection", "action": "fillSelectionWithFrontColor", "enabled": false },
+        { "label": "Reverse Selection", "action": "reverseSelection", "enabled": false }
+      ]
+    },
+    {
+      "label": "Design",
+      "items": [
+        { "label": "Brush Designer", "action": "openBrushDesigner" },
+        { "label": "Brush Designer 2", "action": "openBrushDesigner2" },
+        { "label": "Lines Designer", "action": "openLinesDesigner" },
+        { "label": "Star Generator", "action": "openStarGenerator" }
+      ]
+    },
+    {
+      "label": "Window",
+      "items": [
+        { "label": "Paint Tools", "action": "openPaintTools" },
+        { "label": "Layers", "action": "openLayers" },
+        { "type": "separator" },
+        { "label": "Color Picker", "action": "openColorPicker" },
+        { "label": "Big Color Picker", "action": "openBigColorPicker" },
+        { "type": "separator" },
+        { "label": "Line Width", "action": "openLineWidthPicker" },
+        { "label": "Brush Width", "action": "openBrushWidthPicker" }
+      ]
+    },
+    {
+      "label": "Help",
+      "align": "right",
+      "items": [
+        { "label": "About", "action": "showAbout" }
+      ]
+    }
+  ]
+}

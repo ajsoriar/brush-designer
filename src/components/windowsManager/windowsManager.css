@@ -34,7 +34,8 @@
 
 .wm-window-minimized {
     height: 28px !important;
-    min-height: 28px;
+    min-height: 28px !important;
+    grid-template-rows: 28px 0 0 0 0 !important;
 }
 
 .wm-window-maximized {
@@ -78,7 +79,7 @@
 .wm-window-minimized .wm-bottom-left,
 .wm-window-minimized .wm-bottom,
 .wm-window-minimized .wm-bottom-right {
-    display: none;
+    display: none !important;
 }
 
 .wm-top-left,
@@ -105,6 +106,27 @@
     min-width: 0;
 }
 
+.wm-title-icon {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 16px;
+    height: 16px;
+    justify-content: center;
+    margin-left: 4px;
+    width: 16px;
+    margin-right: -8px;
+}
+
+.wm-title-icon-placeholder {
+    background: transparent;
+}
+
+.wm-title-icon-image {
+    display: block;
+    height: 16px;
+    width: 16px;
+}
+
 .wm-top-right {
     cursor: nesw-resize;
     grid-column: 3;
@@ -120,6 +142,10 @@
     padding-left: 4px;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.wm-title-context {
+    font-weight: 300;
 }
 
 .wm-actions {
@@ -318,6 +344,18 @@
 
 .wm-window-paint-board .wm-center {
     display: block;
+}
+
+.wm-window-paint-board .wm-top-left,
+.wm-window-paint-board .wm-top,
+.wm-window-paint-board .wm-top-right {
+    transition: filter 120ms ease;
+}
+
+.wm-window-paint-board-inactive .wm-top-left,
+.wm-window-paint-board-inactive .wm-top,
+.wm-window-paint-board-inactive .wm-top-right {
+    filter: grayscale(1);
 }
 
 .paint-board-scroll-area {

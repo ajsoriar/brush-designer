@@ -9,7 +9,10 @@
         height: 278,
         activeColor: "#2c79f5",
         onChange: null,
-        onColorSelected: null
+        onColorSelected: null,
+        onAccept: null,
+        onApply: null,
+        onCancel: null
     };
 
     function extend(target, source) {
@@ -36,6 +39,10 @@
         var hue = document.createElement("canvas");
         var hueCursor = document.createElement("span");
         var readout = document.createElement("div");
+        var actions = document.createElement("div");
+        var acceptButton = document.createElement("button");
+        var applyButton = document.createElement("button");
+        var cancelButton = document.createElement("button");
         var initial = hexToHsv(config.activeColor) || { h: 217, s: 82, v: 96 };
         var picker;
 
@@ -60,6 +67,16 @@
             fieldHtml("HSV", "hsv", false),
             fieldHtml("HSL", "hsl", false)
         ].join("");
+        actions.className = "big-color-picker-actions";
+        acceptButton.type = "button";
+        acceptButton.textContent = "Accept";
+        applyButton.type = "button";
+        applyButton.textContent = "Apply";
+        cancelButton.type = "button";
+        cancelButton.textContent = "Cancel";
+        actions.appendChild(acceptButton);
+        actions.appendChild(applyButton);
+        actions.appendChild(cancelButton);
 
         areaWrap.appendChild(area);
         areaWrap.appendChild(areaCursor);
@@ -68,6 +85,7 @@
         element.appendChild(areaWrap);
         element.appendChild(hueWrap);
         element.appendChild(readout);
+        element.appendChild(actions);
         container.appendChild(element);
 
         picker = {
@@ -102,6 +120,21 @@
         drawHue(picker);
         drawArea(picker);
         bindEvents(picker, config);
+        acceptButton.addEventListener("click", function() {
+            if (typeof config.onAccept === "function") {
+                config.onAccept(picker.activeColor, picker);
+            }
+        });
+        applyButton.addEventListener("click", function() {
+            if (typeof config.onApply === "function") {
+                config.onApply(picker.activeColor, picker);
+            }
+        });
+        cancelButton.addEventListener("click", function() {
+            if (typeof config.onCancel === "function") {
+                config.onCancel(picker);
+            }
+        });
         updateFromHsv(picker, config, true);
 
         return picker;

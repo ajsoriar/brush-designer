@@ -33,17 +33,22 @@
     background-image: url("./btn-selected.png");
 }
 
+.paint-tools-button-crop-board {
+    grid-column: -2 / -1;
+    grid-row: -2 / -1;
+}
+
 .paint-tools-button-line {
-    display: block;
+    display: inline-block;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-right: 3px;
 }
 
 .paint-tools-button-label {
     display: block;
     flex: 0 0 auto;
-    height: 24px;
     max-width: 100%;
     overflow: hidden;
 }
@@ -71,4 +76,64 @@
     max-width: 64px;
     object-fit: contain;
     pointer-events: none;
+}
+
+.paint-tools-selection-grid {
+    align-content: center;
+    display: grid;
+    gap: 1px;
+    grid-template-columns: repeat(2, 32px);
+    grid-template-rows: repeat(2, 32px);
+    justify-content: center;
+    width: 100%;
+}
+
+.paint-tools-selection-button {
+    background-repeat: no-repeat;
+    background-size: auto;
+    cursor: pointer;
+    display: block;
+    height: 32px;
+    width: 32px;
+}
+
+.paint-tools-selection-button-selected {
+    outline: 2px solid rgb(23, 147, 255);
+    outline-offset: -2px;
+}
+
+.selection-laso-tool {
+    background-position: 0 0;
+}
+
+.selection-laso-tool:hover {
+    background-color: #8ff8ff;
+    background-position: -32px 0;
+}
+
+.selection-poligonal-tool {
+    background-position: 0 -32px;
+}
+
+.selection-poligonal-tool:hover {
+    background-color: #8ff8ff;
+    background-position: -32px -32px;
+}
+
+.selection-oval-tool {
+    background-position: 0 -96px;
+}
+
+.selection-oval-tool:hover {
+    background-color: #8ff8ff;
+    background-position: -32px -96px;
+}
+
+.selection-rectangle-tool {
+    background-position: 0 -64px;
+}
+
+.selection-rectangle-tool:hover {
+    background-color: #8ff8ff;
+    background-position: -32px -64px;
 }

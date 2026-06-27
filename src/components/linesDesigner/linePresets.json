@@ -1,0 +1,172 @@
+{
+  "columns": 7,
+  "cellSize": 32,
+  "gap": 8,
+  "padding": 8,
+  "categories": [
+    {
+      "id": "general",
+      "label": "General",
+      "presets": [
+        {
+          "id": "fine-square",
+          "label": "Fine square",
+          "line": { "weight": 2, "cap": "butt", "corner": "miter", "limit": 10, "antialiasing": false, "dashed": false, "arrowStart": "none", "arrowEnd": "none" }
+        },
+        {
+          "id": "medium-round",
+          "label": "Medium round",
+          "line": { "weight": 6, "cap": "round", "corner": "round", "limit": 10, "antialiasing": true, "dashed": false, "arrowStart": "none", "arrowEnd": "none" }
+        },
+        {
+          "id": "heavy-bevel",
+          "label": "Heavy bevel",
+          "line": { "weight": 12, "cap": "square", "corner": "bevel", "limit": 5, "antialiasing": true, "dashed": false, "arrowStart": "none", "arrowEnd": "none" }
+        },
+        {
+          "id": "pixel-hairline",
+          "label": "Pixel hairline",
+          "line": { "weight": 1, "cap": "butt", "corner": "miter", "limit": 10, "antialiasing": false, "dashed": false, "arrowStart": "none", "arrowEnd": "none" }
+        },
+        {
+          "id": "soft-stroke",
+          "label": "Soft stroke",
+          "line": { "weight": 9, "cap": "round", "corner": "round", "limit": 12, "antialiasing": true, "dashed": false, "arrowStart": "none", "arrowEnd": "none" }
+        },
+        {
+          "id": "square-block",
+          "label": "Square block",
+          "line": { "weight": 15, "cap": "butt", "corner": "miter", "limit": 18, "antialiasing": false, "dashed": false, "arrowStart": "none", "arrowEnd": "none" }
+        },
+        {
+          "id": "thin-smooth",
+          "label": "Thin smooth",
+          "line": { "weight": 3, "cap": "round", "corner": "round", "limit": 10, "antialiasing": true, "dashed": false, "arrowStart": "none", "arrowEnd": "none" }
+        }
+      ]
+    },
+    {
+      "id": "arrows",
+      "label": "Arrows",
+      "presets": [
+        {
+          "id": "single-arrow",
+          "label": "Single arrow",
+          "line": { "weight": 5, "cap": "butt", "corner": "miter", "limit": 10, "antialiasing": true, "dashed": false, "arrowStart": "none", "arrowEnd": "triangle", "startScale": 100, "endScale": 120 }
+        },
+        {
+          "id": "double-arrow",
+          "label": "Double arrow",
+          "line": { "weight": 5, "cap": "butt", "corner": "miter", "limit": 10, "antialiasing": true, "dashed": false, "arrowStart": "triangle", "arrowEnd": "triangle", "startScale": 110, "endScale": 110, "arrowLinked": true }
+        },
+        {
+          "id": "bar-end",
+          "label": "Bar end",
+          "line": { "weight": 4, "cap": "butt", "corner": "miter", "limit": 10, "antialiasing": true, "dashed": false, "arrowStart": "none", "arrowEnd": "bar", "startScale": 100, "endScale": 135 }
+        },
+        {
+          "id": "bar-to-arrow",
+          "label": "Bar to arrow",
+          "line": { "weight": 4, "cap": "butt", "corner": "miter", "limit": 10, "antialiasing": true, "dashed": false, "arrowStart": "bar", "arrowEnd": "triangle", "startScale": 130, "endScale": 120 }
+        },
+        {
+          "id": "circle-end",
+          "label": "Circle end",
+          "line": { "weight": 4, "cap": "round", "corner": "round", "limit": 10, "antialiasing": true, "dashed": false, "arrowStart": "none", "arrowEnd": "circle", "startScale": 100, "endScale": 95 }
+        },
+        {
+          "id": "circle-to-arrow",
+          "label": "Circle to arrow",
+          "line": { "weight": 5, "cap": "round", "corner": "round", "limit": 10, "antialiasing": true, "dashed": false, "arrowStart": "circle", "arrowEnd": "triangle", "startScale": 80, "endScale": 120 }
+        },
+        {
+          "id": "heavy-arrow",
+          "label": "Heavy arrow",
+          "line": { "weight": 10, "cap": "butt", "corner": "miter", "limit": 12, "antialiasing": true, "dashed": false, "arrowStart": "none", "arrowEnd": "triangle", "startScale": 100, "endScale": 160 }
+        }
+      ]
+    },
+    {
+      "id": "dashed-lines",
+      "label": "Dashed Lines",
+      "presets": [
+        {
+          "id": "short-dash",
+          "label": "Short dash",
+          "line": { "weight": 4, "cap": "butt", "corner": "miter", "limit": 10, "antialiasing": true, "dashed": true, "dashes": [6, 4, 6, 4, 6, 4], "arrowStart": "none", "arrowEnd": "none" }
+        },
+        {
+          "id": "long-dash",
+          "label": "Long dash",
+          "line": { "weight": 5, "cap": "butt", "corner": "miter", "limit": 10, "antialiasing": true, "dashed": true, "dashes": [18, 8, 18, 8, 18, 8], "arrowStart": "none", "arrowEnd": "none" }
+        },
+        {
+          "id": "round-dot",
+          "label": "Round dot",
+          "line": { "weight": 6, "cap": "round", "corner": "round", "limit": 10, "antialiasing": true, "dashed": true, "dashes": [1, 8, 1, 8, 1, 8], "arrowStart": "none", "arrowEnd": "none" }
+        },
+        {
+          "id": "dash-dot",
+          "label": "Dash dot",
+          "line": { "weight": 4, "cap": "round", "corner": "round", "limit": 10, "antialiasing": true, "dashed": true, "dashes": [14, 6, 2, 6, 14, 6], "arrowStart": "none", "arrowEnd": "none" }
+        },
+        {
+          "id": "pixel-dash",
+          "label": "Pixel dash",
+          "line": { "weight": 3, "cap": "butt", "corner": "miter", "limit": 10, "antialiasing": false, "dashed": true, "dashes": [8, 5, 8, 5, 8, 5], "arrowStart": "none", "arrowEnd": "none" }
+        },
+        {
+          "id": "wide-gaps",
+          "label": "Wide gaps",
+          "line": { "weight": 8, "cap": "square", "corner": "bevel", "limit": 6, "antialiasing": true, "dashed": true, "dashes": [10, 14, 10, 14, 10, 14], "arrowStart": "none", "arrowEnd": "none" }
+        },
+        {
+          "id": "dashed-arrow",
+          "label": "Dashed arrow",
+          "line": { "weight": 4, "cap": "butt", "corner": "miter", "limit": 10, "antialiasing": true, "dashed": true, "dashes": [12, 8, 12, 8, 12, 8], "arrowStart": "none", "arrowEnd": "triangle", "startScale": 100, "endScale": 120 }
+        }
+      ]
+    },
+    {
+      "id": "colorful",
+      "label": "Colorful",
+      "presets": [
+        {
+          "id": "red-marker",
+          "label": "Red marker",
+          "line": { "weight": 8, "cap": "round", "corner": "round", "limit": 10, "antialiasing": true, "dashed": false, "arrowStart": "none", "arrowEnd": "none", "color": "#df2f2f" }
+        },
+        {
+          "id": "blue-draft",
+          "label": "Blue draft",
+          "line": { "weight": 4, "cap": "butt", "corner": "miter", "limit": 10, "antialiasing": false, "dashed": true, "dashes": [10, 6, 10, 6, 10, 6], "arrowStart": "none", "arrowEnd": "none", "color": "#1f69d9" }
+        },
+        {
+          "id": "green-arrow",
+          "label": "Green arrow",
+          "line": { "weight": 5, "cap": "round", "corner": "round", "limit": 10, "antialiasing": true, "dashed": false, "arrowStart": "none", "arrowEnd": "triangle", "endScale": 120, "color": "#238f45" }
+        },
+        {
+          "id": "purple-dot",
+          "label": "Purple dot",
+          "line": { "weight": 6, "cap": "round", "corner": "round", "limit": 10, "antialiasing": true, "dashed": true, "dashes": [1, 8, 1, 8, 1, 8], "arrowStart": "none", "arrowEnd": "none", "color": "#8f45cf" }
+        },
+        {
+          "id": "orange-callout",
+          "label": "Orange callout",
+          "line": { "weight": 7, "cap": "butt", "corner": "bevel", "limit": 8, "antialiasing": true, "dashed": false, "arrowStart": "bar", "arrowEnd": "triangle", "startScale": 110, "endScale": 130, "color": "#d26a21" }
+        },
+        {
+          "id": "cyan-guide",
+          "label": "Cyan guide",
+          "line": { "weight": 3, "cap": "butt", "corner": "miter", "limit": 10, "antialiasing": false, "dashed": true, "dashes": [5, 5, 5, 5, 5, 5], "arrowStart": "none", "arrowEnd": "none", "color": "#008c99" }
+        },
+        {
+          "id": "pink-soft",
+          "label": "Pink soft",
+          "line": { "weight": 9, "cap": "round", "corner": "round", "limit": 10, "antialiasing": true, "dashed": false, "arrowStart": "circle", "arrowEnd": "circle", "startScale": 80, "endScale": 80, "color": "#d64286" }
+        }
+      ]
+    }
+  ]
+}

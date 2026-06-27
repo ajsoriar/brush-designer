@@ -1,11 +1,17 @@
+body {
+    margin: 0;
+    padding: 0;
+}
+
 .tools-bar {
     display: flex;
     flex-direction: row;
     align-items: center;
     gap: 10px;
-    padding: 10px;
+    padding: 2px;
     background-color: #f0f0f0;
     border-right: 1px solid #ccc;
+    margin-top: 26px;
 
     button {
         display: flex;
@@ -25,5 +31,49 @@
         &:hover {
             background-color: #e0e0e0;
         }
+
     }
+
+    .tools-bar-frame {
+        align-items: center;
+        border: 1px solid #a0a0a0;
+        display: flex;
+        gap: 6px;
+        margin: 0;
+        padding: 2px 7px 7px;
+
+        button {
+            height: auto;
+        }
+
+        legend {
+            color: #111;
+            font-family: monospace;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 0 4px;
+        }
+
+        label {
+            align-items: center;
+            color: #111;
+            display: flex;
+            font-family: monospace;
+            font-size: 11px;
+            font-weight: bold;
+            gap: 2px;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        input {
+            margin: 0;
+        }
+
+    }
+
+}
+
+#svg-exporter-toolbar-icon-container {
+    margin-left: auto;
 }

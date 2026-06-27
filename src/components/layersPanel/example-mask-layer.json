@@ -1,0 +1,9 @@
+{
+    "id": "layer-3",
+    "label": "Layer 3",
+    "visible": true,
+    "blocked": false,
+    "order-from-the-bottom": 3,
+    "selected": true,
+    "mask": { "id": "layer-3-mask" }
+}

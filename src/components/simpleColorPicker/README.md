@@ -26,6 +26,8 @@ var picker = SimpleColorPicker({
 });
 
 var color = picker.getActiveColor();
+var nextRight = picker.getNextColorRight();
+var nextDown = picker.getNextColorDown();
 var width = picker.getWidth();
 var height = picker.getHeight();
 ```
@@ -49,6 +51,8 @@ Tambien queda disponible como `simpleColorPicker(...)`.
 ## API
 
 - `picker.getActiveColor()`
+- `picker.getNextColorRight()`
+- `picker.getNextColorDown()`
 - `picker.getWidth()`
 - `picker.getHeight()`
 - `picker.setActiveColor(color)`

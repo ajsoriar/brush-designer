@@ -1,6 +1,8 @@
 .big-color-picker {
     background: #202329;
     color: #ffffff;
+    display: flex;
+    flex-direction: column;
     font-family: Arial, sans-serif;
     height: 100%;
     overflow: hidden;
@@ -52,6 +54,32 @@
     gap: 6px;
     grid-template-columns: repeat(4, 1fr);
     padding: 0 15px 9px;
+}
+
+.big-color-picker-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 0 15px 12px;
+}
+
+.big-color-picker-actions button {
+    background: #f3f3f3;
+    border: 1px solid #8b8b8b;
+    border-radius: 3px;
+    color: #111111;
+    cursor: pointer;
+    font: 12px Arial, sans-serif;
+    height: 28px;
+    min-width: 72px;
+    padding: 0 12px;
+}
+
+.big-color-picker-actions button:hover,
+.big-color-picker-actions button:focus {
+    background: #ffffff;
+    border-color: #12b8c5;
+    outline: none;
 }
 
 .big-color-picker-field {

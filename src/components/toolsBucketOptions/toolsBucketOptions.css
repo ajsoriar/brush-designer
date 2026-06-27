@@ -1,0 +1,69 @@
+.tools-bucket-options {
+    margin: 0;
+    padding: 2px 7px 7px;
+    border: 1px solid #a0a0a0;
+}
+
+.tools-bucket-options legend {
+    color: #111;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 0 4px;
+}
+
+.tools-bucket-options-grid {
+    align-items: center;
+    display: grid;
+    grid-template-columns: auto auto auto auto;
+    gap: 6px;
+}
+
+.tools-bucket-options-label {
+    color: #111;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.tools-bucket-options-range {
+    width: 110px;
+}
+
+.tools-bucket-options-number {
+    width: 48px;
+    box-sizing: border-box;
+}
+
+.tools-bucket-options-check {
+    align-items: center;
+    color: #111;
+    display: inline-flex;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: bold;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.tools-bucket-options input {
+    margin: 0;
+}
+
+.tools-bucket-options-modes {
+    align-items: center;
+    color: #111;
+    display: inline-flex;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: bold;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.tools-bucket-options-mode {
+    align-items: center;
+    display: inline-flex;
+    gap: 3px;
+}

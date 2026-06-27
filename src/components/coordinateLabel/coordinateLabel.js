@@ -9,6 +9,7 @@
         var borderColor;
         var borderWidth;
         var fontSize;
+        var scale = typeof config.scale === "number" && config.scale > 0 ? config.scale : 1;
         var offset = typeof config.offset === "number" ? config.offset : 7;
         var horizontal;
         var textColor;
@@ -41,7 +42,8 @@
         return "<span class=\"coordinate-label\" style=\"" +
             "left:" + (horizontal === "left" ? x - offset : x + offset) + "px;" +
             "top:" + (vertical === "top" ? y - offset : y + offset) + "px;" +
-            "transform:translate(" + transformX + "," + transformY + ");" +
+            "transform:scale(" + scale + ") translate(" + transformX + "," + transformY + ");" +
+            "transform-origin:0 0;" +
             "background:" + backgroundColor + ";" +
             "border-width:" + borderWidth + "px;" +
             "border-color:" + borderColor + ";" +
