@@ -85,6 +85,13 @@
         sampleAllLayers: true,
         mode: DEFAULT_MAGIC_WAND_MODE
     };
+    var currentBucketOptions = {
+        tolerance: 32,
+        antiAlias: false,
+        contiguous: true,
+        sampleAllLayers: true,
+        mode: DEFAULT_MAGIC_WAND_MODE
+    };
     var MAGIC_WAND_MAX_DISTANCE = Math.sqrt(4 * 255 * 255);
     var MAGIC_WAND_MAX_LAB_DISTANCE = 100;
 
@@ -183,6 +190,56 @@
         },
         getMagicWandOptions: function() {
             return copyMagicWandOptions(currentMagicWandOptions);
+        },
+        setBucketTolerance: function(tolerance) {
+            var normalizedTolerance = normalizeMagicWandTolerance(tolerance);
+
+            currentBucketOptions.tolerance = normalizedTolerance;
+            notifyBucketOptionsChange(currentBucketOptions);
+            return normalizedTolerance;
+        },
+        getBucketTolerance: function() {
+            return currentBucketOptions.tolerance;
+        },
+        setBucketAntiAlias: function(antiAlias) {
+            currentBucketOptions.antiAlias = !!antiAlias;
+            notifyBucketOptionsChange(currentBucketOptions);
+            return currentBucketOptions.antiAlias;
+        },
+        getBucketAntiAlias: function() {
+            return currentBucketOptions.antiAlias;
+        },
+        setBucketContiguous: function(contiguous) {
+            currentBucketOptions.contiguous = !!contiguous;
+            notifyBucketOptionsChange(currentBucketOptions);
+            return currentBucketOptions.contiguous;
+        },
+        getBucketContiguous: function() {
+            return currentBucketOptions.contiguous;
+        },
+        setBucketSampleAllLayers: function(sampleAllLayers) {
+            currentBucketOptions.sampleAllLayers = !!sampleAllLayers;
+            notifyBucketOptionsChange(currentBucketOptions);
+            return currentBucketOptions.sampleAllLayers;
+        },
+        getBucketSampleAllLayers: function() {
+            return currentBucketOptions.sampleAllLayers;
+        },
+        setBucketMode: function(mode) {
+            currentBucketOptions.mode = normalizeMagicWandMode(mode);
+            notifyBucketOptionsChange(currentBucketOptions);
+            return currentBucketOptions.mode;
+        },
+        getBucketMode: function() {
+            return currentBucketOptions.mode;
+        },
+        setBucketOptions: function(options) {
+            currentBucketOptions = normalizeMagicWandOptions(options);
+            notifyBucketOptionsChange(currentBucketOptions);
+            return copyMagicWandOptions(currentBucketOptions);
+        },
+        getBucketOptions: function() {
+            return copyMagicWandOptions(currentBucketOptions);
         }
     };
 
@@ -339,6 +396,22 @@
         global.dispatchEvent(event);
     }
 
+    function notifyBucketOptionsChange(options) {
+        var event;
+        var detail = copyMagicWandOptions(options);
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-bucket-options-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-bucket-options-change", false, false, detail);
+        }
+
+        global.dispatchEvent(event);
+    }
+
     function notifyUndoStateChange(board) {
         var event;
         var detail;
@@ -482,6 +555,11 @@
             board.hoverGuideControlActive = false;
             board.axisLockMode = null;
             clearHoverGuide(board);
+        };
+        var refreshSelectionOnZoomChange = function(event) {
+            if (event.detail && event.detail.board === board.element) {
+                renderLassoSelection(board);
+            }
         };
         var stopPainting = function(event) {
             if (board.selectionMove) {
@@ -1153,7 +1231,8 @@
                     leaveCanvas: leaveCanvas,
                     finishPolygonalSelectionFromEvent: finishPolygonalSelectionFromEvent,
                     updatePreviewModifier: updatePreviewModifier,
-                    clearHoverGuideOnBlur: clearHoverGuideOnBlur
+                    clearHoverGuideOnBlur: clearHoverGuideOnBlur,
+                    refreshSelectionOnZoomChange: refreshSelectionOnZoomChange
                 }, {
                     clearPreviewOnPaintToolChange: clearPreviewOnPaintToolChange,
                     clearSelectionDraftOnToolChange: clearSelectionDraftOnToolChange,
@@ -1195,6 +1274,7 @@
             global.addEventListener("paint-tools-change", clearSelectionDraftOnToolChange);
             global.addEventListener("paint-selection-tool-change", clearSelectionDraftOnSelectionToolChange);
         }
+        global.addEventListener("paint-board-zoom-change", refreshSelectionOnZoomChange);
 
         return board;
     }
@@ -2770,7 +2850,7 @@
             return;
         }
 
-        board.tempLayerElement.innerHTML = getBoxSelectionSvgString(bounds, isOvalSelectionTool());
+        board.tempLayerElement.innerHTML = getBoxSelectionSvgString(board, bounds, isOvalSelectionTool());
     }
 
     function setPolygonSelection(board, type, points) {
@@ -3448,7 +3528,7 @@
         }
 
         if (board.selection.bounds) {
-            board.selectionLayerElement.innerHTML = getBoxSelectionSvgString(board.selection.bounds, board.selection.type === "oval");
+            board.selectionLayerElement.innerHTML = getBoxSelectionSvgString(board, board.selection.bounds, board.selection.type === "oval");
         }
     }
 
@@ -3473,24 +3553,45 @@
             "</svg>";
     }
 
-    function getBoxSelectionSvgString(bounds, oval) {
+    function getBoxSelectionSvgString(board, bounds, oval) {
         var shape;
+        var zoom = getBoardRenderZoom(board);
+        var inset = 0.5 / zoom;
+        var strokeLeft;
+        var strokeTop;
+        var strokeWidth;
+        var strokeHeight;
 
         if (!bounds) {
             return "";
         }
 
+        strokeLeft = bounds.left + inset;
+        strokeTop = bounds.top + inset;
+        strokeWidth = Math.max(0, bounds.width - (inset * 2));
+        strokeHeight = Math.max(0, bounds.height - (inset * 2));
+
         if (oval) {
             shape = "<ellipse class=\"paint-board-lasso-fill\" cx=\"" + escapeHtml(bounds.left + (bounds.width / 2)) + "\" cy=\"" + escapeHtml(bounds.top + (bounds.height / 2)) + "\" rx=\"" + escapeHtml(bounds.width / 2) + "\" ry=\"" + escapeHtml(bounds.height / 2) + "\"></ellipse>" +
-                "<ellipse class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" cx=\"" + escapeHtml(bounds.left + (bounds.width / 2)) + "\" cy=\"" + escapeHtml(bounds.top + (bounds.height / 2)) + "\" rx=\"" + escapeHtml(bounds.width / 2) + "\" ry=\"" + escapeHtml(bounds.height / 2) + "\"></ellipse>" +
-                "<ellipse class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" cx=\"" + escapeHtml(bounds.left + (bounds.width / 2)) + "\" cy=\"" + escapeHtml(bounds.top + (bounds.height / 2)) + "\" rx=\"" + escapeHtml(bounds.width / 2) + "\" ry=\"" + escapeHtml(bounds.height / 2) + "\"></ellipse>";
+                "<ellipse class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" cx=\"" + escapeHtml(strokeLeft + (strokeWidth / 2)) + "\" cy=\"" + escapeHtml(strokeTop + (strokeHeight / 2)) + "\" rx=\"" + escapeHtml(strokeWidth / 2) + "\" ry=\"" + escapeHtml(strokeHeight / 2) + "\"></ellipse>" +
+                "<ellipse class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" cx=\"" + escapeHtml(strokeLeft + (strokeWidth / 2)) + "\" cy=\"" + escapeHtml(strokeTop + (strokeHeight / 2)) + "\" rx=\"" + escapeHtml(strokeWidth / 2) + "\" ry=\"" + escapeHtml(strokeHeight / 2) + "\"></ellipse>";
         } else {
             shape = "<rect class=\"paint-board-lasso-fill\" x=\"" + escapeHtml(bounds.left) + "\" y=\"" + escapeHtml(bounds.top) + "\" width=\"" + escapeHtml(bounds.width) + "\" height=\"" + escapeHtml(bounds.height) + "\"></rect>" +
-                "<rect class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" x=\"" + escapeHtml(bounds.left) + "\" y=\"" + escapeHtml(bounds.top) + "\" width=\"" + escapeHtml(bounds.width) + "\" height=\"" + escapeHtml(bounds.height) + "\"></rect>" +
-                "<rect class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" x=\"" + escapeHtml(bounds.left) + "\" y=\"" + escapeHtml(bounds.top) + "\" width=\"" + escapeHtml(bounds.width) + "\" height=\"" + escapeHtml(bounds.height) + "\"></rect>";
+                "<rect class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" x=\"" + escapeHtml(strokeLeft) + "\" y=\"" + escapeHtml(strokeTop) + "\" width=\"" + escapeHtml(strokeWidth) + "\" height=\"" + escapeHtml(strokeHeight) + "\"></rect>" +
+                "<rect class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" x=\"" + escapeHtml(strokeLeft) + "\" y=\"" + escapeHtml(strokeTop) + "\" width=\"" + escapeHtml(strokeWidth) + "\" height=\"" + escapeHtml(strokeHeight) + "\"></rect>";
         }
 
         return "<svg class=\"paint-board-lasso-svg\" xmlns=\"http://www.w3.org/2000/svg\">" + shape + "</svg>";
+    }
+
+    function getBoardRenderZoom(board) {
+        var zoom = parseFloat(board && board.element && board.element.getAttribute("data-zoom"));
+
+        if (isNaN(zoom) || zoom <= 0) {
+            return 1;
+        }
+
+        return zoom;
     }
 
     function getMaskSelectionHtml(maskCanvas) {
@@ -5186,41 +5287,29 @@
     function paintBucket(board, x, y) {
         var imageData = board.context.getImageData(0, 0, board.canvas.width, board.canvas.height);
         var data = imageData.data;
-        var targetColor = getPixelColor(data, imageData.width, x, y);
         var fillColor = getRgb(getCurrentPaintColor(board));
-        var stack;
-        var point;
+        var maskData = getBucketMaskData(board, x, y);
+        var total;
+        var pixel;
         var index;
 
-        if (colorsMatch(targetColor, fillColor)) {
+        if (!maskData) {
             return;
         }
 
         fillColor.a = 255;
-        stack = [{ x: x, y: y }];
+        total = imageData.width * imageData.height;
 
-        while (stack.length) {
-            point = stack.pop();
-
-            if (point.x < 0 || point.x >= imageData.width || point.y < 0 || point.y >= imageData.height) {
+        for (pixel = 0; pixel < total; pixel++) {
+            if (maskData[(pixel * 4) + 3] <= 0) {
                 continue;
             }
 
-            index = getPixelIndex(imageData.width, point.x, point.y);
-
-            if (!colorsMatchAt(data, index, targetColor)) {
-                continue;
-            }
-
+            index = pixel * 4;
             data[index] = fillColor.r;
             data[index + 1] = fillColor.g;
             data[index + 2] = fillColor.b;
             data[index + 3] = 255;
-
-            stack.push({ x: point.x + 1, y: point.y });
-            stack.push({ x: point.x - 1, y: point.y });
-            stack.push({ x: point.x, y: point.y + 1 });
-            stack.push({ x: point.x, y: point.y - 1 });
         }
 
         board.context.putImageData(imageData, 0, 0);
@@ -5231,12 +5320,12 @@
         var patternData;
         var imageData;
         var data;
-        var targetColor;
-        var stack;
-        var visited;
-        var point;
+        var maskData;
+        var total;
+        var pixel;
         var index;
-        var pixelIndex;
+        var xPos;
+        var yPos;
         var patternColor;
         var frontColor = getRgb(getCurrentPaintColor(board));
         var useFrontColor = getCurrentPatternUseFrontColor();
@@ -5253,43 +5342,44 @@
 
         imageData = board.context.getImageData(0, 0, board.canvas.width, board.canvas.height);
         data = imageData.data;
-        targetColor = getPixelColor(data, imageData.width, x, y);
-        stack = [{ x: x, y: y }];
-        visited = new Uint8Array(imageData.width * imageData.height);
+        maskData = getBucketMaskData(board, x, y);
 
-        while (stack.length) {
-            point = stack.pop();
+        if (!maskData) {
+            return;
+        }
 
-            if (point.x < 0 || point.x >= imageData.width || point.y < 0 || point.y >= imageData.height) {
+        total = imageData.width * imageData.height;
+
+        for (pixel = 0; pixel < total; pixel++) {
+            if (maskData[(pixel * 4) + 3] <= 0) {
                 continue;
             }
 
-            pixelIndex = (point.y * imageData.width) + point.x;
-
-            if (visited[pixelIndex]) {
-                continue;
-            }
-
-            visited[pixelIndex] = 1;
-            index = getPixelIndex(imageData.width, point.x, point.y);
-
-            if (!colorsMatchAt(data, index, targetColor)) {
-                continue;
-            }
-
-            patternColor = getPatternPixelColor(patternData, point.x, point.y, frontColor, useFrontColor);
+            xPos = pixel % imageData.width;
+            yPos = (pixel - xPos) / imageData.width;
+            index = pixel * 4;
+            patternColor = getPatternPixelColor(patternData, xPos, yPos, frontColor, useFrontColor);
             data[index] = patternColor.r;
             data[index + 1] = patternColor.g;
             data[index + 2] = patternColor.b;
             data[index + 3] = patternColor.a;
-
-            stack.push({ x: point.x + 1, y: point.y });
-            stack.push({ x: point.x - 1, y: point.y });
-            stack.push({ x: point.x, y: point.y + 1 });
-            stack.push({ x: point.x, y: point.y - 1 });
         }
 
         board.context.putImageData(imageData, 0, 0);
+    }
+
+    function getBucketMaskData(board, x, y) {
+        var sampleX = clamp(Math.floor(x), 0, board.canvas.width - 1);
+        var sampleY = clamp(Math.floor(y), 0, board.canvas.height - 1);
+        var maskCanvas = createMagicWandMask(board, sampleX, sampleY, currentBucketOptions);
+        var maskContext;
+
+        if (!maskCanvas || isSelectionMaskEmpty(maskCanvas)) {
+            return null;
+        }
+
+        maskContext = maskCanvas.getContext("2d");
+        return maskContext.getImageData(0, 0, board.canvas.width, board.canvas.height).data;
     }
 
     function getPatternImageData(pattern) {
@@ -8370,6 +8460,10 @@
 
         if (paintHandlers && paintHandlers.clearHoverGuideOnBlur) {
             global.removeEventListener("blur", paintHandlers.clearHoverGuideOnBlur);
+        }
+
+        if (paintHandlers && paintHandlers.refreshSelectionOnZoomChange) {
+            global.removeEventListener("paint-board-zoom-change", paintHandlers.refreshSelectionOnZoomChange);
         }
 
         if (paintToolChangeHandlers) {

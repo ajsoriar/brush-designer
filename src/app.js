@@ -81,6 +81,7 @@ import undoIconUrl from "./images/undo-icon.png";
 
     var selectionBehabiourComponent = null;
     var toolsMagicWandOptionsComponent = null;
+    var toolsBucketOptionsComponent = null;
     var toolsTransformOptionsComponent = null;
     var toolsPointerOptionsComponent = null;
     var toolsCrazyOptionsComponent = null;
@@ -104,6 +105,7 @@ import undoIconUrl from "./images/undo-icon.png";
         global.AppOpenWindows.openLayersPanelWindow();
         initSelectionBehabiourComponent();
         initToolsMagicWandOptionsComponent();
+        initToolsBucketOptionsComponent();
         initToolsTransformOptionsComponent();
         initToolsPointerOptionsComponent();
         initToolsCrazyOptionsComponent();
@@ -237,6 +239,7 @@ import undoIconUrl from "./images/undo-icon.png";
 
         syncSelectionBehabiourVisibility(mode);
         syncToolsMagicWandOptionsVisibility(mode);
+        syncToolsBucketOptionsVisibility(mode);
         syncToolsPointerOptionsVisibility(mode);
         syncBrushWidthPickerToPaintTool(mode);
 
@@ -334,6 +337,33 @@ import undoIconUrl from "./images/undo-icon.png";
         }
 
         toolsMagicWandOptionsComponent.hide();
+    }
+
+    function initToolsBucketOptionsComponent() {
+        if (!global.ToolsBucketOptionsComponent) {
+            return;
+        }
+
+        toolsBucketOptionsComponent = global.ToolsBucketOptionsComponent({
+            id: "tools-bucket-options-toolbar",
+            containerId: "tools-bucket-options-container",
+            visible: false
+        });
+
+        syncToolsBucketOptionsVisibility(global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : "");
+    }
+
+    function syncToolsBucketOptionsVisibility(mode) {
+        if (!toolsBucketOptionsComponent) {
+            return;
+        }
+
+        if (mode === "PAINT-BUCKET" || mode === "PATTERN-BUCKET") {
+            toolsBucketOptionsComponent.show();
+            return;
+        }
+
+        toolsBucketOptionsComponent.hide();
     }
 
     function initToolsPointerOptionsComponent() {
