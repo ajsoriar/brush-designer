@@ -690,6 +690,7 @@ import undoIconUrl from "./images/undo-icon.png";
                 openFillBigColorPicker: openFillBigColorPicker,
                 transformLayer: transformActiveLayer,
                 openResizeImage: global.AppOpenWindows.openResizeImageWindow,
+                openBrightnessContrast: global.AppOpenWindows.openBrightnessContrastWindow,
                 cropToSelection: cropToSelection,
                 duplicateLayer: duplicateActiveLayer,
                 clearBoard: clearBoard,
@@ -1193,6 +1194,7 @@ import undoIconUrl from "./images/undo-icon.png";
     global.openBrushEditorOutputsWindow = global.AppOpenWindows.openBrushEditorOutputsWindow;
     global.openSimpleColorPickerWindow = global.AppOpenWindows.openSimpleColorPickerWindow;
     global.openBigColorPickerWindow = global.AppOpenWindows.openBigColorPickerWindow;
+    global.openBrightnessContrastWindow = global.AppOpenWindows.openBrightnessContrastWindow;
     global.openSimpleLineWidthPickerWindow = global.AppOpenWindows.openSimpleLineWidthPickerWindow;
     global.openSimpleBrushWidthPickerWindow = global.AppOpenWindows.openSimpleBrushWidthPickerWindow;
     global.openLinesDesignerWindow = global.AppOpenWindows.openLinesDesignerWindow;

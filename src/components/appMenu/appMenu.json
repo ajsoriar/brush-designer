@@ -30,6 +30,7 @@
       "label": "Image",
       "items": [
         { "label": "Image Size", "action": "openResizeImage" },
+        { "label": "Brightness/Contrast...", "action": "openBrightnessContrast" },
         { "label": "Crop", "action": "cropToSelection", "enabled": false }
       ]
     },

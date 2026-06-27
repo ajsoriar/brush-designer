@@ -94,6 +94,10 @@
     };
     var MAGIC_WAND_MAX_DISTANCE = Math.sqrt(4 * 255 * 255);
     var MAGIC_WAND_MAX_LAB_DISTANCE = 100;
+    var SELECTION_SVG_ITERATION_LIMIT = 1000;
+    var SELECTION_SVG_ITERATION_TIME = 2000;
+    var SELECTION_SVG_ITERATION_MODE = "TIME"; // "TIME" or "COUNT"
+    var SELECTION_SVG_TIME_CHECK_INTERVAL = 256;
 
     var PaintTools = {
         modes: PAINT_TOOL_MODES,
@@ -508,6 +512,12 @@
         return target;
     }
 
+    function getReadableCanvasContext(canvas) {
+        return canvas.getContext("2d", {
+            willReadFrequently: true
+        });
+    }
+
     function PaintBoard(options) {
         var config = extend(extend({}, DEFAULTS), options || {});
         var boardId = config.id || ("paint-board-" + Date.now());
@@ -839,7 +849,7 @@
         element.appendChild(overlays);
         container.appendChild(element);
 
-        context = canvas.getContext("2d");
+        context = getReadableCanvasContext(canvas);
         context.fillStyle = config.backgroundColor;
         context.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -1435,7 +1445,7 @@
         setSelectionLayerSize(board.selectionLayerElement, width, height);
         setTempLayerSize(board.tempLayerElement, width, height);
         resizeLayerElements(board, width, height);
-        board.context = board.canvas.getContext("2d");
+        board.context = getReadableCanvasContext(board.canvas);
         updateBoardRulesSize(board, width, height);
         resizeBoardWindowToContent(board, width, height);
 
@@ -1479,7 +1489,7 @@
         canvas.style.width = width + "px";
         canvas.style.height = height + "px";
 
-        context = canvas.getContext("2d");
+        context = getReadableCanvasContext(canvas);
         if (global.ScaleTransformAlgorithms &&
             global.ScaleTransformAlgorithms.hasAlgorithm &&
             global.ScaleTransformAlgorithms.hasAlgorithm(resampling)) {
@@ -2959,7 +2969,7 @@
         }
 
         maskCanvas = createSelectionMaskCanvas(board);
-        maskContext = maskCanvas.getContext("2d");
+        maskContext = getReadableCanvasContext(maskCanvas);
         maskContext.fillStyle = "#ffffff";
         maskContext.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
         bounds = {
@@ -2991,7 +3001,7 @@
         }
 
         reversedMask = createSelectionMaskCanvas(board);
-        reversedContext = reversedMask.getContext("2d");
+        reversedContext = getReadableCanvasContext(reversedMask);
         reversedContext.fillStyle = "#ffffff";
         reversedContext.fillRect(0, 0, reversedMask.width, reversedMask.height);
         reversedContext.globalCompositeOperation = "destination-out";
@@ -3051,7 +3061,7 @@
         }
 
         movedMask = createSelectionMaskCanvas(board);
-        movedContext = movedMask.getContext("2d");
+        movedContext = getReadableCanvasContext(movedMask);
         movedContext.drawImage(baseSelection.maskCanvas, dx, dy);
 
         if (isSelectionMaskEmpty(movedMask)) {
@@ -3298,7 +3308,7 @@
         }
 
         maskCanvas = createSelectionMaskCanvas(board);
-        maskContext = maskCanvas.getContext("2d");
+        maskContext = getReadableCanvasContext(maskCanvas);
         maskContext.fillStyle = "#ffffff";
         maskContext.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
 
@@ -3601,7 +3611,7 @@
             return "";
         }
 
-        pathData = getSelectionMaskPathData(maskCanvas);
+        pathData = getSelectionMaskPathData(maskCanvas, createSelectionSvgBudget(maskCanvas));
 
         if (!pathData) {
             return "";
@@ -3694,7 +3704,7 @@
 
     function createPolygonSelectionMask(board, points) {
         var maskCanvas = createSelectionMaskCanvas(board);
-        var maskContext = maskCanvas.getContext("2d");
+        var maskContext = getReadableCanvasContext(maskCanvas);
         var i;
 
         maskContext.fillStyle = "#ffffff";
@@ -3713,7 +3723,7 @@
 
     function createRectangleSelectionMask(board, bounds) {
         var maskCanvas = createSelectionMaskCanvas(board);
-        var maskContext = maskCanvas.getContext("2d");
+        var maskContext = getReadableCanvasContext(maskCanvas);
 
         maskContext.fillStyle = "#ffffff";
         maskContext.fillRect(bounds.left, bounds.top, bounds.width, bounds.height);
@@ -3723,7 +3733,7 @@
 
     function createOvalSelectionMask(board, bounds) {
         var maskCanvas = createSelectionMaskCanvas(board);
-        var maskContext = maskCanvas.getContext("2d");
+        var maskContext = getReadableCanvasContext(maskCanvas);
 
         maskContext.fillStyle = "#ffffff";
         maskContext.beginPath();
@@ -3743,7 +3753,7 @@
 
     function combineSelectionMasks(board, baseMaskCanvas, nextMaskCanvas, operation) {
         var combinedMask = createSelectionMaskCanvas(board);
-        var combinedContext = combinedMask.getContext("2d");
+        var combinedContext = getReadableCanvasContext(combinedMask);
 
         combinedContext.drawImage(baseMaskCanvas, 0, 0);
         combinedContext.globalCompositeOperation = operation;
@@ -3758,7 +3768,7 @@
     }
 
     function getSelectionMaskBounds(maskCanvas) {
-        var maskContext = maskCanvas.getContext("2d");
+        var maskContext = getReadableCanvasContext(maskCanvas);
         var imageData = maskContext.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
         var data = imageData.data;
         var left = maskCanvas.width;
@@ -3798,12 +3808,20 @@
         };
     }
 
-    function getSelectionMaskPathData(maskCanvas) {
-        var loops = getSelectionMaskBoundaryLoops(maskCanvas);
+    function getSelectionMaskPathData(maskCanvas, budget) {
+        var loops = getSelectionMaskBoundaryLoops(maskCanvas, budget);
         var pathParts = [];
         var i;
 
+        if (!loops || isSelectionSvgBudgetCancelled(budget, "path-build")) {
+            return "";
+        }
+
         for (i = 0; i < loops.length; i++) {
+            if (!consumeSelectionSvgBudget(budget, "path-loop")) {
+                return "";
+            }
+
             if (loops[i].length < 2) {
                 continue;
             }
@@ -3827,8 +3845,8 @@
         return commands.join(" ");
     }
 
-    function getSelectionMaskBoundaryLoops(maskCanvas) {
-        var maskContext = maskCanvas.getContext("2d");
+    function getSelectionMaskBoundaryLoops(maskCanvas, budget) {
+        var maskContext = getReadableCanvasContext(maskCanvas);
         var maskImageData = maskContext.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
         var maskData = maskImageData.data;
         var edgesByStart = {};
@@ -3838,23 +3856,39 @@
 
         for (y = 0; y < maskCanvas.height; y++) {
             for (x = 0; x < maskCanvas.width; x++) {
+                if (!consumeSelectionSvgBudget(budget, "mask-scan")) {
+                    return null;
+                }
+
                 if (!isSelectionMaskPixelFilled(maskData, maskCanvas.width, maskCanvas.height, x, y)) {
                     continue;
                 }
 
                 if (!isSelectionMaskPixelFilled(maskData, maskCanvas.width, maskCanvas.height, x, y - 1)) {
+                    if (!consumeSelectionSvgBudget(budget, "edge-add")) {
+                        return null;
+                    }
                     addSelectionBoundaryEdge(edgesByStart, x, y, x + 1, y);
                 }
 
                 if (!isSelectionMaskPixelFilled(maskData, maskCanvas.width, maskCanvas.height, x + 1, y)) {
+                    if (!consumeSelectionSvgBudget(budget, "edge-add")) {
+                        return null;
+                    }
                     addSelectionBoundaryEdge(edgesByStart, x + 1, y, x + 1, y + 1);
                 }
 
                 if (!isSelectionMaskPixelFilled(maskData, maskCanvas.width, maskCanvas.height, x, y + 1)) {
+                    if (!consumeSelectionSvgBudget(budget, "edge-add")) {
+                        return null;
+                    }
                     addSelectionBoundaryEdge(edgesByStart, x + 1, y + 1, x, y + 1);
                 }
 
                 if (!isSelectionMaskPixelFilled(maskData, maskCanvas.width, maskCanvas.height, x - 1, y)) {
+                    if (!consumeSelectionSvgBudget(budget, "edge-add")) {
+                        return null;
+                    }
                     addSelectionBoundaryEdge(edgesByStart, x, y + 1, x, y);
                 }
             }
@@ -3863,11 +3897,18 @@
         while (true) {
             var startKey = getFirstSelectionBoundaryEdgeKey(edgesByStart);
 
+            if (!consumeSelectionSvgBudget(budget, "loop-discovery")) {
+                return null;
+            }
+
             if (!startKey) {
                 break;
             }
 
-            loops.push(traceSelectionBoundaryLoop(edgesByStart, startKey));
+            loops.push(traceSelectionBoundaryLoop(edgesByStart, startKey, budget));
+            if (isSelectionSvgBudgetCancelled(budget, "loop-trace")) {
+                return null;
+            }
         }
 
         return loops;
@@ -3904,7 +3945,7 @@
         return null;
     }
 
-    function traceSelectionBoundaryLoop(edgesByStart, startKey) {
+    function traceSelectionBoundaryLoop(edgesByStart, startKey, budget) {
         var edge = removeSelectionBoundaryEdge(edgesByStart, startKey);
         var firstPoint = edge.start;
         var loop = [firstPoint, edge.end];
@@ -3913,6 +3954,10 @@
         var guard = 0;
 
         while ((currentPoint.x !== firstPoint.x || currentPoint.y !== firstPoint.y) && guard < 100000) {
+            if (!consumeSelectionSvgBudget(budget, "loop-point")) {
+                break;
+            }
+
             currentKey = getSelectionPointKey(currentPoint.x, currentPoint.y);
             edge = removeSelectionBoundaryEdge(edgesByStart, currentKey);
 
@@ -3926,6 +3971,114 @@
         }
 
         return simplifySelectionBoundaryLoop(loop);
+    }
+
+    function createSelectionSvgBudget(maskCanvas) {
+        return {
+            cancelled: false,
+            count: 0,
+            mode: normalizeSelectionSvgBudgetMode(SELECTION_SVG_ITERATION_MODE),
+            startedAt: getSelectionSvgBudgetNow(),
+            lastElapsed: 0,
+            limit: SELECTION_SVG_ITERATION_LIMIT,
+            timeLimit: SELECTION_SVG_ITERATION_TIME,
+            width: maskCanvas ? maskCanvas.width : 0,
+            height: maskCanvas ? maskCanvas.height : 0
+        };
+    }
+
+    function consumeSelectionSvgBudget(budget, phase) {
+        if (!budget) {
+            return true;
+        }
+
+        if (budget.cancelled) {
+            return false;
+        }
+
+        budget.count += 1;
+
+        if (budget.mode === "TIME") {
+            if (budget.count % SELECTION_SVG_TIME_CHECK_INTERVAL !== 0) {
+                return true;
+            }
+
+            budget.lastElapsed = getSelectionSvgBudgetElapsed(budget);
+            if (budget.lastElapsed <= budget.timeLimit) {
+                return true;
+            }
+
+            cancelSelectionSvgBudget(budget, phase, "time limit exceeded");
+            return false;
+        }
+
+        if (budget.count <= budget.limit) {
+            return true;
+        }
+
+        cancelSelectionSvgBudget(budget, phase, "iteration limit exceeded");
+        return false;
+    }
+
+    function cancelSelectionSvgBudget(budget, phase, reason) {
+        budget.cancelled = true;
+        console.error(
+            "Selection SVG generation cancelled: " + reason + ".",
+            {
+                phase: phase,
+                mode: budget.mode,
+                iterations: budget.count,
+                limit: budget.limit,
+                elapsed: getSelectionSvgBudgetElapsedForLog(budget),
+                timeLimit: budget.timeLimit,
+                width: budget.width,
+                height: budget.height
+            }
+        );
+        notifySelectionSvgGenerationError();
+    }
+
+    function isSelectionSvgBudgetCancelled(budget) {
+        return !!(budget && budget.cancelled);
+    }
+
+    function notifySelectionSvgGenerationError() {
+        if (typeof global.ajsrnotify !== "function") {
+            return;
+        }
+
+        global.ajsrnotify({
+            msg: "Selection preview is too complex to display.",
+            type: "error",
+            position: "right",
+            timeout: 2200
+        });
+    }
+
+    function normalizeSelectionSvgBudgetMode(mode) {
+        var normalized = String(mode || "").toUpperCase();
+
+        return normalized === "TIME" ? "TIME" : "COUNT";
+    }
+
+    function getSelectionSvgBudgetNow() {
+        if (global.performance && typeof global.performance.now === "function") {
+            return global.performance.now();
+        }
+
+        return Date.now();
+    }
+
+    function getSelectionSvgBudgetElapsed(budget) {
+        return getSelectionSvgBudgetNow() - budget.startedAt;
+    }
+
+    function getSelectionSvgBudgetElapsedForLog(budget) {
+        if (budget.lastElapsed) {
+            return budget.lastElapsed;
+        }
+
+        return getSelectionSvgBudgetElapsed(budget);
     }
 
     function removeSelectionBoundaryEdge(edgesByStart, key) {
@@ -4008,7 +4161,7 @@
             return false;
         }
 
-        maskContext = board.selection.maskCanvas.getContext("2d");
+        maskContext = getReadableCanvasContext(board.selection.maskCanvas);
         pixel = maskContext.getImageData(Math.floor(point.x), Math.floor(point.y), 1, 1).data;
 
         return pixel[3] > 0;
@@ -4529,7 +4682,7 @@
         }
 
         maskCanvas = createSelectionMaskCanvas(board);
-        maskContext = maskCanvas.getContext("2d");
+        maskContext = getReadableCanvasContext(maskCanvas);
         maskImageData = maskContext.createImageData(width, height);
 
         fillMagicWandMask(maskImageData.data, matched, width, height);
@@ -4549,7 +4702,7 @@
 
         if (options && options.sampleAllLayers) {
             sourceCanvas = composeVisibleLayersForMagicWand(board, width, height);
-            sourceContext = sourceCanvas && sourceCanvas.getContext("2d");
+            sourceContext = sourceCanvas && getReadableCanvasContext(sourceCanvas);
             if (sourceContext) {
                 return sourceContext.getImageData(0, 0, width, height);
             }
@@ -4579,7 +4732,7 @@
             compositeCanvas.height = height;
         }
 
-        compositeContext = compositeCanvas.getContext("2d");
+        compositeContext = getReadableCanvasContext(compositeCanvas);
         compositeContext.clearRect(0, 0, width, height);
 
         if (!board.layers || !board.layers.length || !board.layersElement) {
@@ -5378,7 +5531,7 @@
             return null;
         }
 
-        maskContext = maskCanvas.getContext("2d");
+        maskContext = getReadableCanvasContext(maskCanvas);
         return maskContext.getImageData(0, 0, board.canvas.width, board.canvas.height).data;
     }
 
@@ -5395,7 +5548,7 @@
         canvas = document.createElement("canvas");
         canvas.width = width;
         canvas.height = height;
-        context = canvas.getContext("2d");
+        context = getReadableCanvasContext(canvas);
         context.drawImage(pattern.image, 0, 0, width, height);
         pattern.imageData = context.getImageData(0, 0, width, height);
 

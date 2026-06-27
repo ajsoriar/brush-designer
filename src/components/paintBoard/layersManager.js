@@ -98,6 +98,12 @@
         return opacity;
     }
 
+    function getReadableCanvasContext(canvas) {
+        return canvas.getContext("2d", {
+            willReadFrequently: true
+        });
+    }
+
     function applyLayerOpacityToElement(listItem, opacity) {
         if (!listItem) {
             return;
@@ -244,7 +250,7 @@
         board.activeLayerId = activeLayerId;
         board.selectedLayerIds = validSelectedIds.slice();
         board.canvas = canvas;
-        board.context = canvas.getContext("2d");
+        board.context = getReadableCanvasContext(canvas);
 
         board.layers.forEach(function(layer) {
             layer.active = layer.id === activeLayerId;
