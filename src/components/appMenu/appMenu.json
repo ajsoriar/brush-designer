@@ -11,6 +11,7 @@
         { "label": "Save", "action": "saveImage" },
         { "label": "Download Flatten Image", "action": "downloadFlattenImage" },
         { "label": "Save As...", "action": "saveImageAs" },
+        { "label": "Save as PDF", "action": "saveAsPdf" },
         { "label": "Save as a project", "action": "saveAsProject" }
       ]
     },

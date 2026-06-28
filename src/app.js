@@ -685,6 +685,7 @@ import undoIconUrl from "./images/undo-icon.png";
                 saveImage: saveImage,
                 downloadFlattenImage: downloadFlattenImage,
                 saveImageAs: saveImageAs,
+                saveAsPdf: saveAsPdf,
                 saveAsProject: saveAsProject,
                 copyToClipboard: copyToClipboard,
                 pasteFromClipboard: pasteFromClipboard,
@@ -995,6 +996,12 @@ import undoIconUrl from "./images/undo-icon.png";
     function openProject() {
         if (global.OutputManagement && typeof global.OutputManagement.openProject === "function") {
             global.OutputManagement.openProject();
+        }
+    }
+
+    function saveAsPdf() {
+        if (global.OutputManagement && typeof global.OutputManagement.saveAsPdf === "function") {
+            global.OutputManagement.saveAsPdf();
         }
     }
 
