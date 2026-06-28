@@ -53,7 +53,9 @@
         OLD_BRUSH: "OLD-BRUSH",
         DESIGNED_BRUSH: "DESIGNED-BRUSH",
         DESIGNED_BRUSH_2: "DESIGNED-BRUSH-2",
-        CROP_BOARD: "CROP-BOARD"
+        CROP_BOARD: "CROP-BOARD",
+        TEXT: "TEXT",
+        REMOVE: "REMOVE"
     };
 
     var SELECTION_TOOL_TYPES = {
@@ -4318,7 +4320,37 @@
 
         board.context.clearRect(0, 0, board.canvas.width, board.canvas.height);
         board.context.drawImage(beforeCanvas, 0, 0);
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.REMOVE) {
+            applyEraseMaskToPaint(board, beforeCanvas, selectedCanvas);
+            return;
+        }
+
         board.context.drawImage(selectedCanvas, 0, 0);
+    }
+
+    function applyEraseMaskToPaint(board, beforeCanvas, selectedCanvas) {
+        var width = board.canvas.width;
+        var height = board.canvas.height;
+        var invertCanvas = document.createElement("canvas");
+        var invertCtx;
+
+        invertCanvas.width = width;
+        invertCanvas.height = height;
+        invertCtx = invertCanvas.getContext("2d");
+        invertCtx.fillStyle = "#ffffff";
+        invertCtx.fillRect(0, 0, width, height);
+        invertCtx.globalCompositeOperation = "destination-out";
+        invertCtx.drawImage(selectedCanvas, 0, 0);
+        invertCtx.globalCompositeOperation = "source-over";
+        invertCtx.globalCompositeOperation = "destination-in";
+        invertCtx.drawImage(board.selection.maskCanvas, 0, 0);
+        invertCtx.globalCompositeOperation = "source-over";
+
+        board.context.save();
+        board.context.globalCompositeOperation = "destination-out";
+        board.context.drawImage(invertCanvas, 0, 0);
+        board.context.restore();
     }
 
     function fillSelectionWithFrontColor(board) {
@@ -4515,6 +4547,11 @@
         markUndoableChange(board);
 
         paintWithSelection(board, function() {
+            if (currentPaintToolMode === PAINT_TOOL_MODES.REMOVE) {
+                board.context.save();
+                board.context.globalCompositeOperation = "destination-out";
+            }
+
             if (currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH && board.lastPointerPosition) {
                 paintOldBrushLine(board, board.lastPointerPosition, point);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES && board.lastPointerPosition) {
@@ -4540,6 +4577,10 @@
                     paintSquaredPoint(board, point.x, point.y);
                 }
             }
+
+            if (currentPaintToolMode === PAINT_TOOL_MODES.REMOVE) {
+                board.context.restore();
+            }
         });
 
         scheduleActiveLayerMaskRefresh(board);
@@ -4561,7 +4602,8 @@
             currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES ||
             currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH ||
             currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH ||
-            currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2;
+            currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2 ||
+            currentPaintToolMode === PAINT_TOOL_MODES.REMOVE;
     }
 
     function paintContinuousLineStart(board, point) {

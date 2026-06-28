@@ -48,7 +48,9 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         "DESIGNED-BRUSH",
         "DESIGNED-BRUSH-2",
         "STAR-GENERATOR",
-        "CROP-BOARD"
+        "CROP-BOARD",
+        "TEXT",
+        "REMOVE"
     ];
 
     function extend(target, source) {

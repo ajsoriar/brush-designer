@@ -34,7 +34,9 @@
         "GRADIENT": new URL("./icons/paint-tools_gradient.png", import.meta.url).href,
         "STAR-GENERATOR": new URL("./icons/paint-tools_poligon-star.png", import.meta.url).href,
         "CROP-BOARD": new URL("./icons/paint-tools_crop.png", import.meta.url).href,
-        "PENCIL-TOOL": new URL("./icons/paint-tools_pencil.png", import.meta.url).href
+        "PENCIL-TOOL": new URL("./icons/paint-tools_pencil.png", import.meta.url).href,
+        "TEXT": new URL("./icons/paint-tools_text.png", import.meta.url).href,
+        "REMOVE": new URL("./icons/paint-tools_delete.png", import.meta.url).href
     };
 
     var TOOL_ACTIONS = {
@@ -85,7 +87,9 @@
         "LASSO-SELECTION": "Lasso Selection",
         "MAGIC-WAND": "Magic Wand",
         "STAR-GENERATOR": "Star",
-        "CROP-BOARD": "Crop Board"
+        "CROP-BOARD": "Crop Board",
+        "TEXT": "Text",
+        "REMOVE": "Remove"
     };
 
     var HIDDEN_TOOLS = {
