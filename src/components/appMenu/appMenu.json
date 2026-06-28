@@ -61,7 +61,9 @@
     },
     {
       "label": "Filters",
-      "items": []
+      "items": [
+        { "label": "Desaturate", "action": "filterDesaturate" }
+      ]
     },
     {
       "label": "Design",

@@ -717,7 +717,8 @@ import undoIconUrl from "./images/undo-icon.png";
                 openLineWidthPicker: global.AppOpenWindows.openSimpleLineWidthPickerWindow,
                 openBrushWidthPicker: global.AppOpenWindows.openSimpleBrushWidthPickerWindow,
                 openSvgExporter: global.AppOpenWindows.openSvgExporterWindow,
-                showAbout: showAbout
+                showAbout: showAbout,
+                filterDesaturate: global.Filters && global.Filters.desaturate
             }
         });
         global.AppMenuApi = appMenuComponent;
