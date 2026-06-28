@@ -83,6 +83,7 @@
         { "label": "Color Picker", "action": "openColorPicker" },
         { "label": "Big Color Picker", "action": "openBigColorPicker" },
         { "label": "The Global Goals", "action": "openGlobalGoalsPicker" },
+        { "label": "Eyes", "action": "openEyes" },
         { "type": "separator" },
         { "label": "Line Width", "action": "openLineWidthPicker" },
         { "label": "Brush Width", "action": "openBrushWidthPicker" }

@@ -712,6 +712,7 @@ import undoIconUrl from "./images/undo-icon.png";
                 openPaintTools: global.AppOpenWindows.openPaintToolsWindow,
                 openLayers: global.AppOpenWindows.openLayersPanelWindow,
                 openGlobalGoalsPicker: global.AppOpenWindows.openTheGlobalGoalsPickerWindow,
+                openEyes: global.Eyes && global.Eyes.open,
                 openColorPicker: global.AppOpenWindows.openSimpleColorPickerWindow,
                 openBigColorPicker: global.AppOpenWindows.openBigColorPickerWindow,
                 openLineWidthPicker: global.AppOpenWindows.openSimpleLineWidthPickerWindow,
