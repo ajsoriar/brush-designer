@@ -681,6 +681,7 @@ import undoIconUrl from "./images/undo-icon.png";
                     global.AppOpenWindows.openPaintBoardWindow();
                 },
                 openImage: openImage,
+                openProject: openProject,
                 saveImage: saveImage,
                 downloadFlattenImage: downloadFlattenImage,
                 saveImageAs: saveImageAs,
@@ -991,14 +992,16 @@ import undoIconUrl from "./images/undo-icon.png";
         downloadBoardImage(targetBoard, fileName);
     }
 
-    function saveAsProject() {
-        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
-
-        if (!targetBoard) {
-            return;
+    function openProject() {
+        if (global.OutputManagement && typeof global.OutputManagement.openProject === "function") {
+            global.OutputManagement.openProject();
         }
+    }
 
-        downloadBoardImage(targetBoard, targetBoard.id + ".project.png");
+    function saveAsProject() {
+        if (global.OutputManagement && typeof global.OutputManagement.saveAsProject === "function") {
+            global.OutputManagement.saveAsProject();
+        }
     }
 
     function clearBoard() {
