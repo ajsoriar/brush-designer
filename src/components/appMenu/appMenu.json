@@ -9,7 +9,8 @@
         { "type": "separator" },
         { "label": "Save", "action": "saveImage" },
         { "label": "Download Flatten Image", "action": "downloadFlattenImage" },
-        { "label": "Save As...", "action": "saveImageAs" }
+        { "label": "Save As...", "action": "saveImageAs" },
+        { "label": "Save as a project", "action": "saveAsProject" }
       ]
     },
     {
@@ -55,6 +56,10 @@
         { "label": "Fill Selection", "action": "fillSelectionWithFrontColor", "enabled": false },
         { "label": "Reverse Selection", "action": "reverseSelection", "enabled": false }
       ]
+    },
+    {
+      "label": "Filters",
+      "items": []
     },
     {
       "label": "Design",

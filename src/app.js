@@ -684,6 +684,7 @@ import undoIconUrl from "./images/undo-icon.png";
                 saveImage: saveImage,
                 downloadFlattenImage: downloadFlattenImage,
                 saveImageAs: saveImageAs,
+                saveAsProject: saveAsProject,
                 copyToClipboard: copyToClipboard,
                 pasteFromClipboard: pasteFromClipboard,
                 pasteAsNewLayer: pasteAsNewLayer,
@@ -988,6 +989,16 @@ import undoIconUrl from "./images/undo-icon.png";
         }
 
         downloadBoardImage(targetBoard, fileName);
+    }
+
+    function saveAsProject() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (!targetBoard) {
+            return;
+        }
+
+        downloadBoardImage(targetBoard, targetBoard.id + ".project.png");
     }
 
     function clearBoard() {
