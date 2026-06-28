@@ -994,20 +994,20 @@ import undoIconUrl from "./images/undo-icon.png";
     }
 
     function openProject() {
-        if (global.OutputManagement && typeof global.OutputManagement.openProject === "function") {
-            global.OutputManagement.openProject();
+        if (global.ProjectIo && typeof global.ProjectIo.openProject === "function") {
+            global.ProjectIo.openProject();
         }
     }
 
     function saveAsPdf() {
-        if (global.OutputManagement && typeof global.OutputManagement.saveAsPdf === "function") {
-            global.OutputManagement.saveAsPdf();
+        if (global.PdfExporter && typeof global.PdfExporter.saveAsPdf === "function") {
+            global.PdfExporter.saveAsPdf();
         }
     }
 
     function saveAsProject() {
-        if (global.OutputManagement && typeof global.OutputManagement.saveAsProject === "function") {
-            global.OutputManagement.saveAsProject();
+        if (global.ProjectIo && typeof global.ProjectIo.saveAsProject === "function") {
+            global.ProjectIo.saveAsProject();
         }
     }
 
