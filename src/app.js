@@ -173,7 +173,8 @@ import undoIconUrl from "./images/undo-icon.png";
 
         global.AppOpenWindows.updateLayersPanelThumbnail(
             event.detail.paintBoard,
-            event.detail.layerId
+            event.detail.layerId,
+            event.detail.paintTarget
         );
     });
 
@@ -680,9 +681,12 @@ import undoIconUrl from "./images/undo-icon.png";
                     global.AppOpenWindows.openPaintBoardWindow();
                 },
                 openImage: openImage,
+                openProject: openProject,
                 saveImage: saveImage,
                 downloadFlattenImage: downloadFlattenImage,
                 saveImageAs: saveImageAs,
+                saveAsPdf: saveAsPdf,
+                saveAsProject: saveAsProject,
                 copyToClipboard: copyToClipboard,
                 pasteFromClipboard: pasteFromClipboard,
                 pasteAsNewLayer: pasteAsNewLayer,
@@ -690,6 +694,7 @@ import undoIconUrl from "./images/undo-icon.png";
                 openFillBigColorPicker: openFillBigColorPicker,
                 transformLayer: transformActiveLayer,
                 openResizeImage: global.AppOpenWindows.openResizeImageWindow,
+                openBrightnessContrast: global.AppOpenWindows.openBrightnessContrastWindow,
                 cropToSelection: cropToSelection,
                 duplicateLayer: duplicateActiveLayer,
                 clearBoard: clearBoard,
@@ -706,12 +711,14 @@ import undoIconUrl from "./images/undo-icon.png";
                 openStarGenerator: global.AppOpenWindows.openStarGeneratorWindow,
                 openPaintTools: global.AppOpenWindows.openPaintToolsWindow,
                 openLayers: global.AppOpenWindows.openLayersPanelWindow,
+                openGlobalGoalsPicker: global.AppOpenWindows.openTheGlobalGoalsPickerWindow,
                 openColorPicker: global.AppOpenWindows.openSimpleColorPickerWindow,
                 openBigColorPicker: global.AppOpenWindows.openBigColorPickerWindow,
                 openLineWidthPicker: global.AppOpenWindows.openSimpleLineWidthPickerWindow,
                 openBrushWidthPicker: global.AppOpenWindows.openSimpleBrushWidthPickerWindow,
                 openSvgExporter: global.AppOpenWindows.openSvgExporterWindow,
-                showAbout: showAbout
+                showAbout: showAbout,
+                filterDesaturate: global.Filters && global.Filters.desaturate
             }
         });
         global.AppMenuApi = appMenuComponent;
@@ -987,6 +994,24 @@ import undoIconUrl from "./images/undo-icon.png";
         downloadBoardImage(targetBoard, fileName);
     }
 
+    function openProject() {
+        if (global.ProjectIo && typeof global.ProjectIo.openProject === "function") {
+            global.ProjectIo.openProject();
+        }
+    }
+
+    function saveAsPdf() {
+        if (global.PdfExporter && typeof global.PdfExporter.saveAsPdf === "function") {
+            global.PdfExporter.saveAsPdf();
+        }
+    }
+
+    function saveAsProject() {
+        if (global.ProjectIo && typeof global.ProjectIo.saveAsProject === "function") {
+            global.ProjectIo.saveAsProject();
+        }
+    }
+
     function clearBoard() {
         global.AppOpenWindows.clearBoard();
     }
@@ -1193,6 +1218,7 @@ import undoIconUrl from "./images/undo-icon.png";
     global.openBrushEditorOutputsWindow = global.AppOpenWindows.openBrushEditorOutputsWindow;
     global.openSimpleColorPickerWindow = global.AppOpenWindows.openSimpleColorPickerWindow;
     global.openBigColorPickerWindow = global.AppOpenWindows.openBigColorPickerWindow;
+    global.openBrightnessContrastWindow = global.AppOpenWindows.openBrightnessContrastWindow;
     global.openSimpleLineWidthPickerWindow = global.AppOpenWindows.openSimpleLineWidthPickerWindow;
     global.openSimpleBrushWidthPickerWindow = global.AppOpenWindows.openSimpleBrushWidthPickerWindow;
     global.openLinesDesignerWindow = global.AppOpenWindows.openLinesDesignerWindow;
@@ -1202,6 +1228,7 @@ import undoIconUrl from "./images/undo-icon.png";
     global.LinesDesignerApi = global.AppOpenWindows.getLinesDesignerApi();
     global.openPaintToolsWindow = global.AppOpenWindows.openPaintToolsWindow;
     global.openLayersPanelWindow = global.AppOpenWindows.openLayersPanelWindow;
+    global.openTheGlobalGoalsPickerWindow = global.AppOpenWindows.openTheGlobalGoalsPickerWindow;
     global.openStarGeneratorWindow = global.AppOpenWindows.openStarGeneratorWindow;
     global.renderBruses = renderBruses;
     global.storeImage = storeImage;

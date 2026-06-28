@@ -10,6 +10,8 @@
         height: 360,
         className: "",
         content: null,
+        movable: false,
+        overlayOpacity: null,
         closeOnEscape: true,
         beforeClose: null
     };
@@ -34,7 +36,9 @@
             y: y,
             width: config.width,
             height: config.height,
-            fixed: true,
+            fixed: !config.movable,
+            movable: !!config.movable,
+            resizable: false,
             minimizable: false,
             maximizable: false,
             scrollBarX: false,
@@ -52,6 +56,10 @@
 
         if (!modal) {
             return null;
+        }
+
+        if (modal.modalOverlay && config.overlayOpacity !== null && config.overlayOpacity !== undefined) {
+            modal.modalOverlay.style.background = "rgba(0, 0, 0, " + normalizeOpacity(config.overlayOpacity) + ")";
         }
 
         modal.element.className += " modal-window";
@@ -80,6 +88,16 @@
         }
 
         return target;
+    }
+
+    function normalizeOpacity(value) {
+        var opacity = parseFloat(value);
+
+        if (isNaN(opacity)) {
+            return 0.5;
+        }
+
+        return Math.max(0, Math.min(1, opacity));
     }
 
     global.ModalWindow = ModalWindow;

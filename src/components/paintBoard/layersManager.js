@@ -98,6 +98,12 @@
         return opacity;
     }
 
+    function getReadableCanvasContext(canvas) {
+        return canvas.getContext("2d", {
+            willReadFrequently: true
+        });
+    }
+
     function applyLayerOpacityToElement(listItem, opacity) {
         if (!listItem) {
             return;
@@ -106,14 +112,71 @@
         listItem.style.opacity = String(normalizeLayerOpacity(opacity) / 100);
     }
 
-    function drawLayerWithOpacity(context, layerCanvas, layer) {
+    function createLuminanceMaskCanvas(maskCanvas) {
+        var alphaCanvas;
+        var alphaContext;
+        var sourceContext;
+        var imageData;
+        var data;
+        var luminance;
+        var i;
+
+        if (!maskCanvas) {
+            return null;
+        }
+
+        alphaCanvas = maskCanvas.ownerDocument.createElement("canvas");
+        alphaCanvas.width = maskCanvas.width;
+        alphaCanvas.height = maskCanvas.height;
+        alphaContext = getReadableCanvasContext(alphaCanvas);
+        sourceContext = getReadableCanvasContext(maskCanvas);
+        imageData = sourceContext.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+        data = imageData.data;
+
+        for (i = 0; i < data.length; i += 4) {
+            luminance = Math.round(
+                (data[i] * 0.2126) +
+                (data[i + 1] * 0.7152) +
+                (data[i + 2] * 0.0722)
+            );
+            data[i] = 255;
+            data[i + 1] = 255;
+            data[i + 2] = 255;
+            data[i + 3] = Math.round(luminance * (data[i + 3] / 255));
+        }
+
+        alphaContext.putImageData(imageData, 0, 0);
+        return alphaCanvas;
+    }
+
+    function drawLayerWithOpacity(context, layerCanvas, layer, maskCanvas) {
         var opacity = getLayerOpacity(layer);
+        var maskedCanvas;
+        var maskedContext;
+        var alphaMask;
+        var blendMode;
 
         if (!context || !layerCanvas || opacity <= 0) {
             return;
         }
 
+        if (maskCanvas) {
+            maskedCanvas = layerCanvas.ownerDocument.createElement("canvas");
+            maskedCanvas.width = layerCanvas.width;
+            maskedCanvas.height = layerCanvas.height;
+            maskedContext = maskedCanvas.getContext("2d");
+            maskedContext.drawImage(layerCanvas, 0, 0);
+            alphaMask = createLuminanceMaskCanvas(maskCanvas);
+            if (alphaMask) {
+                maskedContext.globalCompositeOperation = "destination-in";
+                maskedContext.drawImage(alphaMask, 0, 0);
+            }
+            layerCanvas = maskedCanvas;
+        }
+
+        blendMode = layer.blendMode || layer["blend-mode"] || "source-over";
         context.save();
+        context.globalCompositeOperation = blendMode;
         context.globalAlpha = opacity / 100;
         context.drawImage(layerCanvas, 0, 0);
         context.restore();
@@ -152,6 +215,116 @@
         return board.layersElement.querySelector('[data-layer="' + layerId + '"]');
     }
 
+    function getLayerCanvas(board, layerId) {
+        var layerElement = getLayerElement(board, layerId);
+
+        return layerElement &&
+            layerElement.querySelector('[data-paint-target="board"]');
+    }
+
+    function getLayerById(board, layerId) {
+        var found = null;
+
+        if (!board || !board.layers) {
+            return null;
+        }
+
+        board.layers.forEach(function(layer) {
+            if (layer.id === layerId) {
+                found = layer;
+            }
+        });
+
+        return found;
+    }
+
+    function getLayerMaskCanvas(board, layerId) {
+        var layerElement = getLayerElement(board, layerId);
+
+        return layerElement &&
+            layerElement.querySelector('[data-paint-target="mask"]');
+    }
+
+    function createLayerMaskCanvas(board, layerId) {
+        var layerElement = getLayerElement(board, layerId);
+        var layerCanvas = getLayerCanvas(board, layerId);
+        var maskCanvas;
+        var maskContext;
+
+        if (!layerElement || !layerCanvas) {
+            return null;
+        }
+
+        maskCanvas = getLayerMaskCanvas(board, layerId);
+        if (maskCanvas) {
+            return maskCanvas;
+        }
+
+        maskCanvas = layerCanvas.ownerDocument.createElement("canvas");
+        maskCanvas.className = "paint-board-canvas paint-board-mask-canvas";
+        maskCanvas.setAttribute("data-paint-target", "mask");
+        maskCanvas.width = layerCanvas.width;
+        maskCanvas.height = layerCanvas.height;
+        maskCanvas.style.display = "none";
+        maskCanvas.style.width = layerCanvas.style.width;
+        maskCanvas.style.height = layerCanvas.style.height;
+
+        maskContext = getReadableCanvasContext(maskCanvas);
+        maskContext.fillStyle = "#ffffff";
+        maskContext.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+
+        layerElement.appendChild(maskCanvas);
+        applyLayerMaskToElement(board, layerId);
+        return maskCanvas;
+    }
+
+    function applyLayerMaskToElement(board, layerId) {
+        var layer = getLayerById(board, layerId);
+        var layerElement = getLayerElement(board, layerId);
+        var maskCanvas = getLayerMaskCanvas(board, layerId);
+        var alphaMask;
+        var maskUrl;
+
+        if (!layerElement) {
+            return false;
+        }
+
+        if (!layer || !layer.mask || !maskCanvas) {
+            layerElement.style.maskImage = "";
+            layerElement.style.maskMode = "";
+            layerElement.style.maskRepeat = "";
+            layerElement.style.maskSize = "";
+            layerElement.style.webkitMaskImage = "";
+            layerElement.style.webkitMaskRepeat = "";
+            layerElement.style.webkitMaskSize = "";
+            return true;
+        }
+
+        alphaMask = createLuminanceMaskCanvas(maskCanvas);
+        maskUrl = "url(" + (alphaMask || maskCanvas).toDataURL() + ")";
+        layerElement.style.maskImage = maskUrl;
+        layerElement.style.maskMode = "alpha";
+        layerElement.style.maskRepeat = "no-repeat";
+        layerElement.style.maskSize = "100% 100%";
+        layerElement.style.webkitMaskImage = maskUrl;
+        layerElement.style.webkitMaskRepeat = "no-repeat";
+        layerElement.style.webkitMaskSize = "100% 100%";
+        return true;
+    }
+
+    function applyLayerMasksToElements(board) {
+        if (!board || !board.layers) {
+            return false;
+        }
+
+        board.layers.forEach(function(layer) {
+            if (layer && layer.mask) {
+                applyLayerMaskToElement(board, layer.id);
+            }
+        });
+        return true;
+    }
+
     function syncLayerOrderInDom(board) {
         board.layers.forEach(function(layer) {
             var listItem = getLayerElement(board, layer.id);
@@ -180,6 +353,7 @@
 
         canvas.id = layerId + "-canvas";
         canvas.className = "paint-board-canvas";
+        canvas.setAttribute("data-paint-target", "board");
         canvas.width = board.width;
         canvas.height = board.height;
         canvas.style.width = board.width + "px";
@@ -205,10 +379,12 @@
     // canvas/context are redirected to that layer's own canvas, so painting goes
     // to the selected layer even when other layers are stacked on top of it
     // (Photoshop-style layers). Returns true when the layer was activated.
-    function setLayerSelection(board, selectedLayerIds, activeLayerId) {
+    function setLayerSelection(board, selectedLayerIds, activeLayerId, paintTarget) {
         var listItem = null;
         var canvas;
         var validSelectedIds = [];
+        var target = paintTarget === "mask" ? "mask" : "board";
+        var activeLayer;
 
         selectedLayerIds = selectedLayerIds || [];
         board.layers.forEach(function(layer) {
@@ -234,7 +410,13 @@
             listItem = document.getElementById(activeLayerId);
         }
 
-        canvas = listItem && listItem.querySelector("canvas");
+        activeLayer = getLayerById(board, activeLayerId);
+        if (target === "mask" && activeLayer && activeLayer.mask) {
+            canvas = createLayerMaskCanvas(board, activeLayerId);
+        } else {
+            target = "board";
+            canvas = getLayerCanvas(board, activeLayerId);
+        }
 
         if (!listItem || !canvas) {
             return false;
@@ -242,13 +424,20 @@
 
         board.activeLayerElement = listItem;
         board.activeLayerId = activeLayerId;
+        board.activePaintTarget = target;
+        board.inputCanvas = getLayerCanvas(board, activeLayerId);
         board.selectedLayerIds = validSelectedIds.slice();
         board.canvas = canvas;
-        board.context = canvas.getContext("2d");
+        board.context = getReadableCanvasContext(canvas);
 
         board.layers.forEach(function(layer) {
             layer.active = layer.id === activeLayerId;
             layer.selected = validSelectedIds.indexOf(layer.id) >= 0;
+            if (layer.active) {
+                layer.activePaintTarget = target;
+            } else {
+                delete layer.activePaintTarget;
+            }
         });
 
         // Debug-only marker: tag the active layer element with the ACTIVE-LAYER
@@ -335,9 +524,15 @@
 
             if (mask && typeof mask === "object") {
                 layer.mask = cloneLayer(mask);
+                createLayerMaskCanvas(board, layerId);
             } else {
                 delete layer.mask;
+                if (board.activeLayerId === layerId &&
+                    board.activePaintTarget === "mask") {
+                    setLayerSelection(board, board.selectedLayerIds, layerId, "board");
+                }
             }
+            applyLayerMaskToElement(board, layerId);
             layerFound = true;
         });
 
@@ -434,10 +629,10 @@
         var sourceLayer;
         var duplicatedLayer;
         var duplicatedLayerData;
-        var sourceElement;
-        var duplicatedElement;
         var sourceCanvas;
         var duplicatedCanvas;
+        var sourceMaskCanvas;
+        var duplicatedMaskCanvas;
 
         if (!board || !board.activeLayerId) {
             return null;
@@ -476,17 +671,28 @@
             duplicatedLayerData.mask.id = duplicatedLayerData.id + "-mask";
         }
 
-        sourceElement = getLayerElement(board, sourceLayer.id);
-        duplicatedElement = getLayerElement(board, duplicatedLayerData.id);
-        sourceCanvas = sourceElement && sourceElement.querySelector("canvas");
-        duplicatedCanvas = duplicatedElement &&
-            duplicatedElement.querySelector("canvas");
+        sourceCanvas = getLayerCanvas(board, sourceLayer.id);
+        duplicatedCanvas = getLayerCanvas(board, duplicatedLayerData.id);
 
         if (sourceCanvas && duplicatedCanvas) {
             duplicatedCanvas.getContext("2d").drawImage(sourceCanvas, 0, 0);
         }
-        if (duplicatedElement) {
-            duplicatedElement.style.display = duplicatedLayerData.visible ?
+        if (sourceLayer.mask) {
+            sourceMaskCanvas = getLayerMaskCanvas(board, sourceLayer.id);
+            duplicatedMaskCanvas = createLayerMaskCanvas(board, duplicatedLayerData.id);
+            if (sourceMaskCanvas && duplicatedMaskCanvas) {
+                duplicatedMaskCanvas.getContext("2d").clearRect(
+                    0,
+                    0,
+                    duplicatedMaskCanvas.width,
+                    duplicatedMaskCanvas.height
+                );
+                duplicatedMaskCanvas.getContext("2d").drawImage(sourceMaskCanvas, 0, 0);
+                applyLayerMaskToElement(board, duplicatedLayerData.id);
+            }
+        }
+        if (getLayerElement(board, duplicatedLayerData.id)) {
+            getLayerElement(board, duplicatedLayerData.id).style.display = duplicatedLayerData.visible ?
                 "" :
                 "none";
         }
@@ -604,8 +810,8 @@
             false;
     }
 
-    function setActiveLayer(board, layerId) {
-        return setLayerSelection(board, [layerId], layerId);
+    function setActiveLayer(board, layerId, paintTarget) {
+        return setLayerSelection(board, [layerId], layerId, paintTarget);
     }
 
     function mergeSelectedLayers(board) {
@@ -641,7 +847,7 @@
         selectedLayers.some(function(layer) {
             var layerElement = getLayerElement(board, layer.id);
 
-            referenceCanvas = layerElement && layerElement.querySelector("canvas");
+            referenceCanvas = layerElement && getLayerCanvas(board, layer.id);
             return !!referenceCanvas;
         });
         if (!referenceCanvas) {
@@ -661,9 +867,14 @@
             }
 
             layerElement = getLayerElement(board, layer.id);
-            layerCanvas = layerElement && layerElement.querySelector("canvas");
+            layerCanvas = layerElement && getLayerCanvas(board, layer.id);
             if (layerCanvas) {
-                drawLayerWithOpacity(compositeContext, layerCanvas, layer);
+                drawLayerWithOpacity(
+                    compositeContext,
+                    layerCanvas,
+                    layer,
+                    layer.mask && getLayerMaskCanvas(board, layer.id)
+                );
             }
         });
 
@@ -708,7 +919,7 @@
             mergedLayerId,
             mergedLayer["order-from-the-bottom"]
         );
-        mergedCanvas = mergedElement.querySelector("canvas");
+        mergedCanvas = getLayerCanvas(board, mergedLayerId);
         mergedCanvas.getContext("2d").drawImage(compositeCanvas, 0, 0);
         applyLayerOpacityToElement(mergedElement, mergedLayer.opacity);
         syncLayerOrderInDom(board);
@@ -737,7 +948,7 @@
         orderedLayers.some(function(layer) {
             var layerElement = getLayerElement(board, layer.id);
 
-            referenceCanvas = layerElement && layerElement.querySelector("canvas");
+            referenceCanvas = layerElement && getLayerCanvas(board, layer.id);
             return !!referenceCanvas;
         });
         if (!referenceCanvas) {
@@ -758,9 +969,14 @@
             }
 
             layerElement = getLayerElement(board, layer.id);
-            layerCanvas = layerElement && layerElement.querySelector("canvas");
+            layerCanvas = layerElement && getLayerCanvas(board, layer.id);
             if (layerCanvas) {
-                drawLayerWithOpacity(compositeContext, layerCanvas, layer);
+                drawLayerWithOpacity(
+                    compositeContext,
+                    layerCanvas,
+                    layer,
+                    layer.mask && getLayerMaskCanvas(board, layer.id)
+                );
             }
         });
 
@@ -791,7 +1007,7 @@
             return layer.background;
         })[0] || orderedLayers[0];
         targetElement = getLayerElement(board, targetLayer.id);
-        targetCanvas = targetElement && targetElement.querySelector("canvas");
+        targetCanvas = targetElement && getLayerCanvas(board, targetLayer.id);
         compositeCanvas = createFlattenedCanvas(board);
 
         if (!targetElement || !targetCanvas || !compositeCanvas) {
@@ -830,6 +1046,9 @@
         cloneLayer: cloneLayer,
         createInitialLayers: createInitialLayers,
         createFlattenedCanvas: createFlattenedCanvas,
+        getLayerMaskCanvas: getLayerMaskCanvas,
+        applyLayerMaskToElement: applyLayerMaskToElement,
+        applyLayerMasksToElements: applyLayerMasksToElements,
         addLayer: addLayer,
         duplicateActiveLayer: duplicateActiveLayer,
         flattenImage: flattenImage,

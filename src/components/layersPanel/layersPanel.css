@@ -99,8 +99,8 @@
 }
 
 .layers-panel-thumbnail-selected {
-    outline: 2px solid #E91E63;
-    outline-offset: 0px;
+    outline: 3px solid #ff0000;
+    outline-offset: -1px;
 }
 
 .layers-panel-thumbnail-canvas {
@@ -201,6 +201,13 @@
     padding: 2px 6px;
 }
 
+.layers-panel-active-target-label {
+    color: #111111;
+    flex: 0 0 auto;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
 .layers-panel-opacity-control {
     color: #111111;
     font-size: 12px;
@@ -210,6 +217,7 @@
     height: 20px;
     margin: 0;
     max-width: 200px;
+    min-width: 90px;
     width: 200px;
 }
 

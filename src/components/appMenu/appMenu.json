@@ -6,10 +6,13 @@
         { "label": "New...", "action": "newDocument" },
         { "label": "Quick New (800x600)", "action": "createPaintBoard" },
         { "label": "Open", "action": "openImage" },
+        { "label": "Open Project", "action": "openProject" },
         { "type": "separator" },
         { "label": "Save", "action": "saveImage" },
         { "label": "Download Flatten Image", "action": "downloadFlattenImage" },
-        { "label": "Save As...", "action": "saveImageAs" }
+        { "label": "Save As...", "action": "saveImageAs" },
+        { "label": "Save as PDF", "action": "saveAsPdf" },
+        { "label": "Save as a project", "action": "saveAsProject" }
       ]
     },
     {
@@ -30,6 +33,7 @@
       "label": "Image",
       "items": [
         { "label": "Image Size", "action": "openResizeImage" },
+        { "label": "Brightness/Contrast...", "action": "openBrightnessContrast" },
         { "label": "Crop", "action": "cropToSelection", "enabled": false }
       ]
     },
@@ -56,6 +60,12 @@
       ]
     },
     {
+      "label": "Filters",
+      "items": [
+        { "label": "Desaturate", "action": "filterDesaturate" }
+      ]
+    },
+    {
       "label": "Design",
       "items": [
         { "label": "Brush Designer", "action": "openBrushDesigner" },
@@ -72,6 +82,7 @@
         { "type": "separator" },
         { "label": "Color Picker", "action": "openColorPicker" },
         { "label": "Big Color Picker", "action": "openBigColorPicker" },
+        { "label": "The Global Goals", "action": "openGlobalGoalsPicker" },
         { "type": "separator" },
         { "label": "Line Width", "action": "openLineWidthPicker" },
         { "label": "Brush Width", "action": "openBrushWidthPicker" }

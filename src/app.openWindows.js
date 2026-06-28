@@ -21,6 +21,8 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
     var appGradientPanel = null;
     var appLinesDesigner = null;
     var appSvgExporter = null;
+    var appBrightnessContrast = null;
+    var appGlobalGoalsPicker = null;
     var syncingLineWidthComponents = false;
     var documentCount = 0;
     var activePaintBoard = null;
@@ -46,7 +48,9 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         "DESIGNED-BRUSH",
         "DESIGNED-BRUSH-2",
         "STAR-GENERATOR",
-        "CROP-BOARD"
+        "CROP-BOARD",
+        "TEXT",
+        "REMOVE"
     ];
 
     function extend(target, source) {
@@ -277,6 +281,99 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         });
 
         dialogWindow.setContent(dialog.element);
+        return dialogWindow;
+    }
+
+    function openBrightnessContrastWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("brightness-contrast");
+        var targetBoard = getActivePaintBoard();
+        var dialogWindow;
+        var sourceSnapshot;
+        var hasPreview = false;
+        var hasChanges = false;
+        var accepted = false;
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return existingWindow;
+        }
+
+        if (!targetBoard || !targetBoard.canvas || !targetBoard.context) {
+            notifyMessage("Open a paint board first.", "error");
+            return null;
+        }
+
+        sourceSnapshot = captureActiveLayerSnapshot(targetBoard);
+        if (!sourceSnapshot) {
+            notifyMessage("Unable to read the active layer.", "error");
+            return null;
+        }
+
+        dialogWindow = ModalWindow({
+            id: "brightness-contrast-window",
+            windowId: "brightness-contrast",
+            title: "Brightness/Contrast",
+            width: 340,
+            height: 150,
+            className: "wm-window-brightness-contrast",
+            movable: true,
+            overlayOpacity: 0,
+            beforeClose: function() {
+                if (!accepted && hasPreview) {
+                    restoreActiveLayerSnapshot(targetBoard, sourceSnapshot);
+                    refreshLayersPanel(targetBoard);
+                }
+                if (appBrightnessContrast) {
+                    appBrightnessContrast.destroy();
+                    appBrightnessContrast = null;
+                }
+                return true;
+            }
+        });
+
+        if (!dialogWindow) {
+            return null;
+        }
+
+        appBrightnessContrast = BrightnessContrastDialog({
+            brightness: 0,
+            contrast: 0,
+            preview: true,
+            useLegacy: true,
+            onChange: function(options) {
+                if (options.preview) {
+                    applyBrightnessContrastPreview(targetBoard, sourceSnapshot, options);
+                    hasPreview = true;
+                    hasChanges = hasChanges || options.brightness !== 0 || options.contrast !== 0;
+                    return;
+                }
+
+                if (hasPreview) {
+                    restoreActiveLayerSnapshot(targetBoard, sourceSnapshot);
+                    refreshLayersPanel(targetBoard);
+                    hasPreview = false;
+                }
+            },
+            onCancel: function() {
+                restoreActiveLayerSnapshot(targetBoard, sourceSnapshot);
+                refreshLayersPanel(targetBoard);
+                dialogWindow.close();
+            },
+            onOk: function(options) {
+                if (!options.preview) {
+                    applyBrightnessContrastPreview(targetBoard, sourceSnapshot, options);
+                }
+                hasChanges = hasChanges || options.brightness !== 0 || options.contrast !== 0;
+                if (hasChanges) {
+                    storeActiveLayerUndoSnapshot(targetBoard, sourceSnapshot);
+                    refreshLayersPanel(targetBoard);
+                }
+                accepted = true;
+                dialogWindow.close();
+            }
+        });
+
+        dialogWindow.setContent(appBrightnessContrast.element);
         return dialogWindow;
     }
 
@@ -521,6 +618,9 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         updateLayersPanelFooterState(appLayersPanel);
         layers.forEach(function(layer) {
             updateLayersPanelThumbnail(paintBoard, layer.id);
+            if (layer.mask) {
+                updateLayersPanelThumbnail(paintBoard, layer.id, "mask");
+            }
         });
     }
 
@@ -540,9 +640,10 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         return appLayersPanel.resizeThumbnailsTo(maxSize);
     }
 
-    function updateLayersPanelThumbnail(paintBoard, layerId) {
+    function updateLayersPanelThumbnail(paintBoard, layerId, paintTarget) {
         var layerElement;
         var canvas;
+        var target = paintTarget === "mask" ? "mask" : "board";
 
         if (!paintBoard ||
             paintBoard !== activePaintBoard ||
@@ -552,15 +653,20 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             return false;
         }
 
-        layerElement = paintBoard.layersElement &&
-            paintBoard.layersElement.querySelector('[data-layer="' + layerId + '"]');
-        canvas = layerElement && layerElement.querySelector("canvas");
+        if (target === "mask" &&
+            paintBoard.getLayerMaskCanvas) {
+            canvas = paintBoard.getLayerMaskCanvas(layerId);
+        } else {
+            layerElement = paintBoard.layersElement &&
+                paintBoard.layersElement.querySelector('[data-layer="' + layerId + '"]');
+            canvas = layerElement && layerElement.querySelector('[data-paint-target="board"]');
+        }
 
         if (!canvas) {
             return false;
         }
 
-        return appLayersPanel.updateThumbnail(layerId, canvas, "board");
+        return appLayersPanel.updateThumbnail(layerId, canvas, target);
     }
 
     function syncLayersPanelWindowTitle(paintBoard) {
@@ -1677,7 +1783,17 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
                 activePaintBoard.canvas.width : 800,
             boardHeight: activePaintBoard && activePaintBoard.canvas ?
                 activePaintBoard.canvas.height : 600,
-            onActiveLayerChange: function(layer) {
+            onActiveLayerChange: function(layer, activePreview, panel) {
+                if (activePaintBoard &&
+                    activePaintBoard.setLayerSelection &&
+                    layer &&
+                    panel) {
+                    activePaintBoard.setLayerSelection(
+                        panel.getSelectedLayerIds(),
+                        layer.id,
+                        activePreview
+                    );
+                }
                 updateLayersPanelFooterState(appLayersPanel);
             },
             onSelectionChange: function(layers, activeLayer) {
@@ -1688,7 +1804,10 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
                         layers.map(function(layer) {
                             return layer.id;
                         }),
-                        activeLayer.id
+                        activeLayer.id,
+                        appLayersPanel && appLayersPanel.getActivePreview ?
+                            appLayersPanel.getActivePreview() :
+                            "board"
                     );
                 }
                 updateLayersPanelFooterState(appLayersPanel);
@@ -1706,6 +1825,9 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             onLayerMaskChange: function(layer, mask) {
                 if (activePaintBoard && activePaintBoard.setLayerMask && layer) {
                     activePaintBoard.setLayerMask(layer.id, mask);
+                    if (mask) {
+                        updateLayersPanelThumbnail(activePaintBoard, layer.id, "mask");
+                    }
                 }
             },
             onLayerOpacityChange: function(layer, opacity) {
@@ -1731,6 +1853,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         var blockButton;
         var opacityRange;
         var opacityValue;
+        var activeTargetLabel;
 
         if (!toolsRowElement || !layersPanel) {
             return;
@@ -1742,12 +1865,14 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
                 '<label class="layers-panel-opacity-control" for="layers-panel-opacity-range">Opacity</label>',
                 '<input id="layers-panel-opacity-range" class="layers-panel-opacity-range" type="range" min="0" max="100" step="1" value="100" aria-label="Layer opacity">',
                 '<span class="layers-panel-opacity-value">100%</span>',
+                '<span class="layers-panel-active-target-label" aria-live="polite">Active Target: Layer</span>',
             '</div>'
         ].join("");
 
         blockButton = toolsRowElement.querySelector(".layers-panel-block-btn");
         opacityRange = toolsRowElement.querySelector(".layers-panel-opacity-range");
         opacityValue = toolsRowElement.querySelector(".layers-panel-opacity-value");
+        activeTargetLabel = toolsRowElement.querySelector(".layers-panel-active-target-label");
 
         function syncOpacityValueLabel() {
             var value = parseInt(opacityRange.value, 10);
@@ -1782,6 +1907,12 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         });
         opacityRange.addEventListener("change", syncOpacityValueLabel);
         syncOpacityValueLabel();
+        if (activeTargetLabel) {
+            activeTargetLabel.textContent = layersPanel.getActivePreview &&
+                layersPanel.getActivePreview() === "mask" ?
+                "Active Target: Mask" :
+                "Active Target: Layer";
+        }
         updateLayersPanelFooterState(layersPanel);
     }
 
@@ -1851,6 +1982,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         var blockButton;
         var opacityRange;
         var opacityValue;
+        var activeTargetLabel;
         var activeLayer;
         var selectedLayers;
         var removableSelectedCount;
@@ -1875,6 +2007,8 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             footerElement.querySelector(".layers-panel-opacity-range");
         opacityValue = footerElement &&
             footerElement.querySelector(".layers-panel-opacity-value");
+        activeTargetLabel = footerElement &&
+            footerElement.querySelector(".layers-panel-active-target-label");
         activeLayer = layersPanel.getActiveLayer && layersPanel.getActiveLayer();
         selectedLayers = layersPanel.getSelectedLayers ?
             layersPanel.getSelectedLayers() :
@@ -1937,6 +2071,96 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         if (opacityValue) {
             opacityValue.textContent = activeOpacity + "%";
         }
+        if (activeTargetLabel) {
+            activeTargetLabel.textContent = layersPanel.getActivePreview &&
+                layersPanel.getActivePreview() === "mask" ?
+                "Active Target: Mask" :
+                "Active Target: Layer";
+        }
+    }
+
+    function openTheGlobalGoalsPickerWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("global-goals-picker");
+        var pickerWindow;
+        var activeGoal;
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return appGlobalGoalsPicker;
+        }
+
+        pickerWindow = WindowsManager.create({
+            id: "global-goals-picker-window",
+            windowId: "global-goals-picker",
+            title: "",
+            type: "TOOL",
+            x: Math.max(6, global.innerWidth - 220),
+            y: 200,
+            width: 200,
+            height: 227,
+            resizable: false,
+            minimizable: false,
+            scrollBarX: false,
+            scrollBarY: false,
+            transparentFrame: true,
+            cornerRadius: 4,
+            boxShadow: "rgba(0, 0, 0, 0.5) 2px 2px 5px 0px",
+            contentId: "global-goals-picker-content",
+            beforeClose: function() {
+                if (appGlobalGoalsPicker) {
+                    appGlobalGoalsPicker.destroy();
+                    appGlobalGoalsPicker = null;
+                }
+                return true;
+            }
+        });
+
+        if (!pickerWindow) {
+            return null;
+        }
+
+        pickerWindow.element.className += " wm-window-global-goals-picker";
+
+        activeGoal = global.TheGlobalGoalsPickerGoalByColor ?
+            global.TheGlobalGoalsPickerGoalByColor(getActiveColors().frontColor) :
+            null;
+
+        appGlobalGoalsPicker = TheGlobalGoalsPicker({
+            containerId: pickerWindow.contentId,
+            activeGoal: activeGoal && activeGoal.index,
+            onChange: function(goal) {
+                setActiveColor(goal.color);
+            }
+        });
+
+        return appGlobalGoalsPicker;
+    }
+
+    function openTransparentFrameExampleWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("transparent-frame-example");
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return existingWindow;
+        }
+
+        return WindowsManager.create({
+            id: "transparent-frame-example-window",
+            windowId: "transparent-frame-example",
+            title: "",
+            type: "TOOL",
+            x: 200,
+            y: 100,
+            width: 200,
+            height: 227,
+            resizable: false,
+            minimizable: false,
+            closable: true,
+            scrollBarX: false,
+            scrollBarY: false,
+            transparentFrame: true,
+            contentId: "transparent-frame-example-content"
+        });
     }
 
     function openStarGeneratorWindow() {
@@ -2079,6 +2303,158 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         return appSvgExporter;
     }
 
+    function captureActiveLayerSnapshot(board) {
+        var selectionMaskCanvas = board &&
+            board.selection &&
+            board.selection.maskCanvas;
+        var selectionMaskContext;
+
+        if (!board || !board.canvas || !board.context) {
+            return null;
+        }
+
+        if (selectionMaskCanvas) {
+            selectionMaskContext = selectionMaskCanvas.getContext("2d");
+        }
+
+        return {
+            width: board.canvas.width,
+            height: board.canvas.height,
+            backgroundColor: board.backgroundColor,
+            imageData: board.context.getImageData(0, 0, board.canvas.width, board.canvas.height),
+            selectionMaskData: selectionMaskContext ?
+                selectionMaskContext.getImageData(0, 0, board.canvas.width, board.canvas.height).data :
+                null
+        };
+    }
+
+    function restoreActiveLayerSnapshot(board, snapshot) {
+        if (!board || !board.context || !snapshot || !snapshot.imageData) {
+            return false;
+        }
+
+        board.context.putImageData(snapshot.imageData, 0, 0);
+        return true;
+    }
+
+    function storeActiveLayerUndoSnapshot(board, snapshot) {
+        if (!board || !snapshot || !snapshot.imageData) {
+            return;
+        }
+
+        board.undoSnapshot = {
+            width: snapshot.width,
+            height: snapshot.height,
+            backgroundColor: snapshot.backgroundColor,
+            imageData: cloneImageData(snapshot.imageData)
+        };
+        notifyPaintBoardUndoChange(board);
+    }
+
+    function applyBrightnessContrastPreview(board, snapshot, options) {
+        var imageData;
+
+        if (!board || !board.context || !snapshot || !snapshot.imageData) {
+            return false;
+        }
+
+        imageData = cloneImageData(snapshot.imageData);
+        adjustBrightnessContrastImageData(
+            imageData,
+            options.brightness,
+            options.contrast,
+            options.useLegacy,
+            snapshot.imageData,
+            snapshot.selectionMaskData
+        );
+        board.context.putImageData(imageData, 0, 0);
+        return true;
+    }
+
+    function adjustBrightnessContrastImageData(imageData, brightness, contrast, useLegacy, sourceImageData, selectionMaskData) {
+        var data = imageData.data;
+        var sourceData = sourceImageData && sourceImageData.data;
+        var brightnessOffset = clampPercent(brightness) * 2.55;
+        var contrastValue = clampPercent(contrast);
+        var contrastFactor = useLegacy ?
+            (259 * (contrastValue * 2.55 + 255)) / (255 * (259 - contrastValue * 2.55)) :
+            1 + contrastValue / 100;
+        var maskAlpha;
+        var i;
+
+        for (i = 0; i < data.length; i += 4) {
+            data[i] = clampChannel((data[i] - 128) * contrastFactor + 128 + brightnessOffset);
+            data[i + 1] = clampChannel((data[i + 1] - 128) * contrastFactor + 128 + brightnessOffset);
+            data[i + 2] = clampChannel((data[i + 2] - 128) * contrastFactor + 128 + brightnessOffset);
+
+            if (!selectionMaskData || !sourceData) {
+                continue;
+            }
+
+            maskAlpha = selectionMaskData[i + 3] / 255;
+            if (maskAlpha <= 0) {
+                data[i] = sourceData[i];
+                data[i + 1] = sourceData[i + 1];
+                data[i + 2] = sourceData[i + 2];
+                data[i + 3] = sourceData[i + 3];
+            } else if (maskAlpha < 1) {
+                data[i] = clampChannel(sourceData[i] + (data[i] - sourceData[i]) * maskAlpha);
+                data[i + 1] = clampChannel(sourceData[i + 1] + (data[i + 1] - sourceData[i + 1]) * maskAlpha);
+                data[i + 2] = clampChannel(sourceData[i + 2] + (data[i + 2] - sourceData[i + 2]) * maskAlpha);
+                data[i + 3] = sourceData[i + 3];
+            }
+        }
+    }
+
+    function cloneImageData(imageData) {
+        return new ImageData(
+            new Uint8ClampedArray(imageData.data),
+            imageData.width,
+            imageData.height
+        );
+    }
+
+    function clampPercent(value) {
+        var number = parseInt(value, 10);
+
+        if (isNaN(number)) {
+            return 0;
+        }
+
+        return Math.max(-100, Math.min(100, number));
+    }
+
+    function clampChannel(value) {
+        return Math.max(0, Math.min(255, Math.round(value)));
+    }
+
+    function notifyPaintBoardUndoChange(board) {
+        var event;
+
+        if (!board) {
+            return;
+        }
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-board-undo-change", {
+                detail: {
+                    board: board.element,
+                    paintBoard: board,
+                    canUndo: !!board.undoSnapshot
+                }
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-board-undo-change", false, false, {
+                board: board.element,
+                paintBoard: board,
+                canUndo: !!board.undoSnapshot
+            });
+        }
+
+        global.dispatchEvent(event);
+    }
+
     function notifyMessage(message, type) {
         if (typeof global.ajsrnotify !== "function") {
             return;
@@ -2135,6 +2511,8 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
     }
 
     function setActiveColor(color) {
+        var globalGoal;
+
         global.App.memory.currentColor = color;
 
         if (appColorPicker && appColorPicker.setActiveColor) {
@@ -2148,6 +2526,17 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         if (global.ForegroundBackgroundColorsApi &&
             global.ForegroundBackgroundColorsApi.setFrontColor) {
             global.ForegroundBackgroundColorsApi.setFrontColor(color, true);
+        }
+
+        if (appGlobalGoalsPicker) {
+            globalGoal = global.TheGlobalGoalsPickerGoalByColor ?
+                global.TheGlobalGoalsPickerGoalByColor(color) :
+                null;
+            if (globalGoal && appGlobalGoalsPicker.setActiveGoal) {
+                appGlobalGoalsPicker.setActiveGoal(globalGoal.index);
+            } else if (appGlobalGoalsPicker.clearActiveGoal) {
+                appGlobalGoalsPicker.clearActiveGoal();
+            }
         }
     }
 
@@ -2199,6 +2588,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         openSimpleColorPickerWindow: openSimpleColorPickerWindow,
         openBigColorPickerWindow: openBigColorPickerWindow,
         openResizeImageWindow: openResizeImageWindow,
+        openBrightnessContrastWindow: openBrightnessContrastWindow,
         openSimpleLineWidthPickerWindow: openSimpleLineWidthPickerWindow,
         openSimpleBrushWidthPickerWindow: openSimpleBrushWidthPickerWindow,
         openLinesDesignerWindow: openLinesDesignerWindow,
@@ -2210,6 +2600,8 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         getLinesDesignerApi: getLinesDesignerApi,
         openPaintToolsWindow: openPaintToolsWindow,
         openLayersPanelWindow: openLayersPanelWindow,
+        openTheGlobalGoalsPickerWindow: openTheGlobalGoalsPickerWindow,
+        openTransparentFrameExampleWindow: openTransparentFrameExampleWindow,
         openStarGeneratorWindow: openStarGeneratorWindow,
         openSvgExporterWindow: openSvgExporterWindow,
         updatePaintBoardWindowTitle: updatePaintBoardWindowTitle,
