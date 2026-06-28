@@ -4558,6 +4558,8 @@
                 paintSquaredLine(board, board.lastPointerPosition, point);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.PENCIL_TOOL && board.lastPointerPosition) {
                 paintSquaredLine(board, board.lastPointerPosition, point);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.REMOVE && board.lastPointerPosition) {
+                paintSquaredLine(board, board.lastPointerPosition, point);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES && board.lastPointerPosition) {
                 paintRoundLine(board, board.lastPointerPosition, point);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH) {
