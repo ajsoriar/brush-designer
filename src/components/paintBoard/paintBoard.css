@@ -234,6 +234,12 @@
     stroke: #fff;
 }
 
+.paint-board-lasso-cross {
+    stroke: #fff;
+    stroke-width: 1.5;
+    fill: none;
+}
+
 @keyframes paint-board-lasso-march {
     from {
         stroke-dashoffset: 0;

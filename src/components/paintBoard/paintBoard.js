@@ -2941,12 +2941,16 @@
 
     function renderBoxSelectionPreview(board, fromPoint, toPoint) {
         var bounds = getSelectionBoundsFromPoints(fromPoint, toPoint);
+        var showCross;
+        var centerPoint;
 
         if (!board || !board.tempLayerElement) {
             return;
         }
 
-        board.tempLayerElement.innerHTML = getBoxSelectionSvgString(board, bounds, isOvalSelectionTool());
+        showCross = board.previewModifierState && board.previewModifierState.altKey;
+        centerPoint = showCross ? board.pointerStartPosition : null;
+        board.tempLayerElement.innerHTML = getBoxSelectionSvgString(board, bounds, isOvalSelectionTool(), centerPoint);
     }
 
     function setPolygonSelection(board, type, points) {
@@ -3651,7 +3655,7 @@
             "</svg>";
     }
 
-    function getBoxSelectionSvgString(board, bounds, oval) {
+    function getBoxSelectionSvgString(board, bounds, oval, centerPoint) {
         var shape;
         var zoom = getBoardRenderZoom(board);
         var inset = 0.5 / zoom;
@@ -3659,6 +3663,7 @@
         var strokeTop;
         var strokeWidth;
         var strokeHeight;
+        var crossSize;
 
         if (!bounds) {
             return "";
@@ -3677,6 +3682,11 @@
             shape = "<rect class=\"paint-board-lasso-fill\" x=\"" + escapeHtml(bounds.left) + "\" y=\"" + escapeHtml(bounds.top) + "\" width=\"" + escapeHtml(bounds.width) + "\" height=\"" + escapeHtml(bounds.height) + "\"></rect>" +
                 "<rect class=\"paint-board-lasso-outline paint-board-lasso-outline-dark\" x=\"" + escapeHtml(strokeLeft) + "\" y=\"" + escapeHtml(strokeTop) + "\" width=\"" + escapeHtml(strokeWidth) + "\" height=\"" + escapeHtml(strokeHeight) + "\"></rect>" +
                 "<rect class=\"paint-board-lasso-outline paint-board-lasso-outline-light\" x=\"" + escapeHtml(strokeLeft) + "\" y=\"" + escapeHtml(strokeTop) + "\" width=\"" + escapeHtml(strokeWidth) + "\" height=\"" + escapeHtml(strokeHeight) + "\"></rect>";
+        }
+
+        if (centerPoint) {
+            crossSize = 10 / zoom;
+            shape += "<path class=\"paint-board-lasso-cross\" d=\"M " + escapeHtml(centerPoint.x) + " " + escapeHtml(centerPoint.y - crossSize) + " L " + escapeHtml(centerPoint.x) + " " + escapeHtml(centerPoint.y + crossSize) + " M " + escapeHtml(centerPoint.x - crossSize) + " " + escapeHtml(centerPoint.y) + " L " + escapeHtml(centerPoint.x + crossSize) + " " + escapeHtml(centerPoint.y) + "\"></path>";
         }
 
         return "<svg class=\"paint-board-lasso-svg\" xmlns=\"http://www.w3.org/2000/svg\">" + shape + "</svg>";
