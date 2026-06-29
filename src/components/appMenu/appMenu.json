@@ -19,6 +19,7 @@
       "label": "Edit",
       "items": [
         { "label": "Copy", "action": "copyToClipboard" },
+        { "label": "Copy Merged", "action": "copyMergedToClipboard" },
         { "label": "Paste", "action": "pasteFromClipboard" },
         { "label": "Paste as New Layer", "action": "pasteAsNewLayer" },
         { "label": "Multi Paste", "action": "openMultiPaste" },

@@ -270,8 +270,14 @@
         maskCanvas.style.height = layerCanvas.style.height;
 
         maskContext = getReadableCanvasContext(maskCanvas);
-        maskContext.fillStyle = "#ffffff";
-        maskContext.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+        if (board && board.selection && board.selection.maskCanvas) {
+            maskContext.fillStyle = "#000000";
+            maskContext.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+            maskContext.drawImage(board.selection.maskCanvas, 0, 0);
+        } else {
+            maskContext.fillStyle = "#ffffff";
+            maskContext.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+        }
 
         layerElement.appendChild(maskCanvas);
         applyLayerMaskToElement(board, layerId);

@@ -688,6 +688,7 @@ import undoIconUrl from "./images/undo-icon.png";
                 saveAsPdf: saveAsPdf,
                 saveAsProject: saveAsProject,
                 copyToClipboard: copyToClipboard,
+                copyMergedToClipboard: copyMergedToClipboard,
                 pasteFromClipboard: pasteFromClipboard,
                 pasteAsNewLayer: pasteAsNewLayer,
                 openMultiPaste: global.AppOpenWindows.openMultiPaste,
@@ -921,6 +922,22 @@ import undoIconUrl from "./images/undo-icon.png";
             }
         }).catch(function(error) {
             console.log("Copy to clipboard failed:", error);
+        });
+    }
+
+    function copyMergedToClipboard() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (!targetBoard) {
+            return;
+        }
+
+        global.AppClipboard.copyMergedBoardToClipboard(targetBoard).then(function(copied) {
+            if (copied) {
+                showNotify("Copied merged");
+            }
+        }).catch(function(error) {
+            console.log("Copy merged to clipboard failed:", error);
         });
     }
 
@@ -1214,6 +1231,7 @@ import undoIconUrl from "./images/undo-icon.png";
     global.pasteFromClipboard = pasteFromClipboard;
     global.pasteAsNewLayer = pasteAsNewLayer;
     global.copyToClipboard = copyToClipboard;
+    global.copyMergedToClipboard = copyMergedToClipboard;
     global.saveImage = saveImage;
     global.clearBoard = clearBoard;
     global.openFillBigColorPicker = openFillBigColorPicker;

@@ -6,20 +6,28 @@
     var WINDOW_HEIGHT = 222;
     var CONTENT_LEFT = 6;
     var CONTENT_TOP = 26;
-    var SOCKET_RADIUS = 15;
+    var SOCKET_WIDTH = 93;
+    var SOCKET_HEIGHT = 153;
     var PUPIL_WIDTH = 18;
     var PUPIL_HEIGHT = 30;
 
     var eyes = [
-        { cx: 78, cy: 78 },
-        { cx: 162, cy: 78 }
+        { cx: 57.5, cy: 96.5 },
+        { cx: 183.5, cy: 96.5 }
     ];
+    var SOCKET_CENTER_X = SOCKET_WIDTH / 2;
+    var SOCKET_CENTER_Y = SOCKET_HEIGHT / 2;
+    var PUPIL_LIMIT_X = (SOCKET_WIDTH - PUPIL_WIDTH) / 2;
+    var PUPIL_LIMIT_Y = (SOCKET_HEIGHT - PUPIL_HEIGHT) / 2;
 
     var instance = null;
 
-    function Eyes() {
+    function Eyes(options) {
+        options = options || {};
+
         this.windowEl = null;
         this.pupils = [];
+        this.eyeBackground = options.eyeBackground;
         this.isDragging = false;
         this.dragOffsetX = 0;
         this.dragOffsetY = 0;
@@ -54,19 +62,25 @@
 
         leftSocket = document.createElement("div");
         leftSocket.className = "eyes-socket";
-        leftSocket.style.left = (eyes[0].cx - 22) + "px";
-        leftSocket.style.top = (eyes[0].cy - 22) + "px";
-        leftPupil.style.left = (eyes[0].cx - PUPIL_WIDTH / 2) + "px";
-        leftPupil.style.top = (eyes[0].cy - PUPIL_HEIGHT / 2) + "px";
+        leftSocket.style.left = (eyes[0].cx - SOCKET_CENTER_X) + "px";
+        leftSocket.style.top = (eyes[0].cy - SOCKET_CENTER_Y) + "px";
+        if (this.eyeBackground) {
+            leftSocket.style.background = this.eyeBackground;
+        }
+        leftPupil.style.left = SOCKET_CENTER_X + "px";
+        leftPupil.style.top = SOCKET_CENTER_Y + "px";
         leftSocket.appendChild(leftPupil);
         content.appendChild(leftSocket);
 
         rightSocket = document.createElement("div");
         rightSocket.className = "eyes-socket";
-        rightSocket.style.left = (eyes[1].cx - 22) + "px";
-        rightSocket.style.top = (eyes[1].cy - 22) + "px";
-        rightPupil.style.left = (eyes[1].cx - PUPIL_WIDTH / 2) + "px";
-        rightPupil.style.top = (eyes[1].cy - PUPIL_HEIGHT / 2) + "px";
+        rightSocket.style.left = (eyes[1].cx - SOCKET_CENTER_X) + "px";
+        rightSocket.style.top = (eyes[1].cy - SOCKET_CENTER_Y) + "px";
+        if (this.eyeBackground) {
+            rightSocket.style.background = this.eyeBackground;
+        }
+        rightPupil.style.left = SOCKET_CENTER_X + "px";
+        rightPupil.style.top = SOCKET_CENTER_Y + "px";
         rightSocket.appendChild(rightPupil);
         content.appendChild(rightSocket);
 
@@ -117,7 +131,7 @@
         var socketLeft = parseInt(socket.style.left, 10);
         var socketTop = parseInt(socket.style.top, 10);
 
-        return { x: socketLeft + 22, y: socketTop + 22 };
+        return { x: socketLeft + SOCKET_CENTER_X, y: socketTop + SOCKET_CENTER_Y };
     };
 
     Eyes.prototype.updatePupils = function() {
@@ -134,10 +148,16 @@
             var dy = my - absCy;
             var dist = Math.sqrt(dx * dx + dy * dy);
             var angle = Math.atan2(dy, dx);
-            var offset = Math.min(dist, SOCKET_RADIUS);
+            var cos = Math.cos(angle);
+            var sin = Math.sin(angle);
+            var maxOffset = 1 / Math.sqrt(
+                (cos * cos) / (PUPIL_LIMIT_X * PUPIL_LIMIT_X) +
+                (sin * sin) / (PUPIL_LIMIT_Y * PUPIL_LIMIT_Y)
+            );
+            var offset = Math.min(dist, maxOffset);
 
-            pupil.style.left = (center.x - PUPIL_WIDTH / 2 + Math.cos(angle) * offset) + "px";
-            pupil.style.top = (center.y - PUPIL_HEIGHT / 2 + Math.sin(angle) * offset) + "px";
+            pupil.style.left = (SOCKET_CENTER_X + cos * offset) + "px";
+            pupil.style.top = (SOCKET_CENTER_Y + sin * offset) + "px";
         });
     };
 
@@ -164,12 +184,12 @@
         instance = null;
     };
 
-    function openEyes() {
+    function openEyes(options) {
         if (instance) {
             return instance;
         }
 
-        instance = new Eyes();
+        instance = new Eyes(options);
         instance.build();
         return instance;
     }
