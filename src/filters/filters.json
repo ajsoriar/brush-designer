@@ -1,0 +1,74 @@
+[
+  {
+    "index": 1,
+    "id": "desaturate",
+    "description": "Converts the active layer to grayscale using weighted luminance (0.299R + 0.587G + 0.114B)",
+    "file": "desaturate.js"
+  },
+  {
+    "index": 2,
+    "id": "invertColors",
+    "description": "Inverts every RGB channel of the active layer (255 − value)",
+    "file": "invertColors.js"
+  },
+  {
+    "index": 3,
+    "id": "blur",
+    "description": "Applies a 3×3 box blur averaging kernel to the active layer",
+    "file": "blur.js"
+  },
+  {
+    "index": 4,
+    "id": "sepia",
+    "description": "Applies a classic sepia tone transformation using fixed RGB coefficients",
+    "file": "sepia.js"
+  },
+  {
+    "index": 5,
+    "id": "solarize",
+    "description": "Inverts each RGB channel when its value is below 128, creating a solarization effect",
+    "file": "solarize.js"
+  },
+  {
+    "index": 6,
+    "id": "posterize",
+    "description": "Reduces each RGB channel to 4 discrete levels, creating a poster-like banding effect",
+    "file": "posterize.js"
+  },
+  {
+    "index": 7,
+    "id": "emboss",
+    "description": "Applies an emboss relief kernel and shifts by 128 to produce a 3D raised effect",
+    "file": "emboss.js"
+  },
+  {
+    "index": 8,
+    "id": "edgeDetect",
+    "description": "Detects edges using a Laplacian kernel, outputting bright edges on a dark background",
+    "file": "edgeDetect.js"
+  },
+  {
+    "index": 9,
+    "id": "sharpen",
+    "description": "Sharpens the active layer using a 3×3 kernel (center 5, cardinal neighbours −1)",
+    "file": "sharpen.js"
+  },
+  {
+    "index": 10,
+    "id": "grayscaleAvg",
+    "description": "Converts the active layer to grayscale using equal-channel average (R+G+B)/3",
+    "file": "grayscaleAvg.js"
+  },
+  {
+    "index": 11,
+    "id": "autoContrast",
+    "description": "Stretches each RGB channel independently from its min–max range to full 0–255",
+    "file": "autoContrast.js"
+  },
+  {
+    "index": 12,
+    "id": "removeAlpha",
+    "description": "Sets the alpha channel to 255 (fully opaque) for every pixel on the active layer",
+    "file": "removeAlpha.js"
+  }
+]
