@@ -235,10 +235,10 @@
 }
 
 .paint-board-lasso-cross {
-    stroke: #000;
-    stroke-width: 1;
-    vector-effect: non-scaling-stroke;
     fill: none;
+    shape-rendering: crispEdges;
+    stroke: #000;
+    stroke-width: var(--paint-board-screen-pixel, 1px);
 }
 
 @keyframes paint-board-lasso-march {
