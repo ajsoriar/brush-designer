@@ -4437,6 +4437,9 @@
     function startPointerAction(board, event) {
         if (currentPaintToolMode === PAINT_TOOL_MODES.CROP_BOARD) {
             event.preventDefault();
+            if (!board.cropSession && startCropSession(board, { empty: true })) {
+                startCropDrag(board, event);
+            }
             return;
         }
 
@@ -7867,8 +7870,9 @@
     // cut the old board.
     // ------------------------------------------------------------------
 
-    function startCropSession(board) {
+    function startCropSession(board, options) {
         var cropSession;
+        var startEmpty = !!(options && options.empty);
 
         if (!board) {
             return false;
@@ -7881,7 +7885,7 @@
         clearTempSquare(board);
         board.tempLayerElement.classList.add("paint-board-temp-layer-crop");
         board.tempLayerElement.style.cursor = "default";
-        board.tempLayerElement.title = "Crop Board: drag the handles, press Enter to apply or Escape to cancel.";
+        board.tempLayerElement.title = "Crop Board: click and drag to draw a crop rectangle, then drag the handles, press Enter to apply or Escape to cancel.";
         if (board.element && board.element.classList) {
             board.element.classList.add("paint-board-has-crop");
         }
@@ -7890,8 +7894,9 @@
             overlay: board.tempLayerElement,
             x: 0,
             y: 0,
-            width: board.width,
-            height: board.height,
+            width: startEmpty ? 0 : board.width,
+            height: startEmpty ? 0 : board.height,
+            isCropping: !startEmpty,
             isDragging: false,
             dragAction: null,
             resizeHandle: null,
@@ -7902,6 +7907,8 @@
             startHeight: 0,
             startPointerX: 0,
             startPointerY: 0,
+            drawStartX: 0,
+            drawStartY: 0,
             lastPointerPoint: null,
             modifierState: {
                 shiftKey: false
@@ -7960,6 +7967,12 @@
             return;
         }
 
+        if (crop.width === 0 || crop.height === 0) {
+            crop.overlay.innerHTML = "";
+            notifyCropSessionChange(board, true);
+            return true;
+        }
+
         crop.overlay.innerHTML = getCropHandlesSvg(board, crop, {
             x: crop.x + crop.width / 2,
             y: crop.y + crop.height / 2
@@ -8005,11 +8018,13 @@
             markup += getCropGeometryIndicatorSvg(crop, board);
         }
 
-        for (i = 0; i < handles.length; i++) {
-            markup += "<rect class=\"paint-board-crop-handle\" x=\"" + escapeHtml(handles[i].left) +
-                "\" y=\"" + escapeHtml(handles[i].top) +
-                "\" width=\"" + escapeHtml(handles[i].size) +
-                "\" height=\"" + escapeHtml(handles[i].size) + "\"></rect>";
+        if (crop.isCropping && crop.dragAction !== "draw") {
+            for (i = 0; i < handles.length; i++) {
+                markup += "<rect class=\"paint-board-crop-handle\" x=\"" + escapeHtml(handles[i].left) +
+                    "\" y=\"" + escapeHtml(handles[i].top) +
+                    "\" width=\"" + escapeHtml(handles[i].size) +
+                    "\" height=\"" + escapeHtml(handles[i].size) + "\"></rect>";
+            }
         }
 
         if (centerPoint) {
@@ -8150,6 +8165,7 @@
         var crop = board && board.cropSession;
         var point;
         var handle;
+        var isCropFullBoard;
 
         if (!crop || !isPrimaryPaintInput(event)) {
             return;
@@ -8162,17 +8178,86 @@
         }
 
         point = getSelectionPointerPosition(board, event);
+
+        if (!crop.isCropping) {
+            crop.isDragging = true;
+            crop.dragAction = "draw";
+            crop.pointerId = typeof event.pointerId === "number" ? event.pointerId : null;
+            crop.drawStartX = point.x;
+            crop.drawStartY = point.y;
+            crop.startPointerX = point.x;
+            crop.startPointerY = point.y;
+            crop.startX = 0;
+            crop.startY = 0;
+            crop.startWidth = 0;
+            crop.startHeight = 0;
+            crop.x = point.x;
+            crop.y = point.y;
+            crop.width = 0;
+            crop.height = 0;
+            crop.lastPointerPoint = point;
+            crop.modifierState.shiftKey = !!event.shiftKey;
+            event.preventDefault();
+            event.stopPropagation();
+            capturePointer(crop.overlay, event.pointerId);
+            return;
+        }
+
         handle = getCropHandleAtPoint(crop, point, board);
 
-        if (!handle && !isPointInsideBounds(point, crop)) {
+        if (handle) {
+            event.preventDefault();
+            event.stopPropagation();
+            crop.isDragging = true;
+            crop.dragAction = "resize";
+            crop.resizeHandle = handle;
+            crop.pointerId = typeof event.pointerId === "number" ? event.pointerId : null;
+            crop.startX = crop.x;
+            crop.startY = crop.y;
+            crop.startWidth = crop.width;
+            crop.startHeight = crop.height;
+            crop.startPointerX = point.x;
+            crop.startPointerY = point.y;
+            crop.lastPointerPoint = point;
+            crop.modifierState.shiftKey = !!event.shiftKey;
+            crop.overlay.style.cursor = getFloatingPasteCursor(handle);
+            capturePointer(crop.overlay, event.pointerId);
+            return;
+        }
+
+        // When the crop covers the entire board, clicking anywhere starts a new
+        // draw (moving a full-board crop would have no effect).
+        isCropFullBoard = crop.x === 0 && crop.y === 0 &&
+            crop.width === board.width && crop.height === board.height;
+
+        if (!isPointInsideBounds(point, crop) || isCropFullBoard) {
+            crop.isDragging = true;
+            crop.dragAction = "draw";
+            crop.pointerId = typeof event.pointerId === "number" ? event.pointerId : null;
+            crop.drawStartX = point.x;
+            crop.drawStartY = point.y;
+            crop.startPointerX = point.x;
+            crop.startPointerY = point.y;
+            crop.startX = 0;
+            crop.startY = 0;
+            crop.startWidth = 0;
+            crop.startHeight = 0;
+            crop.x = point.x;
+            crop.y = point.y;
+            crop.width = 0;
+            crop.height = 0;
+            crop.lastPointerPoint = point;
+            crop.modifierState.shiftKey = !!event.shiftKey;
+            event.preventDefault();
+            event.stopPropagation();
+            capturePointer(crop.overlay, event.pointerId);
             return;
         }
 
         event.preventDefault();
         event.stopPropagation();
         crop.isDragging = true;
-        crop.dragAction = handle ? "resize" : "move";
-        crop.resizeHandle = handle;
+        crop.dragAction = "move";
         crop.pointerId = typeof event.pointerId === "number" ? event.pointerId : null;
         crop.startX = crop.x;
         crop.startY = crop.y;
@@ -8182,13 +8267,15 @@
         crop.startPointerY = point.y;
         crop.lastPointerPoint = point;
         crop.modifierState.shiftKey = !!event.shiftKey;
-        crop.overlay.style.cursor = getFloatingPasteCursor(handle || "move");
+        crop.overlay.style.cursor = getFloatingPasteCursor("move");
         capturePointer(crop.overlay, event.pointerId);
     }
 
     function moveCrop(board, event) {
         var crop = board && board.cropSession;
         var point;
+        var dx;
+        var dy;
 
         if (!crop || !crop.isDragging) {
             return;
@@ -8203,7 +8290,28 @@
         crop.lastPointerPoint = point;
         crop.modifierState.shiftKey = !!event.shiftKey;
 
-        if (crop.dragAction === "resize") {
+        if (crop.dragAction === "draw") {
+            dx = point.x - crop.drawStartX;
+            dy = point.y - crop.drawStartY;
+            if (event.shiftKey) {
+                dx = (dx >= 0 ? 1 : -1) * Math.max(Math.abs(dx), Math.abs(dy));
+                dy = (dy >= 0 ? 1 : -1) * Math.max(Math.abs(dx), Math.abs(dy));
+            }
+            if (dx >= 0) {
+                crop.x = crop.drawStartX;
+                crop.width = dx;
+            } else {
+                crop.x = crop.drawStartX + dx;
+                crop.width = -dx;
+            }
+            if (dy >= 0) {
+                crop.y = crop.drawStartY;
+                crop.height = dy;
+            } else {
+                crop.y = crop.drawStartY + dy;
+                crop.height = -dy;
+            }
+        } else if (crop.dragAction === "resize") {
             resizeCrop(crop, point, event);
         } else {
             crop.x = crop.startX + Math.round(point.x - crop.startPointerX);
@@ -8369,6 +8477,19 @@
         }
 
         crop.isDragging = false;
+
+        if (crop.dragAction === "draw") {
+            if (crop.width > 0 && crop.height > 0) {
+                crop.isCropping = true;
+            } else {
+                crop.x = 0;
+                crop.y = 0;
+                crop.width = 0;
+                crop.height = 0;
+                crop.isCropping = false;
+            }
+        }
+
         crop.dragAction = null;
         crop.resizeHandle = null;
         crop.pointerId = null;
@@ -8428,6 +8549,11 @@
         var height;
 
         if (!crop) {
+            return false;
+        }
+
+        if (!crop.isCropping) {
+            cancelCropSession(board);
             return false;
         }
 
