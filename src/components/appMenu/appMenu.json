@@ -64,7 +64,17 @@
       "items": [
         { "label": "Desaturate", "action": "filterDesaturate" },
         { "label": "Invert Colors", "action": "filterInvertColors" },
-        { "label": "Blur", "action": "filterBlur" }
+        { "label": "Blur", "action": "filterBlur" },
+        { "type": "separator" },
+        { "label": "Sepia", "action": "filterSepia" },
+        { "label": "Solarize", "action": "filterSolarize" },
+        { "label": "Posterize", "action": "filterPosterize" },
+        { "label": "Emboss", "action": "filterEmboss" },
+        { "label": "Edge Detect", "action": "filterEdgeDetect" },
+        { "label": "Sharpen", "action": "filterSharpen" },
+        { "label": "Grayscale (Avg)", "action": "filterGrayscaleAvg" },
+        { "label": "Auto Contrast", "action": "filterAutoContrast" },
+        { "label": "Remove Alpha", "action": "filterRemoveAlpha" }
       ]
     },
     {

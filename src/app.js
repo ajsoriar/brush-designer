@@ -721,7 +721,16 @@ import undoIconUrl from "./images/undo-icon.png";
                 showAbout: showAbout,
                 filterDesaturate: global.Filters && global.Filters.desaturate,
                 filterInvertColors: global.Filters && global.Filters.invertColors,
-                filterBlur: global.Filters && global.Filters.blur
+                filterBlur: global.Filters && global.Filters.blur,
+                filterSepia: global.Filters && global.Filters.sepia,
+                filterSolarize: global.Filters && global.Filters.solarize,
+                filterPosterize: global.Filters && global.Filters.posterize,
+                filterEmboss: global.Filters && global.Filters.emboss,
+                filterEdgeDetect: global.Filters && global.Filters.edgeDetect,
+                filterSharpen: global.Filters && global.Filters.sharpen,
+                filterGrayscaleAvg: global.Filters && global.Filters.grayscaleAvg,
+                filterAutoContrast: global.Filters && global.Filters.autoContrast,
+                filterRemoveAlpha: global.Filters && global.Filters.removeAlpha
             }
         });
         global.AppMenuApi = appMenuComponent;
