@@ -3685,7 +3685,7 @@
         }
 
         if (centerPoint) {
-            crossSize = 10 / zoom;
+            crossSize = 5 / zoom;
             shape += "<path class=\"paint-board-lasso-cross\" d=\"M " + escapeHtml(centerPoint.x) + " " + escapeHtml(centerPoint.y - crossSize) + " L " + escapeHtml(centerPoint.x) + " " + escapeHtml(centerPoint.y + crossSize) + " M " + escapeHtml(centerPoint.x - crossSize) + " " + escapeHtml(centerPoint.y) + " L " + escapeHtml(centerPoint.x + crossSize) + " " + escapeHtml(centerPoint.y) + "\"></path>";
         }
 
@@ -7904,7 +7904,8 @@
             startPointerY: 0,
             lastPointerPoint: null,
             modifierState: {
-                shiftKey: false
+                shiftKey: false,
+                altKey: false
             },
             squareAspectRatioStoredSize: null,
             pointerDown: null,
@@ -7955,17 +7956,23 @@
 
     function renderCropSession(board) {
         var crop = board && board.cropSession;
+        var centerPoint;
 
         if (!crop) {
             return;
         }
 
-        crop.overlay.innerHTML = getCropHandlesSvg(board, crop);
+        centerPoint = crop.modifierState.altKey ? {
+            x: crop.x + crop.width / 2,
+            y: crop.y + crop.height / 2
+        } : null;
+
+        crop.overlay.innerHTML = getCropHandlesSvg(board, crop, centerPoint);
         notifyCropSessionChange(board, true);
         return true;
     }
 
-    function getCropHandlesSvg(board, crop) {
+    function getCropHandlesSvg(board, crop, centerPoint) {
         var corners = [
             { x: crop.x, y: crop.y },
             { x: crop.x + crop.width, y: crop.y },
@@ -7976,6 +7983,8 @@
         var handles;
         var markup;
         var i;
+        var zoom;
+        var crossSize;
 
         outlinePoints = corners.map(function(corner) {
             return escapeHtml(corner.x) + "," + escapeHtml(corner.y);
@@ -8005,6 +8014,12 @@
                 "\" y=\"" + escapeHtml(handles[i].top) +
                 "\" width=\"" + escapeHtml(handles[i].size) +
                 "\" height=\"" + escapeHtml(handles[i].size) + "\"></rect>";
+        }
+
+        if (centerPoint) {
+            zoom = getBoardRenderZoom(board);
+            crossSize = 10 / zoom;
+            markup += "<path class=\"paint-board-lasso-cross\" d=\"M " + escapeHtml(centerPoint.x) + " " + escapeHtml(centerPoint.y - crossSize) + " L " + escapeHtml(centerPoint.x) + " " + escapeHtml(centerPoint.y + crossSize) + " M " + escapeHtml(centerPoint.x - crossSize) + " " + escapeHtml(centerPoint.y) + " L " + escapeHtml(centerPoint.x + crossSize) + " " + escapeHtml(centerPoint.y) + "\"></path>";
         }
 
         markup += "</svg>";
@@ -8394,6 +8409,12 @@
                 resizeCrop(crop, crop.lastPointerPoint, null);
                 renderCropSession(board);
             }
+            return;
+        }
+
+        if (event.key === "Alt") {
+            crop.modifierState.altKey = event.type !== "keyup";
+            renderCropSession(board);
             return;
         }
 
