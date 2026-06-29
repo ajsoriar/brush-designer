@@ -697,6 +697,8 @@ import undoIconUrl from "./images/undo-icon.png";
                 openResizeImage: global.AppOpenWindows.openResizeImageWindow,
                 openBrightnessContrast: global.AppOpenWindows.openBrightnessContrastWindow,
                 cropToSelection: cropToSelection,
+                addLayer: addLayer,
+                deleteLayer: deleteLayer,
                 duplicateLayer: duplicateActiveLayer,
                 clearBoard: clearBoard,
                 clearSelectionContent: deleteActiveSelection,
@@ -885,6 +887,34 @@ import undoIconUrl from "./images/undo-icon.png";
 
         if (!targetBoard.transformActiveLayer()) {
             showNotify("Select a layer other than the background to transform");
+        }
+    }
+
+    function addLayer() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+
+        if (!targetBoard || typeof targetBoard.addLayer !== "function") {
+            return;
+        }
+
+        targetBoard.addLayer();
+        refreshLayersPanel(targetBoard);
+    }
+
+    function deleteLayer() {
+        var targetBoard = global.AppOpenWindows.getActivePaintBoard();
+        var selectedIds;
+
+        if (!targetBoard || typeof targetBoard.removeLayers !== "function") {
+            return;
+        }
+
+        selectedIds = targetBoard.selectedLayerIds ||
+            (targetBoard.activeLayerId ? [targetBoard.activeLayerId] : []);
+
+        if (selectedIds.length > 0) {
+            targetBoard.removeLayers(selectedIds);
+            refreshLayersPanel(targetBoard);
         }
     }
 
