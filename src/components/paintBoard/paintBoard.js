@@ -7904,8 +7904,7 @@
             startPointerY: 0,
             lastPointerPoint: null,
             modifierState: {
-                shiftKey: false,
-                altKey: false
+                shiftKey: false
             },
             squareAspectRatioStoredSize: null,
             pointerDown: null,
@@ -7956,18 +7955,15 @@
 
     function renderCropSession(board) {
         var crop = board && board.cropSession;
-        var centerPoint;
 
         if (!crop) {
             return;
         }
 
-        centerPoint = crop.modifierState.altKey ? {
+        crop.overlay.innerHTML = getCropHandlesSvg(board, crop, {
             x: crop.x + crop.width / 2,
             y: crop.y + crop.height / 2
-        } : null;
-
-        crop.overlay.innerHTML = getCropHandlesSvg(board, crop, centerPoint);
+        });
         notifyCropSessionChange(board, true);
         return true;
     }
@@ -8409,12 +8405,6 @@
                 resizeCrop(crop, crop.lastPointerPoint, null);
                 renderCropSession(board);
             }
-            return;
-        }
-
-        if (event.key === "Alt") {
-            crop.modifierState.altKey = event.type !== "keyup";
-            renderCropSession(board);
             return;
         }
 
