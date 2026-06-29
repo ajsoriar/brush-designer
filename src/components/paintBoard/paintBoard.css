@@ -235,7 +235,7 @@
 }
 
 .paint-board-lasso-cross {
-    stroke: #fff;
+    stroke: #000;
     stroke-width: 1.5;
     fill: none;
 }
