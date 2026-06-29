@@ -103,6 +103,7 @@ await import("./zoom.js");
 await import("./app.openWindows.js");
 await import("./filters/desaturate.js");
 await import("./filters/invertColors.js");
+await import("./filters/blur.js");
 await import("./io/projectIo.js");
 await import("./io/pdfExporter.js");
 await import("./app.js");

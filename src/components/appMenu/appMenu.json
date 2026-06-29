@@ -63,7 +63,8 @@
       "label": "Filters",
       "items": [
         { "label": "Desaturate", "action": "filterDesaturate" },
-        { "label": "Invert Colors", "action": "filterInvertColors" }
+        { "label": "Invert Colors", "action": "filterInvertColors" },
+        { "label": "Blur", "action": "filterBlur" }
       ]
     },
     {
