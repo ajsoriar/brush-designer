@@ -237,6 +237,7 @@
 .paint-board-lasso-cross {
     stroke: #000;
     stroke-width: 1;
+    vector-effect: non-scaling-stroke;
     fill: none;
 }
 
