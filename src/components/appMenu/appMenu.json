@@ -62,7 +62,8 @@
     {
       "label": "Filters",
       "items": [
-        { "label": "Desaturate", "action": "filterDesaturate" }
+        { "label": "Desaturate", "action": "filterDesaturate" },
+        { "label": "Invert Colors", "action": "filterInvertColors" }
       ]
     },
     {
@@ -71,7 +72,8 @@
         { "label": "Brush Designer", "action": "openBrushDesigner" },
         { "label": "Brush Designer 2", "action": "openBrushDesigner2" },
         { "label": "Lines Designer", "action": "openLinesDesigner" },
-        { "label": "Star Generator", "action": "openStarGenerator" }
+        { "label": "Star Generator", "action": "openStarGenerator" },
+        { "label": "Eyes", "action": "openEyes", "eyeBackground": "red" }
       ]
     },
     {
