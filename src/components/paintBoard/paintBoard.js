@@ -2400,10 +2400,12 @@
         }
 
         if (isLassoSelectionToolMode() && isBoxSelectionTool() && board.pointerStartPosition) {
+            var adjustedEnd = getBoxSelectionEndPoint(board, board.pointerStartPosition, board.previewPointerPosition, event);
+
             renderBoxSelectionPreview(
                 board,
-                board.pointerStartPosition,
-                getBoxSelectionEndPoint(board, board.pointerStartPosition, board.previewPointerPosition, event)
+                getBoxSelectionFromPoint(board, board.pointerStartPosition, adjustedEnd, event),
+                adjustedEnd
             );
             return;
         }
@@ -2874,6 +2876,7 @@
     function updateBoxSelectionPreview(board, event) {
         var fromPoint = board.pointerStartPosition;
         var toPoint;
+        var adjustedEnd;
 
         if (!fromPoint) {
             return;
@@ -2881,7 +2884,8 @@
 
         toPoint = getSelectionPointerPosition(board, event);
         board.previewPointerPosition = toPoint;
-        renderBoxSelectionPreview(board, fromPoint, getBoxSelectionEndPoint(board, fromPoint, toPoint, event));
+        adjustedEnd = getBoxSelectionEndPoint(board, fromPoint, toPoint, event);
+        renderBoxSelectionPreview(board, getBoxSelectionFromPoint(board, fromPoint, adjustedEnd, event), adjustedEnd);
     }
 
     function getBoxSelectionEndPoint(board, fromPoint, toPoint, event) {
@@ -2894,9 +2898,23 @@
         return toPoint;
     }
 
+    function getBoxSelectionFromPoint(board, fromPoint, toPoint, event) {
+        var modifierEvent = getPreviewModifierEvent(board, event);
+
+        if (!modifierEvent.altKey) {
+            return fromPoint;
+        }
+
+        return {
+            x: 2 * fromPoint.x - toPoint.x,
+            y: 2 * fromPoint.y - toPoint.y
+        };
+    }
+
     function finishBoxSelection(board, event) {
         var fromPoint = board.pointerStartPosition;
         var toPoint;
+        var adjustedFrom;
         var bounds;
 
         if (!fromPoint) {
@@ -2904,7 +2922,8 @@
         }
 
         toPoint = getBoxSelectionEndPoint(board, fromPoint, getSelectionPointerPosition(board, event), event);
-        bounds = getSelectionBoundsFromPoints(fromPoint, toPoint);
+        adjustedFrom = getBoxSelectionFromPoint(board, fromPoint, toPoint, event);
+        bounds = getSelectionBoundsFromPoints(adjustedFrom, toPoint);
         clearTempSquare(board);
 
         if (bounds.width < 1 || bounds.height < 1) {
