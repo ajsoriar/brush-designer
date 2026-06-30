@@ -91,6 +91,7 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
     var toolsCropOptionsComponent = null;
     var foregroundBackgroundColorsComponent = null;
     var appMenuComponent = null;
+    var activeLayoutButton = null;
     var undoToolbarIconComponent = null;
     var svgExporterToolbarIconComponent = null;
 
@@ -115,6 +116,7 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
         initToolsCropOptionsComponent();
         syncBrushWidthPickerToPaintTool(global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : null);
         global.AppOpenWindows.createDemoWindow("paintBoard");
+        applyDefaultLayout();
         updateFillSelectionButton();
     });
 
@@ -779,6 +781,30 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
         });
     }
 
+    function applyDefaultLayout() {
+        var defaultEntry;
+
+        (layoutsIndex.layouts || []).some(function(entry) {
+            if (entry.default) {
+                defaultEntry = entry;
+                return true;
+            }
+        });
+
+        if (!defaultEntry) {
+            return;
+        }
+
+        (function() {
+            var layoutModule = layoutModules["./layouts/" + defaultEntry.file];
+            var layout = layoutModule && (layoutModule.default || layoutModule);
+
+            if (layout && global.WindowsManager && global.WindowsManager.setLayout) {
+                global.WindowsManager.setLayout(layout);
+            }
+        })();
+    }
+
     function readLayoutIndexEntry(entry) {
         var layoutModule;
         var layout;
@@ -812,13 +838,30 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
         button.addEventListener("click", function() {
             if (global.WindowsManager && global.WindowsManager.setLayout) {
                 global.WindowsManager.setLayout(layoutEntry.layout);
+                setActiveLayoutButton(button);
                 if (appMenuComponent && appMenuComponent.close) {
                     appMenuComponent.close();
                 }
             }
         });
 
+        if (entry.default) {
+            setActiveLayoutButton(button);
+        }
+
         return button;
+    }
+
+    function setActiveLayoutButton(button) {
+        if (activeLayoutButton) {
+            activeLayoutButton.style.fontWeight = "";
+        }
+
+        activeLayoutButton = button;
+
+        if (activeLayoutButton) {
+            activeLayoutButton.style.fontWeight = "bold";
+        }
     }
 
     function removeDynamicLayoutItems(layoutsPopup) {

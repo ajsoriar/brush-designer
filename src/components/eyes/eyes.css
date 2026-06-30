@@ -1,6 +1,6 @@
 .eyes-window {
     position: fixed;
-    z-index: 9999;
+    z-index: 300000;
     width: 252px;
     height: 222px;
     background: url("./window.png") no-repeat;
