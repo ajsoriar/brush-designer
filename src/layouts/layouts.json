@@ -1,0 +1,15 @@
+{
+    "layouts": [
+        {
+            "index": 0,
+            "file": "layout-1782774564437.json",
+            "name": "layout-1782774564437"
+        },
+        {
+            "index": 1,
+            "file": "layout-1782776352906.json",
+            "name": "layout-1782776352906",
+            "default": true
+        }
+    ]
+}

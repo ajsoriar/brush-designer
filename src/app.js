@@ -1,5 +1,8 @@
 import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
 import undoIconUrl from "./images/undo-icon.png";
+import layoutsIndex from "./layouts/layouts.json";
+
+const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
 
 (function(global, $) {
 
@@ -733,14 +736,165 @@ import undoIconUrl from "./images/undo-icon.png";
                 filterSharpen: global.Filters && global.Filters.sharpen,
                 filterGrayscaleAvg: global.Filters && global.Filters.grayscaleAvg,
                 filterAutoContrast: global.Filters && global.Filters.autoContrast,
-                filterRemoveAlpha: global.Filters && global.Filters.removeAlpha
+                filterRemoveAlpha: global.Filters && global.Filters.removeAlpha,
+                downloadLayout: downloadLayout,
+                openLayout: openLayout
             }
         });
         global.AppMenuApi = appMenuComponent;
+        populateLayoutsMenu();
+    }
+
+    function populateLayoutsMenu() {
+        var layoutsTrigger;
+        var layoutsPopup;
+
+        layoutsTrigger = appMenuComponent && appMenuComponent.element &&
+            appMenuComponent.element.querySelector(".app-menu-trigger");
+
+        if (!layoutsTrigger) {
+            return;
+        }
+
+        while (layoutsTrigger && layoutsTrigger.textContent !== "Layouts") {
+            layoutsTrigger = layoutsTrigger.parentNode.nextElementSibling &&
+                layoutsTrigger.parentNode.nextElementSibling.querySelector(".app-menu-trigger");
+        }
+
+        if (!layoutsTrigger) {
+            return;
+        }
+
+        layoutsPopup = layoutsTrigger.parentNode.querySelector(".app-menu-popup");
+
+        if (!layoutsPopup) {
+            return;
+        }
+
+        removeDynamicLayoutItems(layoutsPopup);
+        ensureLayoutsMenuSeparator(layoutsPopup);
+
+        (layoutsIndex.layouts || []).map(readLayoutIndexEntry).filter(Boolean).forEach(function(layoutEntry) {
+            layoutsPopup.appendChild(createLayoutMenuButton(layoutEntry));
+        });
+    }
+
+    function readLayoutIndexEntry(entry) {
+        var layoutModule;
+        var layout;
+
+        if (!entry || !entry.file) {
+            return null;
+        }
+
+        layoutModule = layoutModules["./layouts/" + entry.file];
+        layout = layoutModule && (layoutModule.default || layoutModule);
+
+        if (!layout || !(layout.windows || layout).length) {
+            return null;
+        }
+
+        return {
+            entry: entry,
+            layout: layout
+        };
+    }
+
+    function createLayoutMenuButton(layoutEntry) {
+        var entry = layoutEntry.entry;
+        var button = document.createElement("button");
+
+        button.type = "button";
+        button.className = "app-menu-item app-menu-layout-item";
+        button.textContent = entry.name || entry.file;
+        button.setAttribute("role", "menuitem");
+
+        button.addEventListener("click", function() {
+            if (global.WindowsManager && global.WindowsManager.setLayout) {
+                global.WindowsManager.setLayout(layoutEntry.layout);
+                if (appMenuComponent && appMenuComponent.close) {
+                    appMenuComponent.close();
+                }
+            }
+        });
+
+        return button;
+    }
+
+    function removeDynamicLayoutItems(layoutsPopup) {
+        Array.prototype.forEach.call(layoutsPopup.querySelectorAll(".app-menu-layout-item"), function(item) {
+            item.parentNode.removeChild(item);
+        });
+    }
+
+    function ensureLayoutsMenuSeparator(layoutsPopup) {
+        var lastElement = layoutsPopup.lastElementChild;
+        var separator;
+
+        if (lastElement && lastElement.classList.contains("app-menu-separator")) {
+            return;
+        }
+
+        separator = document.createElement("div");
+        separator.className = "app-menu-separator";
+        separator.setAttribute("role", "separator");
+        layoutsPopup.appendChild(separator);
     }
 
     function showAbout() {
         alert("Brush Designer\nVersion 1.0.0");
+    }
+
+    function downloadLayout() {
+        var layout = global.WindowsManager && global.WindowsManager.listWindows();
+        var blob;
+        var url;
+        var link;
+
+        if (!layout || !layout.length) {
+            return;
+        }
+
+        blob = new Blob([JSON.stringify(layout, null, 2)], { type: "application/json" });
+        url = URL.createObjectURL(blob);
+        link = document.createElement("a");
+        link.href = url;
+        link.download = "layout-" + Date.now() + ".json";
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function openLayout() {
+        var input = document.createElement("input");
+
+        input.type = "file";
+        input.accept = ".json,application/json";
+        input.addEventListener("change", function() {
+            var file = input.files && input.files[0];
+            var reader;
+
+            if (!file) {
+                return;
+            }
+
+            reader = new FileReader();
+            reader.addEventListener("load", function() {
+                var layout;
+
+                try {
+                    layout = JSON.parse(reader.result);
+                } catch (e) {
+                    alert("Invalid layout file");
+                    return;
+                }
+
+                if (global.WindowsManager && global.WindowsManager.setLayout) {
+                    global.WindowsManager.setLayout(layout);
+                }
+            });
+            reader.readAsText(file);
+        });
+        input.click();
     }
 
     function openImage() {

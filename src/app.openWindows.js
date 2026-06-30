@@ -391,8 +391,8 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             title: "Paint Board " + windowIndex,
             windowGroupName: "paint-boards",
             maxGroupItems: 5,
-            x: 225,
-            y: 92,
+            x: 244,
+            y: 105,
             width: paintBoardWidth + windowFrameWidth,
             height: paintBoardHeight + windowFrameHeight,
             resizable: true,
@@ -1094,7 +1094,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         outputsWindow = WindowsManager.create({
             id: "brush-editor-outputs-window",
             windowId: "brush-editor-outputs",
-            title: "Brush outputs",
+            title: "Brush Outputs",
             type: "TOOL",
             x: x,
             y: y,
@@ -1687,26 +1687,29 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         }
 
         var btnSize = 75;
-        var rows = 2;
         var toolsCount = getPaintToolsCount();
-        var columns = Math.max(1, Math.ceil(toolsCount / rows));
+        var columns = 3;
+        var rows = Math.max(1, Math.ceil(toolsCount / columns));
         var toolsWidth = columns * btnSize;
         var toolsHeight = rows * btnSize;
         var windowFrameWidth = 16;
         var windowFrameHeight = 36;
-        var toolsWindowY = Math.max(92, global.innerHeight - toolsHeight - windowFrameHeight - 6);
         var toolsWindow = WindowsManager.create({
             id: "paint-tools-window",
             windowId: "paint-tools",
             title: "Paint Tools",
             type: "TOOL",
-            x: 6,
-            y: toolsWindowY,
+            x: 1,
+            y: 105,
             width: toolsWidth + windowFrameWidth,
             height: toolsHeight + windowFrameHeight,
-            resizable: false,
+            minWidth: windowFrameWidth + btnSize,
+            minHeight: windowFrameHeight + btnSize,
+            resizable: true,
+            resizeContentStep: btnSize,
             scrollBarX: false,
-            scrollBarY: false,
+            scrollBarY: true,
+            contentCentered: false,
             contentId: "paint-tools-window-content"
         });
 
@@ -1725,10 +1728,8 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
 
     function openLayersPanelWindow() {
         var existingWindow = WindowsManager.getWindowByWindowId("layers-panel");
-        var panelWidth = 320;
-        var panelHeight = 420;
-        var frameWidth = 16;
-        var frameHeight = 36;
+        var panelWidth = 309;
+        var panelHeight = 744;
         var layersWindow;
 
         if (existingWindow) {
@@ -1742,10 +1743,11 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             windowId: "layers-panel",
             title: "Layers",
             type: "TOOL",
-            x: Math.max(20, global.innerWidth - panelWidth - frameWidth - 20),
-            y: 92,
-            width: panelWidth + frameWidth,
-            height: panelHeight + frameHeight,
+            x: null,
+            y: 105,
+            width: 325,
+            height: 780,
+            align: "RIGHT",
             minWidth: 250,
             minHeight: 260,
             resizable: true,

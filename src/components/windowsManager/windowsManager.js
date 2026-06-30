@@ -41,6 +41,8 @@
         scrollBarY: true,
         resizeContentStep: null,
         resizeGeometryIndicator: true,
+        moveGeometryIndicator: true,
+        align: "LEFT",
         cornerRadius: 0,
         boxShadow: null,
         topBarGradient: null,
@@ -70,7 +72,9 @@
         restoreWindow: callOnWindow("restore"),
         setWindowTitle: setWindowTitle,
         setWindowScrollBars: setWindowScrollBars,
-        bringToFront: bringToFront
+        bringToFront: bringToFront,
+        listWindows: listWindows,
+        setLayout: setLayout
     };
 
     function extend(target, source) {
@@ -115,6 +119,15 @@
         if (config.fixed) {
             config.movable = false;
             config.resizable = false;
+        }
+
+        if (config.align === "RIGHT") {
+            config.x = Math.max(0, (global.innerWidth || document.documentElement.clientWidth) - config.width);
+        }
+
+        if (config.x === null || config.x === undefined) {
+            console.warn("Se necesita posición x y se posiciona en x=0");
+            config.x = 0;
         }
 
         element.id = id;
@@ -577,7 +590,7 @@
                     return;
                 }
 
-                startMove(event, currentWindow);
+                startMove(event, currentWindow, config);
             });
         }
 
@@ -590,7 +603,7 @@
         }
     }
 
-    function startMove(event, currentWindow) {
+    function startMove(event, currentWindow, config) {
         var element = currentWindow.element;
         var startX = event.clientX;
         var startY = event.clientY;
@@ -615,6 +628,7 @@
         document.addEventListener(moveEventName, move);
         document.addEventListener(stopEventName, stop);
         document.addEventListener(cancelEventName, stop);
+        updateMoveGeometryIndicator(currentWindow, event, config);
 
         function move(moveEvent) {
             if (!isActivePointer(moveEvent, pointerId)) {
@@ -624,6 +638,7 @@
             moveEvent.preventDefault();
             element.style.left = (startLeft + moveEvent.clientX - startX) + "px";
             element.style.top = (startTop + moveEvent.clientY - startY) + "px";
+            updateMoveGeometryIndicator(currentWindow, moveEvent, config);
         }
 
         function stop(stopEvent) {
@@ -634,6 +649,7 @@
             document.removeEventListener(moveEventName, move);
             document.removeEventListener(stopEventName, stop);
             document.removeEventListener(cancelEventName, stop);
+            hideMoveGeometryIndicator(currentWindow);
         }
     }
 
@@ -799,6 +815,42 @@
     function hideResizeGeometryIndicator(currentWindow) {
         if (currentWindow.geometryIndicatorElement) {
             currentWindow.geometryIndicatorElement.style.display = "none";
+        }
+    }
+
+    function updateMoveGeometryIndicator(currentWindow, event, config) {
+        var indicator;
+        var element;
+
+        if (!config.moveGeometryIndicator) {
+            return;
+        }
+
+        element = currentWindow.element;
+        indicator = getMoveGeometryIndicator(currentWindow);
+        indicator.textContent = element.offsetLeft + "+" + element.offsetTop;
+        indicator.style.display = "block";
+        positionMoveGeometryIndicator(indicator, event);
+    }
+
+    function getMoveGeometryIndicator(currentWindow) {
+        if (!currentWindow.moveGeometryIndicatorElement) {
+            currentWindow.moveGeometryIndicatorElement = document.createElement("div");
+            currentWindow.moveGeometryIndicatorElement.className = "wm-move-geometry-indicator";
+            document.body.appendChild(currentWindow.moveGeometryIndicatorElement);
+        }
+
+        return currentWindow.moveGeometryIndicatorElement;
+    }
+
+    function positionMoveGeometryIndicator(indicator, event) {
+        indicator.style.left = (event.clientX + 10) + "px";
+        indicator.style.top = (event.clientY + 10) + "px";
+    }
+
+    function hideMoveGeometryIndicator(currentWindow) {
+        if (currentWindow.moveGeometryIndicatorElement) {
+            currentWindow.moveGeometryIndicatorElement.style.display = "none";
         }
     }
 
@@ -1118,6 +1170,57 @@
         currentWindow.setScrollBars(scrollBarX, scrollBarY);
 
         return currentWindow;
+    }
+
+    function listWindows() {
+        var element;
+        var list;
+
+        list = manager.windows.map(function(w) {
+            element = w.element;
+            return {
+                id: w.id,
+                windowId: w.windowId,
+                title: w.title,
+                x: element.offsetLeft,
+                y: element.offsetTop,
+                w: element.offsetWidth,
+                h: element.offsetHeight
+            };
+        });
+        console.log(JSON.stringify(list, null, 2));
+        return list;
+    }
+
+    function setLayout(layout) {
+        var windows;
+        var currentWindow;
+
+        if (!layout) {
+            return;
+        }
+
+        windows = layout.windows || layout;
+
+        if (!windows || !windows.length) {
+            return;
+        }
+
+        windows.forEach(function(entry) {
+            currentWindow = getWindowByWindowId(entry.windowId) || getWindow(entry.id);
+
+            if (!currentWindow) {
+                return;
+            }
+
+            if (typeof entry.x === "number" && typeof entry.y === "number") {
+                currentWindow.moveTo(entry.x, entry.y);
+            }
+
+            if (typeof entry.w === "number" && typeof entry.h === "number") {
+                currentWindow.resizeTo(entry.w, entry.h);
+            }
+        });
     }
 
     global.WindowsManager = manager;

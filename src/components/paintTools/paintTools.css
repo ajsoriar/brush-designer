@@ -3,8 +3,11 @@
     background: #2b2b2b;
     display: grid;
     gap: 0;
+    grid-auto-rows: var(--paint-tools-button-size, 75px);
+    grid-template-columns: repeat(auto-fill, var(--paint-tools-button-size, 75px));
     justify-content: start;
     padding: 0;
+    width: 100%;
 }
 
 .paint-tools-button {
@@ -27,15 +30,12 @@
     box-sizing: border-box;
     text-align: center;
     user-select: none;
+    height: var(--paint-tools-button-size, 75px);
+    width: var(--paint-tools-button-size, 75px);
 }
 
 .paint-tools-button-active {
     background-image: url("./btn-selected.png");
-}
-
-.paint-tools-button-crop-board {
-    grid-column: -2 / -1;
-    grid-row: -2 / -1;
 }
 
 .paint-tools-button-line {

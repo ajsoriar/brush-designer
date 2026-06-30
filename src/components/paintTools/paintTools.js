@@ -123,10 +123,7 @@
 
         element.id = componentId;
         element.className = "paint-tools";
-        element.style.gridTemplateColumns = repeatGridTrack(columns, config.btnSize);
-        element.style.gridTemplateRows = repeatGridTrack(rows, config.btnSize);
-        element.style.width = (columns * config.btnSize) + "px";
-        element.style.height = (rows * config.btnSize) + "px";
+        element.style.setProperty("--paint-tools-button-size", config.btnSize + "px");
 
         component = {
             id: componentId,
@@ -166,12 +163,7 @@
             var icon = TOOL_ICONS[tool];
 
             button.className = "paint-tools-button" + (icon ? "" : " paint-tools-button-no-icon");
-            if (tool === "CROP-BOARD") {
-                button.className += " paint-tools-button-crop-board";
-            }
             button.setAttribute("data-paint-tool", tool);
-            button.style.width = component.btnSize + "px";
-            button.style.height = component.btnSize + "px";
             button.title = tool;
             button.innerHTML = getToolButtonHtml(tool, icon);
             bindSelectionToolButtons(button, tool);
@@ -297,17 +289,6 @@
         }
 
         return modes;
-    }
-
-    function repeatGridTrack(count, size) {
-        var tracks = [];
-        var i;
-
-        for (i = 0; i < count; i++) {
-            tracks.push(size + "px");
-        }
-
-        return tracks.join(" ");
     }
 
     function getContainer(containerId) {

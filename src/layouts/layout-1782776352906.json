@@ -1,0 +1,68 @@
+{
+    "name": "layout-1782776352906",
+    "windows": [
+        {
+            "id": "brush-editor-outputs-window",
+            "windowId": "brush-editor-outputs",
+            "title": "Brush Outputs",
+            "x": 1376,
+            "y": 104,
+            "w": 216,
+            "h": 364
+        },
+        {
+            "id": "simple-color-picker-window",
+            "windowId": "simple-color-picker",
+            "title": "Simple Color Picker",
+            "x": 243,
+            "y": 105,
+            "w": 224,
+            "h": 802
+        },
+        {
+            "id": "simple-line-width-picker-window",
+            "windowId": "simple-line-width-picker",
+            "title": "Line Width",
+            "x": 1380,
+            "y": 472,
+            "w": 104,
+            "h": 414
+        },
+        {
+            "id": "simple-brush-width-picker-window",
+            "windowId": "simple-brush-width-picker",
+            "title": "Brush Width",
+            "x": 1488,
+            "y": 471,
+            "w": 104,
+            "h": 458
+        },
+        {
+            "id": "paint-tools-window",
+            "windowId": "paint-tools",
+            "title": "Paint Tools",
+            "x": 1,
+            "y": 105,
+            "w": 241,
+            "h": 636
+        },
+        {
+            "id": "layers-panel-window",
+            "windowId": "layers-panel",
+            "title": "Layers (Paint Board 1)",
+            "x": 1595,
+            "y": 105,
+            "w": 325,
+            "h": 836
+        },
+        {
+            "id": "demo-paint-board-window-1",
+            "windowId": null,
+            "title": "Paint Board 1 - 800x600 - 100%",
+            "x": 470,
+            "y": 104,
+            "w": 904,
+            "h": 849
+        }
+    ]
+}

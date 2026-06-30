@@ -104,6 +104,15 @@
       ]
     },
     {
+      "label": "Layouts",
+      "align": "right",
+      "items": [
+        { "label": "Download Layout", "action": "downloadLayout" },
+        { "label": "Open Layout", "action": "openLayout" },
+        { "type": "separator" }
+      ]
+    },
+    {
       "label": "Help",
       "align": "right",
       "items": [
