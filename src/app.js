@@ -29,6 +29,7 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
     global.App.memory.rainbowCrazyJump = !!global.App.memory.rainbowCrazyJump;
     global.App.memory.rainbowCrazyLoop = !!global.App.memory.rainbowCrazyLoop;
     global.App.memory.pointerAutoSelectLayer = !!global.App.memory.pointerAutoSelectLayer;
+    global.App.memory.currentDesignedBrushWidth = global.App.memory.currentDesignedBrushWidth || 256;
     global.App.memory.currentLineDesign = global.App.memory.currentLineDesign || {
         weight: global.App.memory.currentLineWidth,
         unit: "px",

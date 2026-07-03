@@ -1379,6 +1379,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             width: pickerWidth + windowFrameWidth,
             height: pickerHeight + windowFrameHeight,
             minWidth: 90,
+            toolsRow: true,
             minimizable: false,
             resizable: false,
             scrollBarX: false,
@@ -1413,9 +1414,69 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             }
         });
 
+        renderBrushWidthToolbar(pickerWindow, pickerWindow.toolsRowElement);
+
         pickerWindow.scaleToContent(appBrushWidthPicker.getWidth(), appBrushWidthPicker.getHeight());
 
         return appBrushWidthPicker;
+    }
+
+    function renderBrushWidthToolbar(pickerWindow, toolsRowElement) {
+        var brushWidthRange;
+        var brushWidthValue;
+        var resetButton;
+        var initialBrushWidth;
+        var resetBrushWidth = 200;
+
+        if (!toolsRowElement) {
+            return;
+        }
+
+        initialBrushWidth = normalizeConsoleLineWidth(global.App.memory.currentBrushWidth);
+
+        toolsRowElement.innerHTML = [
+            '<div class="brush-width-tools-row">',
+                '<div class="brush-width-range-line">',
+                    '<input id="brush-width-range" class="brush-width-range" type="range" min="1" max="200" step="1" value="' + initialBrushWidth + '" aria-label="Brush width">',
+                    '<span class="brush-width-range-value">' + initialBrushWidth + 'px</span>',
+                '</div>',
+                '<div class="brush-width-range-line">',
+                    '<button id="brush-width-reset-btn" class="brush-width-reset-btn" type="button">Reset</button>',
+                '</div>',
+            '</div>'
+        ].join("");
+
+        brushWidthRange = toolsRowElement.querySelector(".brush-width-range");
+        brushWidthValue = toolsRowElement.querySelector(".brush-width-range-value");
+
+        if (brushWidthRange) {
+            brushWidthRange.addEventListener("input", function() {
+                applyBrushWidthToolbarValue(brushWidthRange, brushWidthValue, brushWidthRange.value);
+            });
+
+            resetButton = toolsRowElement.querySelector(".brush-width-reset-btn");
+            if (resetButton) {
+                resetButton.addEventListener("click", function() {
+                    applyBrushWidthToolbarValue(brushWidthRange, brushWidthValue, resetBrushWidth);
+                });
+            }
+        }
+    }
+
+    function applyBrushWidthToolbarValue(brushWidthRange, brushWidthValue, brushWidth) {
+        var value = normalizeConsoleLineWidth(brushWidth);
+
+        brushWidthRange.value = String(value);
+        brushWidthValue.textContent = value + "px";
+        global.App.memory.currentBrushWidth = value;
+
+        if (appBrushWidthPicker && appBrushWidthPicker.setActiveBrushWidth) {
+            appBrushWidthPicker.setActiveBrushWidth(value);
+        }
+
+        if (global.PaintTools && global.PaintTools.use && !isBrushWidthPaintToolSelected()) {
+            global.PaintTools.use("ROUND-LINES");
+        }
     }
 
     function isBrushWidthPaintToolSelected() {

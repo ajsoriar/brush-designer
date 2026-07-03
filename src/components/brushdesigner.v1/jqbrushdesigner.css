@@ -106,3 +106,35 @@
     background: transparent;
     color: #ff0000;
 }
+
+.wm-toolbar.brush-editor-outputs-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+}
+
+.brush-editor-outputs-toolbar-row,
+.brush-editor-outputs-size-row {
+    align-items: center;
+    display: flex;
+    gap: 4px;
+}
+
+.brush-editor-outputs-size-row {
+    color: #1f2937;
+    font: 11px Arial, sans-serif;
+    width: 100%;
+}
+
+.brush-editor-outputs-size-range {
+    flex: 1 1 auto;
+    height: 20px;
+    margin: 0;
+    min-width: 80px;
+}
+
+.brush-editor-outputs-size-value {
+    flex: 0 0 42px;
+    text-align: right;
+    white-space: nowrap;
+}

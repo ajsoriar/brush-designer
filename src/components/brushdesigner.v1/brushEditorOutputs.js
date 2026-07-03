@@ -113,27 +113,84 @@ import defaultBrushesUrl from "./default-brushes.json?url";
 
     function renderToolbar(outputs, config) {
         var toolbar;
+        var buttonRow;
+        var sizeRow;
+        var sizeRange;
+        var sizeValue;
+        var resetButton;
+        var initialBrushWidth;
 
         if (!config.toolbarElement) {
             return;
         }
 
+        initialBrushWidth = getCurrentDesignedBrushWidth();
         toolbar = document.createElement("div");
-        toolbar.className = "wm-toolbar";
-        toolbar.appendChild(createToolbarButton("Create Brush", function() {
+        toolbar.className = "wm-toolbar brush-editor-outputs-toolbar";
+        buttonRow = document.createElement("div");
+        buttonRow.className = "brush-editor-outputs-toolbar-row";
+        buttonRow.appendChild(createToolbarButton("Create Brush", function() {
             if (typeof config.onCreateBrush === "function") {
                 config.onCreateBrush(outputs);
             }
         }));
-        toolbar.appendChild(createToolbarButton("Save", function() {
+        buttonRow.appendChild(createToolbarButton("Save", function() {
             save(outputs, config);
         }));
-        toolbar.appendChild(createToolbarButton("Load", function() {
+        buttonRow.appendChild(createToolbarButton("Load", function() {
             load(outputs, config);
         }));
 
+        sizeRow = document.createElement("div");
+        sizeRow.className = "brush-editor-outputs-size-row";
+        sizeRow.appendChild(document.createTextNode("Size"));
+
+        sizeRange = document.createElement("input");
+        sizeRange.type = "range";
+        sizeRange.className = "brush-editor-outputs-size-range";
+        sizeRange.min = "50";
+        sizeRange.max = "500";
+        sizeRange.step = "1";
+        sizeRange.value = initialBrushWidth;
+        sizeRange.setAttribute("aria-label", "Designed brush paint width");
+
+        sizeValue = document.createElement("span");
+        sizeValue.className = "brush-editor-outputs-size-value";
+        sizeValue.textContent = initialBrushWidth + "px";
+
+        resetButton = createToolbarButton("Reset", function() {
+            updateDesignedBrushWidthFromToolbar(sizeRange, sizeValue, 256);
+        });
+        resetButton.className += " brush-editor-outputs-reset-btn";
+
+        sizeRange.addEventListener("input", function() {
+            updateDesignedBrushWidthFromToolbar(sizeRange, sizeValue, sizeRange.value);
+        });
+
+        sizeRow.appendChild(sizeRange);
+        sizeRow.appendChild(sizeValue);
+        sizeRow.appendChild(resetButton);
+        toolbar.appendChild(buttonRow);
+        toolbar.appendChild(sizeRow);
         config.toolbarElement.innerHTML = "";
         config.toolbarElement.appendChild(toolbar);
+    }
+
+    function getCurrentDesignedBrushWidth() {
+        return normalizeDesignedBrushWidth(
+            global.App && global.App.memory && global.App.memory.currentDesignedBrushWidth
+        );
+    }
+
+    function updateDesignedBrushWidthFromToolbar(sizeRange, sizeValue, size) {
+        var brushWidth = normalizeDesignedBrushWidth(size);
+
+        sizeRange.value = brushWidth;
+        sizeValue.textContent = brushWidth + "px";
+
+        if (global.App && global.App.memory) {
+            global.App.memory.currentDesignedBrushWidth = brushWidth;
+        }
     }
 
     function createToolbarButton(label, onClick) {
@@ -362,6 +419,16 @@ import defaultBrushesUrl from "./default-brushes.json?url";
         }
 
         element.appendChild(item);
+    }
+
+    function normalizeDesignedBrushWidth(size) {
+        var value = Math.round(parseFloat(size));
+
+        if (isNaN(value)) {
+            return 256;
+        }
+
+        return Math.max(50, Math.min(value, 500));
     }
 
     function createDeleteButton(item, outputs, config) {

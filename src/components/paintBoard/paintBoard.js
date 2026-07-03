@@ -2624,6 +2624,12 @@
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH) {
             brush = getCurrentDesignedBrush();
+            if (brush) {
+                return Math.max(
+                    getCurrentDesignedBrushPaintWidth(brush),
+                    getCurrentDesignedBrushPaintHeight(brush)
+                );
+            }
         }
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2) {
@@ -5494,6 +5500,8 @@
         var brush = getCurrentDesignedBrush();
         var width;
         var height;
+        var paintWidth;
+        var paintHeight;
         var tintedBrush;
 
         if (!brush) {
@@ -5504,7 +5512,9 @@
         width = brush.naturalWidth || brush.width;
         height = brush.naturalHeight || brush.height;
         tintedBrush = getTintedBrush(brush, width, height, getCurrentPaintColor(board));
-        board.context.drawImage(tintedBrush, x - width / 2, y - height / 2, width, height);
+        paintWidth = getCurrentDesignedBrushPaintWidth(brush);
+        paintHeight = getCurrentDesignedBrushPaintHeight(brush);
+        board.context.drawImage(tintedBrush, x - paintWidth / 2, y - paintHeight / 2, paintWidth, paintHeight);
     }
 
     function paintDesignedBrush2(board, x, y) {
@@ -8758,6 +8768,34 @@
         }
 
         return null;
+    }
+
+    function getCurrentDesignedBrushPaintWidth(brush) {
+        var value = global.App && global.App.memory ?
+            Number(global.App.memory.currentDesignedBrushWidth) :
+            NaN;
+
+        if (isNaN(value)) {
+            value = brush && (brush.naturalWidth || brush.width);
+        }
+
+        if (isNaN(value)) {
+            return 256;
+        }
+
+        return Math.max(50, Math.min(Math.round(value), 500));
+    }
+
+    function getCurrentDesignedBrushPaintHeight(brush) {
+        var width = brush && (brush.naturalWidth || brush.width);
+        var height = brush && (brush.naturalHeight || brush.height);
+        var paintWidth = getCurrentDesignedBrushPaintWidth(brush);
+
+        if (!width || !height) {
+            return paintWidth;
+        }
+
+        return Math.max(1, Math.round(height * (paintWidth / width)));
     }
 
     function getCurrentDesignedBrush2() {
