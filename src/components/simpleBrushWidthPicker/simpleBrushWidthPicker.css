@@ -10,6 +10,14 @@
     width: 100%;
 }
 
+.simple-brush-width-picker-value-row {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    min-height: 23px;
+    width: 100%;
+}
+
 .simple-brush-width-picker-value {
     align-items: center;
     display: flex;
@@ -34,6 +42,26 @@
     line-height: 1;
 }
 
+.simple-brush-width-picker-reset {
+    background: #eeeeee;
+    border: 1px solid #747474;
+    color: #111111;
+    cursor: pointer;
+    font: 11px Arial, sans-serif;
+    height: 22px;
+    padding: 0 10px;
+}
+
+.simple-brush-width-picker-reset:hover {
+    background: #ffffff;
+}
+
+.simple-brush-width-picker-checks {
+    display: grid;
+    gap: 6px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .simple-brush-width-picker-check {
     align-items: center;
     cursor: pointer;
@@ -49,10 +77,47 @@
     width: 14px;
 }
 
-.simple-brush-width-picker-list {
+.simple-brush-width-picker-tools {
+    display: grid;
+    gap: 4px;
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.simple-brush-width-picker-tool {
+    align-items: center;
+    background: #d8d8d8;
+    border: 1px solid #7b7b7b;
+    border-color: #ffffff #777777 #777777 #ffffff;
+    cursor: pointer;
     display: flex;
-    flex-direction: column;
+    height: 40px;
+    justify-content: center;
+    padding: 1px;
+}
+
+.simple-brush-width-picker-tool:hover {
+    background: #eeeeee;
+}
+
+.simple-brush-width-picker-tool-active {
+    background: #bdbdbd;
+    border-color: #777777 #ffffff #ffffff #777777;
+}
+
+.simple-brush-width-picker-tool-icon {
+    display: block;
+    max-height: 36px;
+    max-width: 100%;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+.simple-brush-width-picker-list {
+    display: grid;
     gap: 5px;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(var(--simple-brush-width-picker-rows, 8), auto);
+    grid-template-columns: repeat(var(--simple-brush-width-picker-columns, 2), 72px);
 }
 
 .simple-brush-width-picker-option {
@@ -98,7 +163,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding: 2px 6px;
+    padding: 2px 8px;
     width: 100%;
 }
 
@@ -111,24 +176,4 @@
 .brush-width-range {
     flex: 1;
     min-width: 80px;
-}
-
-.brush-width-range-value {
-    font: 11px "Courier New", monospace;
-    min-width: 40px;
-    text-align: right;
-    white-space: nowrap;
-}
-
-.brush-width-reset-btn {
-    background: #eeeeee;
-    border: 1px solid #747474;
-    cursor: pointer;
-    font: 11px Arial, sans-serif;
-    height: 20px;
-    padding: 0 8px;
-}
-
-.brush-width-reset-btn:hover {
-    background: #ffffff;
 }

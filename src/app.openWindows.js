@@ -27,11 +27,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
     var documentCount = 0;
     var activePaintBoard = null;
     var VISIBLE_PAINT_TOOLS = [
-        "SQUARED-POINTS",
-        "ROUND-POINTS",
         "PENCIL-TOOL",
-        "SQUARED-LINES",
-        "ROUND-LINES",
         "STRAIGHT-LINE",
         "FILLED-RECTANGLES",
         "FILLED-OVALS",
@@ -1365,20 +1361,20 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             return appBrushWidthPicker;
         }
 
-        var pickerWidth = 120;
+        var pickerWidth = 240;
         var pickerHeight = 404;
         var windowFrameWidth = 16;
         var windowFrameHeight = 36;
         var pickerWindow = WindowsManager.create({
             id: "simple-brush-width-picker-window",
             windowId: "simple-brush-width-picker",
-            title: "Brush Width",
+            title: "Pencil",
             type: "TOOL",
             x: 115,
             y: 92,
             width: pickerWidth + windowFrameWidth,
             height: pickerHeight + windowFrameHeight,
-            minWidth: 90,
+            minWidth: 210,
             toolsRow: true,
             minimizable: false,
             resizable: false,
@@ -1393,16 +1389,26 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             minWidth: 1,
             maxWidth: 27,
             steps: 16,
+            maxBrushWidth: 512,
+            resetBrushWidth: 200,
+            columns: 2,
             activeBrushWidth: global.App.memory.currentBrushWidth,
+            activeBrushTool: global.App.memory.currentPencilBrushMode,
             brushShape: global.App.memory.currentBrushShape,
             brushStroke: global.App.memory.currentBrushStroke,
             brushAntialiasing: global.App.memory.currentBrushAntialiasing,
             onBrushWidthSelected: function(brushWidth, picker, eventMeta) {
                 global.App.memory.currentBrushWidth = brushWidth;
+                syncBrushWidthToolbarValue(pickerWindow.toolsRowElement, brushWidth);
                 if ((!eventMeta || eventMeta.source !== "init") && !isBrushWidthPaintToolSelected()) {
-                    global.PaintTools.use("ROUND-LINES");
+                    global.PaintTools.use("PENCIL-TOOL");
                 }
                 console.log("Selected brush width:", brushWidth);
+            },
+            onBrushToolChange: function(brushTool) {
+                global.App.memory.currentPencilBrushMode = normalizePencilBrushMode(brushTool);
+                global.App.memory.currentBrushShape = isRoundPencilBrushMode(brushTool) ? "circle" : "square";
+                console.log("Selected pencil brush mode:", brushTool);
             },
             onBrushStrokeChange: function(brushStroke) {
                 global.App.memory.currentBrushStroke = brushStroke;
@@ -1423,51 +1429,35 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
 
     function renderBrushWidthToolbar(pickerWindow, toolsRowElement) {
         var brushWidthRange;
-        var brushWidthValue;
-        var resetButton;
         var initialBrushWidth;
-        var resetBrushWidth = 200;
 
         if (!toolsRowElement) {
             return;
         }
 
-        initialBrushWidth = normalizeConsoleLineWidth(global.App.memory.currentBrushWidth);
+        initialBrushWidth = normalizeConsoleBrushWidth(global.App.memory.currentBrushWidth);
 
         toolsRowElement.innerHTML = [
             '<div class="brush-width-tools-row">',
                 '<div class="brush-width-range-line">',
-                    '<input id="brush-width-range" class="brush-width-range" type="range" min="1" max="200" step="1" value="' + initialBrushWidth + '" aria-label="Brush width">',
-                    '<span class="brush-width-range-value">' + initialBrushWidth + 'px</span>',
-                '</div>',
-                '<div class="brush-width-range-line">',
-                    '<button id="brush-width-reset-btn" class="brush-width-reset-btn" type="button">Reset</button>',
+                    '<input id="brush-width-range" class="brush-width-range" type="range" min="1" max="512" step="1" value="' + initialBrushWidth + '" aria-label="Brush width">',
                 '</div>',
             '</div>'
         ].join("");
 
         brushWidthRange = toolsRowElement.querySelector(".brush-width-range");
-        brushWidthValue = toolsRowElement.querySelector(".brush-width-range-value");
 
         if (brushWidthRange) {
             brushWidthRange.addEventListener("input", function() {
-                applyBrushWidthToolbarValue(brushWidthRange, brushWidthValue, brushWidthRange.value);
+                applyBrushWidthToolbarValue(brushWidthRange, brushWidthRange.value);
             });
-
-            resetButton = toolsRowElement.querySelector(".brush-width-reset-btn");
-            if (resetButton) {
-                resetButton.addEventListener("click", function() {
-                    applyBrushWidthToolbarValue(brushWidthRange, brushWidthValue, resetBrushWidth);
-                });
-            }
         }
     }
 
-    function applyBrushWidthToolbarValue(brushWidthRange, brushWidthValue, brushWidth) {
-        var value = normalizeConsoleLineWidth(brushWidth);
+    function applyBrushWidthToolbarValue(brushWidthRange, brushWidth) {
+        var value = normalizeConsoleBrushWidth(brushWidth);
 
         brushWidthRange.value = String(value);
-        brushWidthValue.textContent = value + "px";
         global.App.memory.currentBrushWidth = value;
 
         if (appBrushWidthPicker && appBrushWidthPicker.setActiveBrushWidth) {
@@ -1475,7 +1465,22 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         }
 
         if (global.PaintTools && global.PaintTools.use && !isBrushWidthPaintToolSelected()) {
-            global.PaintTools.use("ROUND-LINES");
+            global.PaintTools.use("PENCIL-TOOL");
+        }
+    }
+
+    function syncBrushWidthToolbarValue(toolsRowElement, brushWidth) {
+        var value = normalizeConsoleBrushWidth(brushWidth);
+        var brushWidthRange;
+
+        if (!toolsRowElement) {
+            return;
+        }
+
+        brushWidthRange = toolsRowElement.querySelector(".brush-width-range");
+
+        if (brushWidthRange) {
+            brushWidthRange.value = String(value);
         }
     }
 
@@ -1485,7 +1490,8 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         return mode === "SQUARED-POINTS" ||
             mode === "ROUND-POINTS" ||
             mode === "SQUARED-LINES" ||
-            mode === "ROUND-LINES";
+            mode === "ROUND-LINES" ||
+            mode === "PENCIL-TOOL";
     }
 
     function openLinesDesignerWindow() {
@@ -1544,6 +1550,28 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         }
 
         return Math.max(1, Math.min(value, 200));
+    }
+
+    function normalizeConsoleBrushWidth(brushWidth) {
+        var value = Math.round(parseFloat(brushWidth));
+
+        if (isNaN(value)) {
+            throw new Error("Brush width must be a number.");
+        }
+
+        return Math.max(1, Math.min(value, 512));
+    }
+
+    function normalizePencilBrushMode(brushMode) {
+        return brushMode === "ROUND-POINTS" ||
+            brushMode === "SQUARED-LINES" ||
+            brushMode === "ROUND-LINES" ?
+            brushMode :
+            "SQUARED-POINTS";
+    }
+
+    function isRoundPencilBrushMode(brushMode) {
+        return brushMode === "ROUND-POINTS" || brushMode === "ROUND-LINES";
     }
 
     function setSimpleLineWidthPickerWidth(lineWidth) {
@@ -1676,9 +1704,14 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
     }
 
     function setSimpleBrushWidthPickerWidth(brushWidth) {
-        var value = normalizeConsoleLineWidth(brushWidth);
+        var value = normalizeConsoleBrushWidth(brushWidth);
+        var pickerWindowElement;
 
         global.App.memory.currentBrushWidth = value;
+        pickerWindowElement = appBrushWidthPicker && appBrushWidthPicker.element ?
+            appBrushWidthPicker.element.closest(".wm-window") :
+            null;
+        syncBrushWidthToolbarValue(pickerWindowElement ? pickerWindowElement.querySelector(".wm-tools-row") : null, value);
 
         if (appBrushWidthPicker && appBrushWidthPicker.setActiveBrushWidth) {
             appBrushWidthPicker.setActiveBrushWidth(value);
@@ -1699,6 +1732,19 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         return value;
     }
 
+    function setSimpleBrushWidthPickerTool(brushTool) {
+        var value = normalizePencilBrushMode(brushTool);
+
+        global.App.memory.currentPencilBrushMode = value;
+        global.App.memory.currentBrushShape = isRoundPencilBrushMode(value) ? "circle" : "square";
+
+        if (appBrushWidthPicker && appBrushWidthPicker.setBrushTool) {
+            appBrushWidthPicker.setBrushTool(value);
+        }
+
+        return value;
+    }
+
     function getSimpleBrushWidthPickerApi() {
         return {
             open: openSimpleBrushWidthPickerWindow,
@@ -1712,6 +1758,10 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             setBrushShape: setSimpleBrushWidthPickerShape,
             getBrushShape: function() {
                 return appBrushWidthPicker && appBrushWidthPicker.getBrushShape ? appBrushWidthPicker.getBrushShape() : global.App.memory.currentBrushShape;
+            },
+            setBrushTool: setSimpleBrushWidthPickerTool,
+            getBrushTool: function() {
+                return appBrushWidthPicker && appBrushWidthPicker.getBrushTool ? appBrushWidthPicker.getBrushTool() : global.App.memory.currentPencilBrushMode;
             },
             setBrushStroke: setSimpleBrushWidthPickerStroke,
             getBrushStroke: function() {

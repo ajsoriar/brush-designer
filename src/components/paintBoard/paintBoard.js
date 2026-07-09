@@ -2609,7 +2609,7 @@
         var toolMode = mode || currentPaintToolMode;
 
         return toolMode === PAINT_TOOL_MODES.SQUARED_POINTS ||
-            toolMode === PAINT_TOOL_MODES.PENCIL_TOOL ||
+            (toolMode === PAINT_TOOL_MODES.PENCIL_TOOL && isCurrentPencilSquareBrushMode()) ||
             toolMode === PAINT_TOOL_MODES.SQUARED_LINES;
     }
 
@@ -4594,8 +4594,14 @@
                 paintOldBrushLine(board, board.lastPointerPosition, point);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES && board.lastPointerPosition) {
                 paintSquaredLine(board, board.lastPointerPosition, point);
-            } else if (currentPaintToolMode === PAINT_TOOL_MODES.PENCIL_TOOL && board.lastPointerPosition) {
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.PENCIL_TOOL &&
+                    getCurrentPencilBrushMode() === PAINT_TOOL_MODES.SQUARED_LINES &&
+                    board.lastPointerPosition) {
                 paintSquaredLine(board, board.lastPointerPosition, point);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.PENCIL_TOOL &&
+                    getCurrentPencilBrushMode() === PAINT_TOOL_MODES.ROUND_LINES &&
+                    board.lastPointerPosition) {
+                paintRoundLine(board, board.lastPointerPosition, point);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.REMOVE && board.lastPointerPosition) {
                 paintSquaredLine(board, board.lastPointerPosition, point);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES && board.lastPointerPosition) {
@@ -4604,7 +4610,9 @@
                 paintDesignedBrush(board, point.x, point.y);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2) {
                 paintDesignedBrush2(board, point.x, point.y);
-            } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS) {
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS ||
+                    (currentPaintToolMode === PAINT_TOOL_MODES.PENCIL_TOOL &&
+                    getCurrentPencilBrushMode() === PAINT_TOOL_MODES.ROUND_POINTS)) {
                 if (isPointInsideCanvas(board, point)) {
                     paintRoundPoint(board, point.x, point.y);
                 }
@@ -4629,7 +4637,7 @@
 
     function isContinuousLineToolMode() {
         return currentPaintToolMode === PAINT_TOOL_MODES.SQUARED_LINES ||
-            currentPaintToolMode === PAINT_TOOL_MODES.PENCIL_TOOL ||
+            (currentPaintToolMode === PAINT_TOOL_MODES.PENCIL_TOOL && isCurrentPencilLineBrushMode()) ||
             currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES ||
             currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH;
     }
@@ -4647,7 +4655,9 @@
     }
 
     function paintContinuousLineStart(board, point) {
-        if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES) {
+        if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_LINES ||
+                (currentPaintToolMode === PAINT_TOOL_MODES.PENCIL_TOOL &&
+                getCurrentPencilBrushMode() === PAINT_TOOL_MODES.ROUND_LINES)) {
             paintRoundPoint(board, point.x, point.y);
             return;
         }
@@ -8742,6 +8752,32 @@
 
     function getCurrentBrushAntialiasing() {
         return !!(global.App && global.App.memory && global.App.memory.currentBrushAntialiasing);
+    }
+
+    function getCurrentPencilBrushMode() {
+        var mode = global.App && global.App.memory && global.App.memory.currentPencilBrushMode;
+
+        if (mode === PAINT_TOOL_MODES.ROUND_POINTS ||
+                mode === PAINT_TOOL_MODES.SQUARED_LINES ||
+                mode === PAINT_TOOL_MODES.ROUND_LINES) {
+            return mode;
+        }
+
+        return PAINT_TOOL_MODES.SQUARED_POINTS;
+    }
+
+    function isCurrentPencilLineBrushMode() {
+        var mode = getCurrentPencilBrushMode();
+
+        return mode === PAINT_TOOL_MODES.SQUARED_LINES ||
+            mode === PAINT_TOOL_MODES.ROUND_LINES;
+    }
+
+    function isCurrentPencilSquareBrushMode() {
+        var mode = getCurrentPencilBrushMode();
+
+        return mode === PAINT_TOOL_MODES.SQUARED_POINTS ||
+            mode === PAINT_TOOL_MODES.SQUARED_LINES;
     }
 
     function getCurrentLineDesign() {

@@ -14,6 +14,7 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
     global.App.memory.currentLineWidth = global.App.memory.currentLineWidth || 15;
     global.App.memory.currentBrushWidth = global.App.memory.currentBrushWidth || global.App.memory.currentLineWidth;
     global.App.memory.currentBrushShape = global.App.memory.currentBrushShape || "square";
+    global.App.memory.currentPencilBrushMode = global.App.memory.currentPencilBrushMode || "SQUARED-POINTS";
     global.App.memory.currentBrushStroke = global.App.memory.currentBrushStroke || false;
     global.App.memory.currentBrushAntialiasing = global.App.memory.currentBrushAntialiasing || false;
     global.App.memory.cropExpansionFillMode = global.App.memory.cropExpansionFillMode || "background-color";
@@ -590,15 +591,37 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
     }
 
     function syncBrushWidthPickerToPaintTool(mode) {
-        if (mode === "SQUARED-POINTS" || mode === "SQUARED-LINES") {
-            global.AppOpenWindows.getSimpleBrushWidthPickerApi().setBrushShape("square");
+        if (mode === "PENCIL-TOOL") {
             global.AppOpenWindows.openSimpleBrushWidthPickerWindow();
         }
 
+        if (mode === "SQUARED-POINTS" || mode === "SQUARED-LINES") {
+            global.App.memory.currentPencilBrushMode = mode;
+            global.AppOpenWindows.getSimpleBrushWidthPickerApi().setBrushTool(mode);
+            global.AppOpenWindows.getSimpleBrushWidthPickerApi().setBrushShape("square");
+            global.AppOpenWindows.openSimpleBrushWidthPickerWindow();
+            selectPencilPaintTool();
+        }
+
         if (mode === "ROUND-POINTS" || mode === "ROUND-LINES") {
+            global.App.memory.currentPencilBrushMode = mode;
+            global.AppOpenWindows.getSimpleBrushWidthPickerApi().setBrushTool(mode);
             global.AppOpenWindows.getSimpleBrushWidthPickerApi().setBrushShape("circle");
             global.AppOpenWindows.openSimpleBrushWidthPickerWindow();
+            selectPencilPaintTool();
         }
+    }
+
+    function selectPencilPaintTool() {
+        if (!global.PaintTools || !global.PaintTools.use) {
+            return;
+        }
+
+        if (global.PaintTools.getMode && global.PaintTools.getMode() === "PENCIL-TOOL") {
+            return;
+        }
+
+        global.PaintTools.use("PENCIL-TOOL");
     }
 
     function initForegroundBackgroundColorsComponent() {
