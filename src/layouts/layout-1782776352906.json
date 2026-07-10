@@ -31,11 +31,11 @@
         {
             "id": "simple-brush-width-picker-window",
             "windowId": "simple-brush-width-picker",
-            "title": "Brush Width",
+            "title": "Pencil",
             "x": 1488,
             "y": 471,
-            "w": 104,
-            "h": 458
+            "w": 210,
+            "h": 371
         },
         {
             "id": "paint-tools-window",
