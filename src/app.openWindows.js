@@ -44,6 +44,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         "OLD-BRUSH",
         "DESIGNED-BRUSH",
         "DESIGNED-BRUSH-2",
+        "RANDOM-LINES",
         "STAR-GENERATOR",
         "CROP-BOARD",
         "TEXT",
@@ -939,7 +940,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         }
 
         designerWidth = 304;
-        designerHeight = 380;
+        designerHeight = 470;
         windowFrameWidth = 16;
         windowFrameHeight = 36;
         brush = global.App.memory.currentRandomLinesBrush || {};
@@ -967,6 +968,9 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         appRandomLinesDesigner = global.createRandomLinesDesigner(designerWindow.contentElement, {
             brushWidth: brush.brushWidth,
             lineWidth: brush.lineWidth,
+            density: brush.density,
+            antialiasing: brush.antialiasing,
+            colorMode: brush.colorMode,
             onChange: function(randomLinesBrush) {
                 global.App.memory.currentRandomLinesBrush = randomLinesBrush;
             }
@@ -1851,6 +1855,18 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
                 var lineDesign = global.App.memory.currentLineDesign || {};
 
                 return lineDesign.weight || global.App.memory.currentLineWidth;
+            }
+        };
+    }
+
+    function getRandomLinesDesignerApi() {
+        return {
+            open: openRandomLinesDesignerWindow,
+            getInstance: function() {
+                return appRandomLinesDesigner;
+            },
+            getBrush: function() {
+                return appRandomLinesDesigner && appRandomLinesDesigner.getBrush ? appRandomLinesDesigner.getBrush() : global.App.memory.currentRandomLinesBrush;
             }
         };
     }
@@ -2778,6 +2794,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         getSimpleLineWidthPickerApi: getSimpleLineWidthPickerApi,
         getSimpleBrushWidthPickerApi: getSimpleBrushWidthPickerApi,
         getLinesDesignerApi: getLinesDesignerApi,
+        getRandomLinesDesignerApi: getRandomLinesDesignerApi,
         openPaintToolsWindow: openPaintToolsWindow,
         openLayersPanelWindow: openLayersPanelWindow,
         openTheGlobalGoalsPickerWindow: openTheGlobalGoalsPickerWindow,

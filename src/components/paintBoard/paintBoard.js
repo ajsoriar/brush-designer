@@ -53,6 +53,8 @@
         OLD_BRUSH: "OLD-BRUSH",
         DESIGNED_BRUSH: "DESIGNED-BRUSH",
         DESIGNED_BRUSH_2: "DESIGNED-BRUSH-2",
+        RANDOM_LINES: "RANDOM-LINES",
+        STAR_GENERATOR: "STAR-GENERATOR",
         CROP_BOARD: "CROP-BOARD",
         TEXT: "TEXT",
         REMOVE: "REMOVE"
@@ -2598,6 +2600,8 @@
         return toolMode === PAINT_TOOL_MODES.OLD_BRUSH ||
             toolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH ||
             toolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2 ||
+            toolMode === PAINT_TOOL_MODES.STAR_GENERATOR ||
+            toolMode === PAINT_TOOL_MODES.RANDOM_LINES ||
             toolMode === PAINT_TOOL_MODES.PENCIL_TOOL ||
             toolMode === PAINT_TOOL_MODES.SQUARED_POINTS ||
             toolMode === PAINT_TOOL_MODES.ROUND_POINTS ||
@@ -2634,6 +2638,14 @@
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2) {
             brush = getCurrentDesignedBrush2();
+        }
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.STAR_GENERATOR) {
+            return Math.max(1, getCurrentStar().outerRadius * 2);
+        }
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.RANDOM_LINES) {
+            return Math.max(1, getCurrentRandomLinesBrush().brushWidth);
         }
 
         if (!brush) {
@@ -4610,6 +4622,10 @@
                 paintDesignedBrush(board, point.x, point.y);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2) {
                 paintDesignedBrush2(board, point.x, point.y);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.STAR_GENERATOR) {
+                paintStarGeneratorBrush(board, point.x, point.y);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.RANDOM_LINES) {
+                paintRandomLinesBrush(board, point.x, point.y);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS ||
                     (currentPaintToolMode === PAINT_TOOL_MODES.PENCIL_TOOL &&
                     getCurrentPencilBrushMode() === PAINT_TOOL_MODES.ROUND_POINTS)) {
@@ -4651,6 +4667,8 @@
             currentPaintToolMode === PAINT_TOOL_MODES.OLD_BRUSH ||
             currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH ||
             currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2 ||
+            currentPaintToolMode === PAINT_TOOL_MODES.STAR_GENERATOR ||
+            currentPaintToolMode === PAINT_TOOL_MODES.RANDOM_LINES ||
             currentPaintToolMode === PAINT_TOOL_MODES.REMOVE;
     }
 
@@ -5525,6 +5543,128 @@
         paintWidth = getCurrentDesignedBrushPaintWidth(brush);
         paintHeight = getCurrentDesignedBrushPaintHeight(brush);
         board.context.drawImage(tintedBrush, x - paintWidth / 2, y - paintHeight / 2, paintWidth, paintHeight);
+    }
+
+    function paintStarGeneratorBrush(board, x, y) {
+        var star = getCurrentStar();
+        var vertices = getStarVertices(x, y, star);
+        var i;
+
+        board.context.save();
+        board.context.fillStyle = getCurrentPaintColor(board);
+        board.context.beginPath();
+        board.context.moveTo(vertices[0].x, vertices[0].y);
+
+        for (i = 1; i < vertices.length; i++) {
+            board.context.lineTo(vertices[i].x, vertices[i].y);
+        }
+
+        board.context.closePath();
+        board.context.fill();
+        board.context.restore();
+    }
+
+    function getStarVertices(x, y, star) {
+        var vertices = [];
+        var total = star.points * 2;
+        var angleStep = Math.PI / star.points;
+        var startAngle = -Math.PI / 2;
+        var i;
+        var radius;
+        var angle;
+
+        for (i = 0; i < total; i++) {
+            radius = i % 2 === 0 ? star.outerRadius : star.innerRadius;
+            angle = startAngle + (i * angleStep);
+            vertices.push({
+                x: x + Math.cos(angle) * radius,
+                y: y + Math.sin(angle) * radius
+            });
+        }
+
+        return vertices;
+    }
+
+    function paintRandomLinesBrush(board, x, y) {
+        var brush = getCurrentRandomLinesBrush();
+        var count = getRandomLinesSegmentCount(brush);
+        var radius = brush.brushWidth / 2;
+        var lineWidth = Math.max(1, brush.lineWidth);
+        var i;
+        var center;
+        var angle;
+        var length;
+        var dx;
+        var dy;
+        var x0;
+        var y0;
+        var x1;
+        var y1;
+
+        board.context.save();
+        board.context.imageSmoothingEnabled = brush.antialiasing;
+        board.context.lineCap = brush.antialiasing ? "round" : "square";
+        board.context.lineWidth = brush.antialiasing ? lineWidth : Math.round(lineWidth);
+
+        for (i = 0; i < count; i++) {
+            center = getRandomPointInRadius(x, y, radius);
+            angle = (Math.random() * Math.PI) - (Math.PI / 2);
+            length = getRandomLinesSegmentLength(brush);
+            dx = Math.cos(angle) * length / 2;
+            dy = Math.sin(angle) * length / 2;
+            x0 = center.x - dx;
+            y0 = center.y - dy;
+            x1 = center.x + dx;
+            y1 = center.y + dy;
+
+            if (!brush.antialiasing) {
+                x0 = Math.round(x0) + 0.5;
+                y0 = Math.round(y0) + 0.5;
+                x1 = Math.round(x1) + 0.5;
+                y1 = Math.round(y1) + 0.5;
+            }
+
+            board.context.strokeStyle = getRandomLinesSegmentColor(board, brush, i);
+            board.context.beginPath();
+            board.context.moveTo(x0, y0);
+            board.context.lineTo(x1, y1);
+            board.context.stroke();
+        }
+
+        board.context.restore();
+    }
+
+    function getRandomPointInRadius(x, y, radius) {
+        var angle = Math.random() * Math.PI * 2;
+        var distance = Math.sqrt(Math.random()) * radius;
+
+        return {
+            x: x + Math.cos(angle) * distance,
+            y: y + Math.sin(angle) * distance
+        };
+    }
+
+    function getRandomLinesSegmentLength(brush) {
+        var minLength = Math.max(3, brush.lineWidth * 2);
+        var maxLength = Math.max(minLength, brush.brushWidth * 0.55);
+
+        return minLength + (Math.random() * (maxLength - minLength));
+    }
+
+    function getRandomLinesSegmentCount(brush) {
+        return Math.round(10 + (brush.density * 130 / 100));
+    }
+
+    function getRandomLinesSegmentColor(board, brush, index) {
+        if (brush.colorMode === "alternate") {
+            return index % 2 === 0 ? getCurrentFrontPaintColor(board) : getCurrentBackgroundPaintColor(board);
+        }
+
+        if (brush.colorMode === "crazy") {
+            return getCrazyPaintColor(board, { perLine: true }) || getCurrentFrontPaintColor(board);
+        }
+
+        return getCurrentFrontPaintColor(board);
     }
 
     function paintDesignedBrush2(board, x, y) {
@@ -8656,10 +8796,11 @@
         return board.paintColor;
     }
 
-    function getCrazyPaintColor(board) {
+    function getCrazyPaintColor(board, options) {
         var algorithm;
         var colorPickerApi;
         var color = null;
+        var perLine = !!(options && options.perLine);
 
         if (!global.App || !global.App.memory || !global.App.memory.rainbowCrazyMode) {
             return null;
@@ -8671,7 +8812,8 @@
             return getRandomPaintColor();
         }
 
-        if (board &&
+        if (!perLine &&
+            board &&
                 board.crazyPickerPaintColor &&
                 board.crazyPickerPaintColorAlgorithm === algorithm) {
             return board.crazyPickerPaintColor;
@@ -8698,7 +8840,7 @@
             global.AppOpenWindows.setActiveColor(color);
         }
 
-        if (board && color) {
+        if (!perLine && board && color) {
             board.crazyPickerPaintColor = color;
             board.crazyPickerPaintColorAlgorithm = algorithm;
             global.setTimeout(function() {
@@ -8710,6 +8852,22 @@
         }
 
         return color;
+    }
+
+    function getCurrentFrontPaintColor(board) {
+        if (global.App && global.App.memory && global.App.memory.currentColor) {
+            return global.App.memory.currentColor;
+        }
+
+        return board.paintColor;
+    }
+
+    function getCurrentBackgroundPaintColor(board) {
+        if (global.AppOpenWindows && typeof global.AppOpenWindows.getBackgroundColor === "function") {
+            return global.AppOpenWindows.getBackgroundColor();
+        }
+
+        return board && board.backgroundColor ? board.backgroundColor : "#ffffff";
     }
 
     function getRandomPaintColor() {
@@ -8804,6 +8962,83 @@
         }
 
         return null;
+    }
+
+    function getCurrentStar() {
+        var current = global.App && global.App.memory && global.App.memory.currentStar ?
+            global.App.memory.currentStar :
+            null;
+        var points = current ? parseInt(current.points, 10) : 5;
+        var outerRadius = current ? parseFloat(current.outerRadius) : 96;
+        var innerRadius = current ? parseFloat(current.innerRadius) : 44;
+
+        if (isNaN(points)) {
+            points = 5;
+        }
+
+        if (isNaN(outerRadius)) {
+            outerRadius = 96;
+        }
+
+        if (isNaN(innerRadius)) {
+            innerRadius = 44;
+        }
+
+        points = Math.max(3, Math.min(Math.round(points), 24));
+        outerRadius = Math.max(1, Math.min(outerRadius, 180));
+        innerRadius = Math.max(1, Math.min(innerRadius, outerRadius));
+
+        return {
+            points: points,
+            outerRadius: outerRadius,
+            innerRadius: innerRadius
+        };
+    }
+
+    function getCurrentRandomLinesBrush() {
+        var brush = null;
+        var brushWidth;
+        var lineWidth;
+        var density;
+        var colorMode;
+
+        if (global.RandomLinesDesignerApi && typeof global.RandomLinesDesignerApi.getBrush === "function") {
+            brush = global.RandomLinesDesignerApi.getBrush();
+        }
+
+        if (!brush && global.App && global.App.memory) {
+            brush = global.App.memory.currentRandomLinesBrush;
+        }
+
+        brush = brush || {};
+        brushWidth = Number(brush.brushWidth);
+        lineWidth = Number(brush.lineWidth);
+        density = Number(brush.density);
+        colorMode = String(brush.colorMode || "front").toLowerCase();
+
+        if (isNaN(brushWidth)) {
+            brushWidth = 20;
+        }
+
+        if (isNaN(lineWidth)) {
+            lineWidth = 2;
+        }
+
+        if (isNaN(density)) {
+            density = 35;
+        }
+
+        if (colorMode !== "alternate" && colorMode !== "crazy") {
+            colorMode = "front";
+        }
+
+        return {
+            brushWidth: Math.max(10, Math.min(Math.round(brushWidth), 256)),
+            lineWidth: Math.max(1, Math.min(Math.round(lineWidth), 10)),
+            density: Math.max(0, Math.min(Math.round(density), 100)),
+            antialiasing: !!brush.antialiasing,
+            colorMode: colorMode
+        };
     }
 
     function getCurrentDesignedBrushPaintWidth(brush) {

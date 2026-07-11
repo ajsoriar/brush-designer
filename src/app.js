@@ -83,6 +83,13 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
         outerRadius: 96,
         innerRadius: 44
     };
+    global.App.memory.currentRandomLinesBrush = global.App.memory.currentRandomLinesBrush || {
+        brushWidth: 20,
+        lineWidth: 2,
+        density: 35,
+        antialiasing: false,
+        colorMode: "front"
+    };
 
     var selectionBehabiourComponent = null;
     var toolsMagicWandOptionsComponent = null;
@@ -275,6 +282,14 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
 
         if (mode === "GRADIENT") {
             global.AppOpenWindows.openGradientPanelWindow();
+        }
+
+        if (mode === "RANDOM-LINES") {
+            global.AppOpenWindows.openRandomLinesDesignerWindow();
+        }
+
+        if (mode === "STAR-GENERATOR") {
+            global.AppOpenWindows.openStarGeneratorWindow();
         }
 
         if (mode === "STRAIGHT-LINE") {
@@ -1508,10 +1523,12 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
     global.SimpleLineWidthPickerApi = global.AppOpenWindows.getSimpleLineWidthPickerApi();
     global.SimpleBrushWidthPickerApi = global.AppOpenWindows.getSimpleBrushWidthPickerApi();
     global.LinesDesignerApi = global.AppOpenWindows.getLinesDesignerApi();
+    global.RandomLinesDesignerApi = global.AppOpenWindows.getRandomLinesDesignerApi();
     global.openPaintToolsWindow = global.AppOpenWindows.openPaintToolsWindow;
     global.openLayersPanelWindow = global.AppOpenWindows.openLayersPanelWindow;
     global.openTheGlobalGoalsPickerWindow = global.AppOpenWindows.openTheGlobalGoalsPickerWindow;
     global.openStarGeneratorWindow = global.AppOpenWindows.openStarGeneratorWindow;
+    global.openRandomLinesDesignerWindow = global.AppOpenWindows.openRandomLinesDesignerWindow;
     global.renderBruses = renderBruses;
     global.storeImage = storeImage;
 

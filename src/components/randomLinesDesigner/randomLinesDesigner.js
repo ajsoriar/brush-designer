@@ -7,17 +7,29 @@
     var DEFAULTS = {
         id: null,
         width: 304,
-        height: 380,
+        height: 470,
         previewWidth: 276,
         previewHeight: 140,
-        segmentCount: 30,
+        minSegmentCount: 10,
+        maxSegmentCount: 140,
         minBrushWidth: 10,
         maxBrushWidth: 256,
         brushWidth: 20,
         minLineWidth: 1,
         maxLineWidth: 10,
         lineWidth: 2,
+        minDensity: 0,
+        maxDensity: 100,
+        density: 35,
+        antialiasing: false,
+        colorMode: "front",
         onChange: null
+    };
+
+    var COLOR_MODES = {
+        front: "All Front Color",
+        alternate: "Front / Background",
+        crazy: "Crazy Rainbow"
     };
 
     function extend(target, source) {
@@ -94,9 +106,12 @@
         this.options = extend(extend({}, DEFAULTS), options || {});
         this.state = {
             brushWidth: normalizeValue(this.options.brushWidth, this.options.minBrushWidth, this.options.maxBrushWidth, DEFAULTS.brushWidth),
-            lineWidth: normalizeValue(this.options.lineWidth, this.options.minLineWidth, this.options.maxLineWidth, DEFAULTS.lineWidth)
+            lineWidth: normalizeValue(this.options.lineWidth, this.options.minLineWidth, this.options.maxLineWidth, DEFAULTS.lineWidth),
+            density: normalizeValue(this.options.density, this.options.minDensity, this.options.maxDensity, DEFAULTS.density),
+            antialiasing: typeof this.options.antialiasing === "boolean" ? this.options.antialiasing : DEFAULTS.antialiasing,
+            colorMode: normalizeColorMode(this.options.colorMode)
         };
-        this.segments = generateSegments(this.options.segmentCount);
+        this.segments = generateSegments(this.getSegmentCount());
         this.hover = null;
         this.onChange = typeof this.options.onChange === "function" ? this.options.onChange : function() {};
 
@@ -121,7 +136,7 @@
         this.previewCtx = this.previewCanvas.getContext("2d");
 
         this.brushWidthControl = this.createControl(
-            "Brush Wide",
+            "Brush Width",
             this.options.minBrushWidth,
             this.options.maxBrushWidth,
             root
@@ -132,18 +147,29 @@
             this.options.maxLineWidth,
             root
         );
+        this.densityControl = this.createControl(
+            "Density",
+            this.options.minDensity,
+            this.options.maxDensity,
+            root,
+            { unit: "", limitLabels: ["Low", "High"] }
+        );
+        this.colorModeControl = this.createSelect("Color Mode", COLOR_MODES, root);
+        this.antialiasingControl = this.createCheckbox("Antialiasing", root);
 
         this.bindPreviewEvents();
         this.bindControlEvents();
     };
 
-    RandomLinesDesigner.prototype.createControl = function(labelText, min, max, parent) {
+    RandomLinesDesigner.prototype.createControl = function(labelText, min, max, parent, settings) {
         var control = createElement("label", "random-lines-designer-control", parent);
         var labelRow = createElement("span", "random-lines-designer-control-label", control);
         var row = createElement("div", "random-lines-designer-control-row", control);
         var value = createElement("span", "random-lines-designer-value", row);
         var input = createElement("input", "random-lines-designer-range", row);
         var limits = createElement("div", "random-lines-designer-limits", control);
+        var unit = settings && typeof settings.unit === "string" ? settings.unit : "px";
+        var limitLabels = settings && settings.limitLabels ? settings.limitLabels : [min + unit, max + unit];
 
         labelRow.textContent = labelText;
         input.type = "range";
@@ -151,15 +177,52 @@
         input.max = String(max);
         input.step = "1";
 
-        createElement("span", "", limits).textContent = min + "px";
-        createElement("span", "", limits).textContent = max + "px";
+        createElement("span", "", limits).textContent = limitLabels[0];
+        createElement("span", "", limits).textContent = limitLabels[1];
 
         return {
             element: control,
             input: input,
             value: value,
             min: min,
-            max: max
+            max: max,
+            unit: unit
+        };
+    };
+
+    RandomLinesDesigner.prototype.createCheckbox = function(labelText, parent) {
+        var row = createElement("label", "random-lines-designer-check", parent);
+        var input = createElement("input", "", row);
+
+        input.type = "checkbox";
+        row.appendChild(document.createTextNode(labelText));
+
+        return {
+            element: row,
+            input: input
+        };
+    };
+
+    RandomLinesDesigner.prototype.createSelect = function(labelText, choices, parent) {
+        var control = createElement("label", "random-lines-designer-control", parent);
+        var labelRow = createElement("span", "random-lines-designer-control-label", control);
+        var select = createElement("select", "random-lines-designer-select", control);
+        var key;
+        var option;
+
+        labelRow.textContent = labelText;
+
+        for (key in choices) {
+            if (Object.prototype.hasOwnProperty.call(choices, key)) {
+                option = createElement("option", "", select);
+                option.value = key;
+                option.textContent = choices[key];
+            }
+        }
+
+        return {
+            element: control,
+            input: select
         };
     };
 
@@ -167,17 +230,23 @@
         var self = this;
 
         this.brushWidthControl.input.addEventListener("input", function() {
-            self.setBrush({
-                brushWidth: self.brushWidthControl.input.value,
-                lineWidth: self.state.lineWidth
-            });
+            self.setBrush({ brushWidth: self.brushWidthControl.input.value });
         });
 
         this.lineWidthControl.input.addEventListener("input", function() {
-            self.setBrush({
-                brushWidth: self.state.brushWidth,
-                lineWidth: self.lineWidthControl.input.value
-            });
+            self.setBrush({ lineWidth: self.lineWidthControl.input.value });
+        });
+
+        this.densityControl.input.addEventListener("input", function() {
+            self.setBrush({ density: self.densityControl.input.value });
+        });
+
+        this.colorModeControl.input.addEventListener("change", function() {
+            self.setBrush({ colorMode: self.colorModeControl.input.value });
+        });
+
+        this.antialiasingControl.input.addEventListener("change", function() {
+            self.setBrush({ antialiasing: self.antialiasingControl.input.checked });
         });
     };
 
@@ -206,17 +275,34 @@
         };
     };
 
+    RandomLinesDesigner.prototype.getSegmentCount = function() {
+        return Math.round(mapRange(this.state.density, this.options.minDensity, this.options.maxDensity, this.options.minSegmentCount, this.options.maxSegmentCount));
+    };
+
     RandomLinesDesigner.prototype.setBrush = function(brush) {
+        var previousDensity = this.state.density;
+
         brush = brush || {};
         this.state.brushWidth = normalizeValue(brush.brushWidth, this.options.minBrushWidth, this.options.maxBrushWidth, this.state.brushWidth);
         this.state.lineWidth = normalizeValue(brush.lineWidth, this.options.minLineWidth, this.options.maxLineWidth, this.state.lineWidth);
+        this.state.density = normalizeValue(brush.density, this.options.minDensity, this.options.maxDensity, this.state.density);
+        this.state.antialiasing = typeof brush.antialiasing === "boolean" ? brush.antialiasing : this.state.antialiasing;
+        this.state.colorMode = brush.colorMode ? normalizeColorMode(brush.colorMode) : this.state.colorMode;
+
+        if (this.state.density !== previousDensity) {
+            this.segments = generateSegments(this.getSegmentCount());
+        }
+
         this.update();
     };
 
     RandomLinesDesigner.prototype.getBrush = function() {
         return {
             brushWidth: this.state.brushWidth,
-            lineWidth: this.state.lineWidth
+            lineWidth: this.state.lineWidth,
+            density: this.state.density,
+            antialiasing: this.state.antialiasing,
+            colorMode: this.state.colorMode
         };
     };
 
@@ -225,8 +311,12 @@
 
         this.brushWidthControl.input.value = String(brush.brushWidth);
         this.lineWidthControl.input.value = String(brush.lineWidth);
-        this.brushWidthControl.value.textContent = brush.brushWidth + "px";
-        this.lineWidthControl.value.textContent = brush.lineWidth + "px";
+        this.densityControl.input.value = String(brush.density);
+        this.brushWidthControl.value.textContent = brush.brushWidth + this.brushWidthControl.unit;
+        this.lineWidthControl.value.textContent = brush.lineWidth + this.lineWidthControl.unit;
+        this.densityControl.value.textContent = brush.density + this.densityControl.unit;
+        this.colorModeControl.input.value = brush.colorMode;
+        this.antialiasingControl.input.checked = brush.antialiasing;
         this.drawPreview();
         this.onChange(brush, this);
     };
@@ -245,6 +335,7 @@
         var bandHeight = this.getBandHeight();
 
         ctx.clearRect(0, 0, width, height);
+        ctx.imageSmoothingEnabled = this.state.antialiasing;
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, width, height);
 
@@ -252,7 +343,7 @@
         drawGuideLine(ctx, width, centerY + (bandHeight / 2), "#e8a26a");
         drawGuideLine(ctx, width, centerY, "#3d6fd6");
 
-        drawSegments(ctx, this.segments, width, centerY, bandHeight, this.state.lineWidth);
+        drawSegments(ctx, this.segments, width, centerY, bandHeight, this.state.lineWidth, this.state.antialiasing);
 
         if (this.hover) {
             drawCursor(ctx, this.hover, bandHeight);
@@ -275,11 +366,11 @@
         ctx.restore();
     }
 
-    function drawSegments(ctx, segments, width, centerY, bandHeight, lineWidth) {
+    function drawSegments(ctx, segments, width, centerY, bandHeight, lineWidth, antialiasing) {
         ctx.save();
         ctx.strokeStyle = "#111111";
-        ctx.lineWidth = lineWidth;
-        ctx.lineCap = "round";
+        ctx.lineWidth = antialiasing ? lineWidth : Math.round(lineWidth);
+        ctx.lineCap = antialiasing ? "round" : "square";
 
         segments.forEach(function(segment) {
             var x = segment.xFraction * width;
@@ -287,14 +378,35 @@
             var radians = segment.angle * Math.PI / 180;
             var dx = Math.cos(radians) * segment.length / 2;
             var dy = Math.sin(radians) * segment.length / 2;
+            var x0 = x - dx;
+            var y0 = y - dy;
+            var x1 = x + dx;
+            var y1 = y + dy;
+
+            if (!antialiasing) {
+                x0 = Math.round(x0) + 0.5;
+                y0 = Math.round(y0) + 0.5;
+                x1 = Math.round(x1) + 0.5;
+                y1 = Math.round(y1) + 0.5;
+            }
 
             ctx.beginPath();
-            ctx.moveTo(x - dx, y - dy);
-            ctx.lineTo(x + dx, y + dy);
+            ctx.moveTo(x0, y0);
+            ctx.lineTo(x1, y1);
             ctx.stroke();
         });
 
         ctx.restore();
+    }
+
+    function normalizeColorMode(colorMode) {
+        colorMode = String(colorMode || DEFAULTS.colorMode).toLowerCase();
+
+        if (!Object.prototype.hasOwnProperty.call(COLOR_MODES, colorMode)) {
+            return DEFAULTS.colorMode;
+        }
+
+        return colorMode;
     }
 
     function drawCursor(ctx, hover, bandHeight) {

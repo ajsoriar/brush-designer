@@ -101,11 +101,35 @@
     width: 18px;
 }
 
+.random-lines-designer-select {
+    background: #f2f2f2;
+    border: 1px solid #888888;
+    color: #111111;
+    font: inherit;
+    font-size: 14px;
+    padding: 6px;
+    width: 100%;
+}
+
 .random-lines-designer-limits {
     display: flex;
     font-size: 11px;
     justify-content: space-between;
     margin-top: 4px;
+}
+
+.random-lines-designer-check {
+    align-items: center;
+    display: flex;
+    font-size: 14px;
+    font-weight: 700;
+    gap: 8px;
+}
+
+.random-lines-designer-check input {
+    height: 16px;
+    margin: 0;
+    width: 16px;
 }
 
 .wm-window-random-lines-designer .wm-top,
