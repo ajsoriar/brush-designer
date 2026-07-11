@@ -744,6 +744,7 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
                 openPaintTools: global.AppOpenWindows.openPaintToolsWindow,
                 openLayers: global.AppOpenWindows.openLayersPanelWindow,
                 openGlobalGoalsPicker: global.AppOpenWindows.openTheGlobalGoalsPickerWindow,
+                openRandomLinesDesigner: global.AppOpenWindows.openRandomLinesDesignerWindow,
                 openEyes: global.Eyes && global.Eyes.open,
                 openColorPicker: global.AppOpenWindows.openSimpleColorPickerWindow,
                 openBigColorPicker: global.AppOpenWindows.openBigColorPickerWindow,

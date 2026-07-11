@@ -17,6 +17,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
     var appStarGenerator = null;
     var appBrushDesigner2 = null;
     var appRetroBrushDesigner = null;
+    var appRandomLinesDesigner = null;
     var appPatternsView = null;
     var appGradientPanel = null;
     var appLinesDesigner = null;
@@ -923,6 +924,59 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         return appRetroBrushDesigner;
     }
 
+    function openRandomLinesDesignerWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("random-lines-designer");
+        var designerWidth;
+        var designerHeight;
+        var windowFrameWidth;
+        var windowFrameHeight;
+        var brush;
+        var designerWindow;
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return appRandomLinesDesigner;
+        }
+
+        designerWidth = 304;
+        designerHeight = 380;
+        windowFrameWidth = 16;
+        windowFrameHeight = 36;
+        brush = global.App.memory.currentRandomLinesBrush || {};
+        designerWindow = WindowsManager.create({
+            id: "random-lines-designer-window",
+            windowId: "random-lines-designer",
+            title: "Random Lines",
+            type: "TOOL",
+            x: 20,
+            y: 385,
+            width: designerWidth + windowFrameWidth,
+            height: designerHeight + windowFrameHeight,
+            resizable: false,
+            minimizable: false,
+            scrollBarX: false,
+            scrollBarY: false,
+            topBarGradient: {
+                a: "#7c3aed",
+                b: "#5b21b6",
+                orientation: "horizontal"
+            },
+            contentId: "random-lines-designer-window-content"
+        });
+
+        appRandomLinesDesigner = global.createRandomLinesDesigner(designerWindow.contentElement, {
+            brushWidth: brush.brushWidth,
+            lineWidth: brush.lineWidth,
+            onChange: function(randomLinesBrush) {
+                global.App.memory.currentRandomLinesBrush = randomLinesBrush;
+            }
+        });
+
+        designerWindow.scaleToContent(appRandomLinesDesigner.options.width, appRandomLinesDesigner.options.height);
+
+        return appRandomLinesDesigner;
+    }
+
     function openPatternsViewWindow() {
         var existingWindow = WindowsManager.getWindowByWindowId("patterns-view");
         var viewWidth = 368;
@@ -1378,6 +1432,12 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             toolsRow: true,
             minimizable: false,
             resizable: false,
+            cornerRadius: 100,
+            topBarGradient: {
+                a: "#2563eb",
+                b: "#14b8a6",
+                orientation: "horizontal"
+            },
             scrollBarX: false,
             scrollBarY: false,
             contentId: "simple-brush-width-picker-window-content"
@@ -1517,6 +1577,12 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             width: panelWidth + windowFrameWidth,
             height: panelHeight + windowFrameHeight,
             resizable: false,
+            cornerRadius: 100,
+            topBarGradient: {
+                a: "#2563eb",
+                b: "#14b8a6",
+                orientation: "horizontal"
+            },
             scrollBarX: false,
             scrollBarY: false,
             contentId: "lines-designer-window-content"
@@ -2695,6 +2761,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         openBrushDesignerInWindow: openBrushDesignerInWindow,
         openBrushDesigner2InWindow: openBrushDesigner2InWindow,
         openRetroBrushDesignerWindow: openRetroBrushDesignerWindow,
+        openRandomLinesDesignerWindow: openRandomLinesDesignerWindow,
         openPatternsViewWindow: openPatternsViewWindow,
         openGradientPanelWindow: openGradientPanelWindow,
         openBrushEditorOutputsWindow: openBrushEditorOutputsWindow,

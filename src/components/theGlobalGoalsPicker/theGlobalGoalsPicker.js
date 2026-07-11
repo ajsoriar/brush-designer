@@ -29,6 +29,9 @@
         innerRadius: 38
     };
 
+    var DESIGN_WIDTH = 184;
+    var DESIGN_HEIGHT = 191;
+
     var TOTAL_GOALS = GOALS.length;
     var SEGMENT_DEG = 360 / TOTAL_GOALS;
     var START_ANGLE_DEG = -90;
@@ -104,7 +107,7 @@
         mapImage = document.createElement("img");
         mapImage.className = "tggp-map-image";
         mapImage.alt = "The Global Goals color picker";
-        mapImage.src = createTransparentImageDataUrl(184, 191);
+        mapImage.src = createTransparentImageDataUrl(DESIGN_WIDTH, DESIGN_HEIGHT);
         mapImage.useMap = "#" + mapName;
         mapImage.tabIndex = 0;
 
@@ -245,9 +248,14 @@
             var index = goal.index - 1;
             var angleDeg = START_ANGLE_DEG + (index + 0.5) * SEGMENT_DEG;
             var center = getMarkerCenter(goal.index);
+            var leftPercent = (center.x / DESIGN_WIDTH) * 100;
+            var topPercent = (center.y / DESIGN_HEIGHT) * 100;
 
-            selectedMarker.style.left = (center.x - MARKER.width / 2) + "px";
-            selectedMarker.style.top = (center.y - MARKER.height / 2) + "px";
+            // Position as a percentage of the design canvas (not raw px) so the
+            // marker stays aligned with the map image even if the actual
+            // rendered container size differs from the 184x191 design size.
+            selectedMarker.style.left = "calc(" + leftPercent + "% - " + (MARKER.width / 2) + "px)";
+            selectedMarker.style.top = "calc(" + topPercent + "% - " + (MARKER.height / 2) + "px)";
             selectedMarker.style.transform = "rotate(" + (angleDeg + 90) + "deg)";
         }
 
