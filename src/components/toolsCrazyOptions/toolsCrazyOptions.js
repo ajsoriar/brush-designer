@@ -17,6 +17,14 @@
         { value: "picker-vertical", label: "Vertical" },
         { value: "picker-horizontal", label: "Horizontal" }
     ];
+    var SETUPS = {
+        "random-lines-crazy": {
+            active: true,
+            algorithm: "picker-horizontal",
+            jump: false,
+            loop: true
+        }
+    };
 
     function ToolsCrazyOptionsComponent(options) {
         var config = extend(extend({}, DEFAULTS), options || {});
@@ -31,6 +39,8 @@
         var jumpInput = createCheckbox(optionStack, "Jump");
         var loopInput = createCheckbox(optionStack, "Loop");
         var componentId = config.id || ("tools-crazy-options-" + Date.now());
+        var setupResetOptions = null;
+        var activeSetup = null;
         var component;
 
         container.classList.add("tools-crazy-options-container");
@@ -69,6 +79,15 @@
             },
             setOptions: function(nextOptions) {
                 setOptions(nextOptions);
+            },
+            applySetup: function(setup) {
+                return applySetup(setup);
+            },
+            resetSetup: function() {
+                return resetSetup();
+            },
+            getActiveSetup: function() {
+                return activeSetup;
             },
             getOptions: function() {
                 return readOptions();
@@ -150,6 +169,56 @@
             }
             global.dispatchEvent(event);
         }
+
+        function applySetup(setup) {
+            var resolved = resolveSetup(setup);
+            var current;
+
+            if (!resolved) {
+                return readOptions();
+            }
+
+            current = readOptions();
+            resolved = extend({}, resolved);
+
+            if (setup === "random-lines-crazy" &&
+                    (current.algorithm === "picker-vertical" || current.algorithm === "picker-horizontal")) {
+                resolved.algorithm = current.algorithm;
+            }
+
+            if (!setupResetOptions) {
+                setupResetOptions = current;
+            }
+
+            activeSetup = typeof setup === "string" ? setup : null;
+            setOptions(resolved);
+            notifyChange();
+            return readOptions();
+        }
+
+        function resetSetup() {
+            if (!setupResetOptions) {
+                return readOptions();
+            }
+
+            setOptions(setupResetOptions);
+            setupResetOptions = null;
+            activeSetup = null;
+            notifyChange();
+            return readOptions();
+        }
+    }
+
+    function resolveSetup(setup) {
+        if (typeof setup === "string") {
+            return SETUPS[setup] || null;
+        }
+
+        if (setup && typeof setup === "object") {
+            return setup;
+        }
+
+        return null;
     }
 
     function buildAlgorithmRadios(container, inputs, componentId) {

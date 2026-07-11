@@ -113,6 +113,7 @@
         };
         this.segments = generateSegments(this.getSegmentCount());
         this.hover = null;
+        this.syncedCrazyOptionsColorMode = null;
         this.onChange = typeof this.options.onChange === "function" ? this.options.onChange : function() {};
 
         this.render();
@@ -317,8 +318,30 @@
         this.densityControl.value.textContent = brush.density + this.densityControl.unit;
         this.colorModeControl.input.value = brush.colorMode;
         this.antialiasingControl.input.checked = brush.antialiasing;
+        this.syncCrazyOptions();
         this.drawPreview();
         this.onChange(brush, this);
+    };
+
+    RandomLinesDesigner.prototype.syncCrazyOptions = function() {
+        var api = global.ToolsCrazyOptionsApi;
+
+        if (!api || this.syncedCrazyOptionsColorMode === this.state.colorMode) {
+            return;
+        }
+
+        this.syncedCrazyOptionsColorMode = this.state.colorMode;
+
+        if (this.state.colorMode === "crazy") {
+            if (typeof api.applySetup === "function") {
+                api.applySetup("random-lines-crazy");
+            }
+            return;
+        }
+
+        if (typeof api.resetSetup === "function") {
+            api.resetSetup();
+        }
     };
 
     RandomLinesDesigner.prototype.getBandHeight = function() {
