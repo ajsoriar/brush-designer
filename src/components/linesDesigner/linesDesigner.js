@@ -15,7 +15,6 @@ import linePresets from "./linePresets.json";
             cap: "butt",
             corner: "miter",
             limit: 10,
-            align: "center",
             antialiasing: false,
             dashed: false,
             dashes: [12, 8, 12, 8, 12, 8],
@@ -39,11 +38,6 @@ import linePresets from "./linePresets.json";
         { value: "miter", title: "Miter corner" },
         { value: "round", title: "Round corner" },
         { value: "bevel", title: "Bevel corner" }
-    ];
-    var ALIGN_OPTIONS = [
-        { value: "center", title: "Align center" },
-        { value: "inside", title: "Align inside" },
-        { value: "outside", title: "Align outside" }
     ];
     var ARROW_OPTIONS = [
         { value: "none", label: "None" },
@@ -86,7 +80,6 @@ import linePresets from "./linePresets.json";
         element.appendChild(createWeightRow(componentId, controls));
         element.appendChild(createButtonGroupRow("Cap:", CAP_OPTIONS, "cap", controls));
         element.appendChild(createCornerRow(componentId, controls));
-        element.appendChild(createButtonGroupRow("Align Stroke:", ALIGN_OPTIONS, "align", controls));
         element.appendChild(createRule());
         element.appendChild(createDashSection(componentId, controls));
         element.appendChild(createArrowSection(componentId, controls));
@@ -488,25 +481,10 @@ import linePresets from "./linePresets.json";
         if (key === "cap") {
             line.setAttribute("d", value === "round" ? "M5 12h14" : "M6 12h12");
             line.setAttribute("stroke-linecap", value);
-            svg.appendChild(line);
-            return svg;
-        }
-
-        if (key === "corner") {
+        } else {
             line.setAttribute("d", "M6 18V7h12");
             line.setAttribute("stroke-linejoin", value);
             line.setAttribute("stroke-linecap", "square");
-            svg.appendChild(line);
-            return svg;
-        }
-
-        if (value === "center") {
-            line.setAttribute("d", "M6 6h12v12H6z");
-        } else if (value === "inside") {
-            line.setAttribute("d", "M8 8h8v8H8z M5 5h14v14H5z");
-        } else {
-            line.setAttribute("d", "M5 5h14v14H5z M8 8h8v8H8z");
-            line.setAttribute("stroke-dasharray", "3 2");
         }
 
         svg.appendChild(line);
@@ -536,7 +514,6 @@ import linePresets from "./linePresets.json";
         controls.dashes.forEach(bind);
         bindButtonGroup(component, controls, config, "cap");
         bindButtonGroup(component, controls, config, "corner");
-        bindButtonGroup(component, controls, config, "align");
 
         controls.swap.addEventListener("click", function() {
             var next = extend({}, component.current);
@@ -630,7 +607,6 @@ import linePresets from "./linePresets.json";
 
         syncButtonGroup(controls.cap, current.cap);
         syncButtonGroup(controls.corner, current.corner);
-        syncButtonGroup(controls.align, current.align);
         syncPresetButtons(component, controls);
     }
 
@@ -646,7 +622,7 @@ import linePresets from "./linePresets.json";
 
     function renderPreview(component) {
         var current = component.current;
-        var weight = Math.max(1, current.weight);
+        var weight = Math.max(1, getWeightInPixels(current));
         var dash = current.dashed ? current.dashes.join(" ") : "";
         var color = getPreviewColor(current);
 
@@ -710,7 +686,7 @@ import linePresets from "./linePresets.json";
         line.setAttribute("d", "M6 16 L26 16");
         line.setAttribute("fill", "none");
         line.setAttribute("stroke", color);
-        line.setAttribute("stroke-width", Math.max(1, Math.min(current.weight, 10)));
+        line.setAttribute("stroke-width", Math.max(1, Math.min(getWeightInPixels(current), 10)));
         line.setAttribute("stroke-linecap", current.cap);
         line.setAttribute("stroke-linejoin", current.corner);
         line.setAttribute("stroke-dasharray", current.dashed ? current.dashes.join(" ") : "");
@@ -751,6 +727,10 @@ import linePresets from "./linePresets.json";
         return null;
     }
 
+    function getWeightInPixels(current) {
+        return current.unit === "pt" ? current.weight * (96 / 72) : current.weight;
+    }
+
     function getPreviewColor(current) {
         return current.color || (global.App && global.App.memory && global.App.memory.currentColor) || "#111111";
     }
@@ -781,7 +761,6 @@ import linePresets from "./linePresets.json";
             cap: normalizeOption(current.cap, CAP_OPTIONS, DEFAULTS.current.cap),
             corner: normalizeOption(current.corner, CORNER_OPTIONS, DEFAULTS.current.corner),
             limit: Math.round(clamp(parseFloat(current.limit), 1, 50, DEFAULTS.current.limit)),
-            align: normalizeOption(current.align, ALIGN_OPTIONS, DEFAULTS.current.align),
             antialiasing: typeof current.antialiasing === "boolean" ? current.antialiasing : DEFAULTS.current.antialiasing,
             dashed: !!current.dashed,
             dashes: normalizeDashes(current.dashes),

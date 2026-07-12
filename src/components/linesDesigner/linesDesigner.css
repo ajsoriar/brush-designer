@@ -1,5 +1,5 @@
 .lines-designer {
-    background: #d6d6d6;
+    background: #f2f2f2;
     box-sizing: border-box;
     color: #111111;
     display: flex;
@@ -193,10 +193,10 @@
 
 .lines-designer-dash-field span,
 .lines-designer-ghost-label {
-    color: #ffffff;
-    font: bold 12px Arial, sans-serif;
+    color: #484848;
+    font: bold 9px Arial, sans-serif;
     line-height: 1;
-    text-shadow: 0 1px 0 #8f8f8f;
+    _text-shadow: 0 1px 0 #8f8f8f;
 }
 
 .lines-designer-arrow-row {

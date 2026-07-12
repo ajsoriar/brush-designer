@@ -39,7 +39,6 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
         cap: "butt",
         corner: "miter",
         limit: 10,
-        align: "center",
         antialiasing: false,
         dashed: false,
         dashes: [12, 8, 12, 8, 12, 8],
@@ -47,8 +46,7 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
         arrowEnd: "none",
         startScale: 100,
         endScale: 100,
-        arrowLinked: false,
-        active: false
+        arrowLinked: false
     };
     global.App.memory.currentDesignedBrush = global.App.memory.currentDesignedBrush || null;
     global.App.memory.currentPatternUseFrontColor = global.App.memory.currentPatternUseFrontColor || false;
@@ -306,9 +304,6 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
         }
 
         if (mode === "STRAIGHT-LINE") {
-            if (global.App.memory && global.App.memory.currentLineDesign) {
-                global.App.memory.currentLineDesign.active = true;
-            }
             global.AppOpenWindows.openLinesDesignerWindow();
         }
     });

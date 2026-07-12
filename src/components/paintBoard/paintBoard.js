@@ -872,6 +872,7 @@
             inputCanvas: canvas,
             floatingPaste: null,
             cropSession: null,
+            straightLinePreview: null,
             canvas: canvas,
             context: context,
             width: config.width,
@@ -2509,11 +2510,16 @@
     }
 
     function startStraightLinePreview(board, event) {
-        if (!global.PaintBoardTempLayer || !global.PaintBoardTempLayer.startLine) {
+        if (!global.VirtualLine) {
             return;
         }
 
-        global.PaintBoardTempLayer.startLine(board.tempLayerElement, getSelectionPointerPosition(board, event), getStraightLinePreviewOptions(board));
+        if (board.straightLinePreview) {
+            board.straightLinePreview.destroy();
+        }
+
+        board.straightLinePreview = global.VirtualLine(board.tempLayerElement, mapLineDesignToVirtualLineOptions(board));
+        board.straightLinePreview.start(getSelectionPointerPosition(board, event));
     }
 
     function updateStraightLinePreview(board, event) {
@@ -2524,31 +2530,36 @@
         var fromPoint = board.pointerStartPosition;
         var toPoint;
 
-        if (!global.PaintBoardTempLayer || !global.PaintBoardTempLayer.updateLine) {
-            return;
-        }
-
-        if (!fromPoint) {
+        if (!board.straightLinePreview || !fromPoint) {
             return;
         }
 
         toPoint = getGradientEndPoint(fromPoint, rawPoint, event);
-        global.PaintBoardTempLayer.updateLine(board.tempLayerElement, toPoint, getStraightLinePreviewOptions(board));
+        board.straightLinePreview.update(toPoint);
     }
 
-    function getStraightLinePreviewOptions(board) {
+    function mapLineDesignToVirtualLineOptions(board) {
         var lineDesign = getCurrentStoredLineDesign();
-        var designWeight = lineDesign ? Number(lineDesign.weight) : NaN;
+        var designWeight = lineDesign ? getLineDesignWeightInPixels(lineDesign) : NaN;
 
         return {
-            styled: true,
-            weight: isNaN(designWeight) ? Math.max(1, getCurrentBrushSize(board)) : Math.max(1, designWeight),
+            width: isNaN(designWeight) ? Math.max(1, getCurrentBrushSize(board)) : Math.max(1, designWeight),
             color: lineDesign && lineDesign.color ? lineDesign.color : getCurrentPreviewPaintColor(board),
-            cap: lineDesign && lineDesign.cap ? lineDesign.cap : "butt",
-            dashes: lineDesign && lineDesign.dashed && Array.isArray(lineDesign.dashes) ? lineDesign.dashes : null,
-            antialiasing: lineDesign ? lineDesign.antialiasing : true,
-            opacity: 0.8
+            capStyle: lineDesign && lineDesign.cap ? lineDesign.cap : "butt",
+            dashArray: lineDesign && lineDesign.dashed && Array.isArray(lineDesign.dashes) ? lineDesign.dashes : null,
+            opacity: 0.8,
+            die: false
         };
+    }
+
+    function getLineDesignWeightInPixels(lineDesign) {
+        var weight = Number(lineDesign.weight);
+
+        if (isNaN(weight)) {
+            return NaN;
+        }
+
+        return lineDesign.unit === "pt" ? weight * (96 / 72) : weight;
     }
 
     function updateBrushHoverPreview(board, event) {
@@ -4738,6 +4749,12 @@
         rawPoint = getSelectionPointerPosition(board, event);
         toPoint = getGradientEndPoint(fromPoint, rawPoint, event);
         lineDesign = getCurrentStoredLineDesign();
+
+        if (board.straightLinePreview) {
+            board.straightLinePreview.finish(toPoint);
+            board.straightLinePreview = null;
+        }
+
         if (event && typeof event.preventDefault === "function") {
             event.preventDefault();
         }
@@ -5402,27 +5419,92 @@
     }
 
     function paintLine(board, fromPoint, toPoint, lineCap, lineJoin, lineDesignOverride) {
-        var lineDesign = lineDesignOverride || getCurrentLineDesign();
-        var designWeight = lineDesign ? Number(lineDesign.weight) : NaN;
+        var lineDesign = lineDesignOverride || getCurrentStoredLineDesign();
+        var designWeight = lineDesign ? getLineDesignWeightInPixels(lineDesign) : NaN;
         var designLimit = lineDesign ? Number(lineDesign.limit) : NaN;
         var size = isNaN(designWeight) ? Math.max(1, getCurrentBrushSize(board)) : Math.max(1, designWeight);
 
         if (lineDesign && lineDesign.antialiasing === false) {
             paintHardLine(board, fromPoint, toPoint, size, lineDesign);
+        } else {
+            board.context.save();
+            board.context.beginPath();
+            board.context.strokeStyle = lineDesign && lineDesign.color ? lineDesign.color : getCurrentPaintColor(board);
+            board.context.lineWidth = size;
+            board.context.lineCap = lineDesign ? lineDesign.cap : lineCap;
+            board.context.lineJoin = lineDesign ? lineDesign.corner : lineJoin;
+            board.context.miterLimit = lineDesign && !isNaN(designLimit) ? designLimit : board.context.miterLimit;
+            board.context.setLineDash(lineDesign && lineDesign.dashed && Array.isArray(lineDesign.dashes) ? lineDesign.dashes : []);
+            board.context.moveTo(fromPoint.x, fromPoint.y);
+            board.context.lineTo(toPoint.x, toPoint.y);
+            board.context.stroke();
+            board.context.restore();
+        }
+
+        paintLineArrowheads(board, fromPoint, toPoint, lineDesign);
+    }
+
+    function paintLineArrowheads(board, fromPoint, toPoint, lineDesign) {
+        if (!lineDesign) {
             return;
         }
 
+        if (lineDesign.arrowStart && lineDesign.arrowStart !== "none") {
+            paintLineArrowhead(board, fromPoint, toPoint, lineDesign.arrowStart, lineDesign.startScale, lineDesign);
+        }
+
+        if (lineDesign.arrowEnd && lineDesign.arrowEnd !== "none") {
+            paintLineArrowhead(board, toPoint, fromPoint, lineDesign.arrowEnd, lineDesign.endScale, lineDesign);
+        }
+    }
+
+    function paintLineArrowhead(board, tip, awayFromPoint, arrowType, scalePercent, lineDesign) {
+        var dx = tip.x - awayFromPoint.x;
+        var dy = tip.y - awayFromPoint.y;
+        var length = Math.sqrt((dx * dx) + (dy * dy));
+        var size = 8 * (Number(scalePercent) || 100) / 100;
+        var color = lineDesign && lineDesign.color ? lineDesign.color : getCurrentPaintColor(board);
+        var ux;
+        var uy;
+        var perpX;
+        var perpY;
+        var backX;
+        var backY;
+
+        if (length === 0) {
+            return;
+        }
+
+        ux = dx / length;
+        uy = dy / length;
+        perpX = -uy;
+        perpY = ux;
+        backX = tip.x - (ux * size);
+        backY = tip.y - (uy * size);
+
         board.context.save();
-        board.context.beginPath();
-        board.context.strokeStyle = lineDesign && lineDesign.color ? lineDesign.color : getCurrentPaintColor(board);
-        board.context.lineWidth = size;
-        board.context.lineCap = lineDesign ? lineDesign.cap : lineCap;
-        board.context.lineJoin = lineDesign ? lineDesign.corner : lineJoin;
-        board.context.miterLimit = lineDesign && !isNaN(designLimit) ? designLimit : board.context.miterLimit;
-        board.context.setLineDash(lineDesign && lineDesign.dashed && Array.isArray(lineDesign.dashes) ? lineDesign.dashes : []);
-        board.context.moveTo(fromPoint.x, fromPoint.y);
-        board.context.lineTo(toPoint.x, toPoint.y);
-        board.context.stroke();
+        board.context.fillStyle = color;
+        board.context.strokeStyle = color;
+
+        if (arrowType === "triangle") {
+            board.context.beginPath();
+            board.context.moveTo(tip.x, tip.y);
+            board.context.lineTo(backX + (perpX * size), backY + (perpY * size));
+            board.context.lineTo(backX - (perpX * size), backY - (perpY * size));
+            board.context.closePath();
+            board.context.fill();
+        } else if (arrowType === "bar") {
+            board.context.lineWidth = 2;
+            board.context.beginPath();
+            board.context.moveTo(tip.x + (perpX * size), tip.y + (perpY * size));
+            board.context.lineTo(tip.x - (perpX * size), tip.y - (perpY * size));
+            board.context.stroke();
+        } else if (arrowType === "circle") {
+            board.context.beginPath();
+            board.context.arc(tip.x, tip.y, size, 0, Math.PI * 2);
+            board.context.fill();
+        }
+
         board.context.restore();
     }
 
@@ -8948,7 +9030,7 @@
 
     function getCurrentShapeStrokeWidth(board) {
         var lineDesign = getCurrentStoredLineDesign();
-        var designWeight = lineDesign ? Number(lineDesign.weight) : NaN;
+        var designWeight = lineDesign ? getLineDesignWeightInPixels(lineDesign) : NaN;
         var lineWidth = global.App && global.App.memory ? Number(global.App.memory.currentLineWidth) : NaN;
 
         if (!isNaN(designWeight)) {
@@ -8994,16 +9076,6 @@
 
         return mode === PAINT_TOOL_MODES.SQUARED_POINTS ||
             mode === PAINT_TOOL_MODES.SQUARED_LINES;
-    }
-
-    function getCurrentLineDesign() {
-        var lineDesign = global.App && global.App.memory && global.App.memory.currentLineDesign;
-
-        if (!lineDesign || !lineDesign.active) {
-            return null;
-        }
-
-        return lineDesign;
     }
 
     function getCurrentStoredLineDesign() {

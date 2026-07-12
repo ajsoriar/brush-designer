@@ -76,7 +76,7 @@
         renderShapeFromPoints(tempLayer, fromPoint, toPoint, options);
     }
 
-    function startLine(tempLayer, point, options) {
+    function startLine(tempLayer, point) {
         if (!tempLayer || !point) {
             return;
         }
@@ -87,15 +87,15 @@
                 y: point.y
             }
         };
-        renderLine(tempLayer, point, options);
+        renderLine(tempLayer, point);
     }
 
-    function updateLine(tempLayer, point, options) {
+    function updateLine(tempLayer, point) {
         if (!tempLayer || !tempLayer.tempShape || !point) {
             return;
         }
 
-        renderLine(tempLayer, point, options);
+        renderLine(tempLayer, point);
     }
 
     function clear(tempLayer) {
@@ -303,17 +303,12 @@
             "stroke-opacity=\"" + escapeHtml(opacity) + "\"></ellipse>";
     }
 
-    function renderLine(tempLayer, point, options) {
+    function renderLine(tempLayer, point) {
         var origin = tempLayer.tempShape.origin;
         var lineWeight = getScreenPixelScale(tempLayer);
         var lineColor = "#2563eb";
         var lineOpacity = 1;
         var fragments;
-
-        if (options && options.styled) {
-            renderStyledLine(tempLayer, origin, point, options);
-            return;
-        }
 
         if (!global.dljs || !global.dljs.getLineString) {
             return;
@@ -338,34 +333,6 @@
         addCoordinateLabels(fragments, origin, null, point, lineWeight);
 
         tempLayer.innerHTML = fragments.join("");
-    }
-
-    function renderStyledLine(tempLayer, origin, point, options) {
-        var lineWeight = Math.max(1, Number(options.weight) || 1);
-        var lineColor = options.color || "#2563eb";
-        var lineCap = normalizeLineCap(options.cap);
-        var lineOpacity = typeof options.opacity === "number" ? options.opacity : 0.8;
-        var dashArray = Array.isArray(options.dashes) ? options.dashes.join(" ") : "";
-        var shapeRendering = options.antialiasing === false ? " shape-rendering=\"crispEdges\"" : "";
-        var fragments = [
-            "<svg class=\"paint-board-temp-line-svg\" xmlns=\"http://www.w3.org/2000/svg\">",
-            "<line class=\"paint-board-temp-line-preview\" x1=\"" + escapeHtml(origin.x) + "\" y1=\"" + escapeHtml(origin.y) + "\" x2=\"" + escapeHtml(point.x) + "\" y2=\"" + escapeHtml(point.y) + "\" stroke=\"" + escapeHtml(lineColor) + "\" stroke-width=\"" + escapeHtml(lineWeight) + "\" stroke-linecap=\"" + escapeHtml(lineCap) + "\" stroke-opacity=\"" + escapeHtml(lineOpacity) + "\"",
-            dashArray ? " stroke-dasharray=\"" + escapeHtml(dashArray) + "\"" : "",
-            shapeRendering,
-            "></line>",
-            "</svg>"
-        ];
-
-        addCoordinateLabels(fragments, origin, null, point, getScreenPixelScale(tempLayer));
-        tempLayer.innerHTML = fragments.join("");
-    }
-
-    function normalizeLineCap(cap) {
-        if (cap === "round" || cap === "square") {
-            return cap;
-        }
-
-        return "butt";
     }
 
     function escapeHtml(value) {

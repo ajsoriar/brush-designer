@@ -280,10 +280,6 @@
     width: 100%;
 }
 
-.paint-board-temp-line-preview {
-    vector-effect: non-scaling-stroke;
-}
-
 .paint-board-temp-shape-guide {
     shape-rendering: geometricPrecision;
 }

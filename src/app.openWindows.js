@@ -1599,7 +1599,6 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             height: panelHeight,
             current: global.App.memory.currentLineDesign,
             onChange: function(lineDesign) {
-                lineDesign.active = true;
                 global.App.memory.currentLineDesign = lineDesign;
                 global.App.memory.currentLineWidth = lineDesign.weight;
                 syncSimpleLineWidthPickerFromLineWidth(lineDesign.weight);
