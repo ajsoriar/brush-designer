@@ -6,7 +6,7 @@
 
     var DEFAULTS = {
         id: null,
-        width: 304,
+        width: 200,
         height: 470,
         previewWidth: 276,
         previewHeight: 140,
@@ -31,6 +31,24 @@
         alternate: "Front / Background",
         crazy: "Crazy Rainbow"
     };
+
+    var COLOR_MODE_BUTTONS = [
+        {
+            mode: "front",
+            label: COLOR_MODES.front,
+            icon: new URL("./r-l_front-color.png", import.meta.url).href
+        },
+        {
+            mode: "alternate",
+            label: COLOR_MODES.alternate,
+            icon: new URL("./r-l_two-colors.png", import.meta.url).href
+        },
+        {
+            mode: "crazy",
+            label: COLOR_MODES.crazy,
+            icon: new URL("./r-l_rainbow.png", import.meta.url).href
+        }
+    ];
 
     function extend(target, source) {
         var key;
@@ -155,7 +173,7 @@
             root,
             { unit: "", limitLabels: ["Low", "High"] }
         );
-        this.colorModeControl = this.createSelect("Color Mode", COLOR_MODES, root);
+        this.colorModeControl = this.createColorModeButtons("Color Mode", root);
         this.antialiasingControl = this.createCheckbox("Antialiasing", root);
 
         this.bindPreviewEvents();
@@ -164,15 +182,16 @@
 
     RandomLinesDesigner.prototype.createControl = function(labelText, min, max, parent, settings) {
         var control = createElement("label", "random-lines-designer-control", parent);
-        var labelRow = createElement("span", "random-lines-designer-control-label", control);
+        var labelRow = createElement("div", "random-lines-designer-label-row", control);
+        var labelSpan = createElement("span", "random-lines-designer-control-label", labelRow);
+        var value = createElement("span", "random-lines-designer-value", labelRow);
         var row = createElement("div", "random-lines-designer-control-row", control);
-        var value = createElement("span", "random-lines-designer-value", row);
         var input = createElement("input", "random-lines-designer-range", row);
         var limits = createElement("div", "random-lines-designer-limits", control);
         var unit = settings && typeof settings.unit === "string" ? settings.unit : "px";
         var limitLabels = settings && settings.limitLabels ? settings.limitLabels : [min + unit, max + unit];
 
-        labelRow.textContent = labelText;
+        labelSpan.textContent = labelText;
         input.type = "range";
         input.min = String(min);
         input.max = String(max);
@@ -204,26 +223,30 @@
         };
     };
 
-    RandomLinesDesigner.prototype.createSelect = function(labelText, choices, parent) {
+    RandomLinesDesigner.prototype.createColorModeButtons = function(labelText, parent) {
         var control = createElement("label", "random-lines-designer-control", parent);
-        var labelRow = createElement("span", "random-lines-designer-control-label", control);
-        var select = createElement("select", "random-lines-designer-select", control);
-        var key;
-        var option;
+        var labelRow = createElement("div", "random-lines-designer-label-row", control);
+        var labelSpan = createElement("span", "random-lines-designer-control-label", labelRow);
+        var buttonsRow = createElement("div", "random-lines-designer-color-mode-buttons", control);
 
-        labelRow.textContent = labelText;
+        labelSpan.textContent = labelText;
 
-        for (key in choices) {
-            if (Object.prototype.hasOwnProperty.call(choices, key)) {
-                option = createElement("option", "", select);
-                option.value = key;
-                option.textContent = choices[key];
-            }
-        }
+        COLOR_MODE_BUTTONS.forEach(function(colorModeButton) {
+            var button = createElement("button", "random-lines-designer-color-mode-button", buttonsRow);
+            var icon = createElement("img", "random-lines-designer-color-mode-icon", button);
+
+            button.type = "button";
+            button.setAttribute("data-color-mode", colorModeButton.mode);
+            button.title = colorModeButton.label;
+
+            icon.src = colorModeButton.icon;
+            icon.alt = colorModeButton.label;
+            icon.draggable = false;
+        });
 
         return {
             element: control,
-            input: select
+            buttonsRow: buttonsRow
         };
     };
 
@@ -242,8 +265,14 @@
             self.setBrush({ density: self.densityControl.input.value });
         });
 
-        this.colorModeControl.input.addEventListener("change", function() {
-            self.setBrush({ colorMode: self.colorModeControl.input.value });
+        this.colorModeControl.buttonsRow.addEventListener("click", function(event) {
+            var button = event.target.closest("[data-color-mode]");
+
+            if (!button) {
+                return;
+            }
+
+            self.setBrush({ colorMode: button.getAttribute("data-color-mode") });
         });
 
         this.antialiasingControl.input.addEventListener("change", function() {
@@ -316,11 +345,23 @@
         this.brushWidthControl.value.textContent = brush.brushWidth + this.brushWidthControl.unit;
         this.lineWidthControl.value.textContent = brush.lineWidth + this.lineWidthControl.unit;
         this.densityControl.value.textContent = brush.density + this.densityControl.unit;
-        this.colorModeControl.input.value = brush.colorMode;
+        this.updateColorModeButtons(brush.colorMode);
         this.antialiasingControl.input.checked = brush.antialiasing;
         this.syncCrazyOptions();
         this.drawPreview();
         this.onChange(brush, this);
+    };
+
+    RandomLinesDesigner.prototype.updateColorModeButtons = function(colorMode) {
+        var buttons = this.colorModeControl.buttonsRow.querySelectorAll("[data-color-mode]");
+
+        Array.prototype.forEach.call(buttons, function(button) {
+            if (button.getAttribute("data-color-mode") === colorMode) {
+                button.className = "random-lines-designer-color-mode-button random-lines-designer-color-mode-button-active";
+            } else {
+                button.className = "random-lines-designer-color-mode-button";
+            }
+        });
     };
 
     RandomLinesDesigner.prototype.syncCrazyOptions = function() {

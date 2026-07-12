@@ -939,7 +939,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             return appRandomLinesDesigner;
         }
 
-        designerWidth = 304;
+        designerWidth = 200;
         designerHeight = 470;
         windowFrameWidth = 16;
         windowFrameHeight = 36;
