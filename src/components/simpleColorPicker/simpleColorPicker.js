@@ -200,6 +200,7 @@
         var column;
         var columnTop;
         var columnBottom;
+        var direction;
         var nextIndex;
         var nextColumn;
 
@@ -217,16 +218,29 @@
         nextIndex = index + columns;
 
         if (settings.loop) {
-            if (nextIndex <= columnBottom) {
-                return picker.colors[nextIndex];
+            direction = picker.nextColorDownDirection || 1;
+
+            if (direction > 0) {
+                if (nextIndex <= columnBottom) {
+                    return picker.colors[nextIndex];
+                }
+
+                picker.nextColorDownDirection = -1;
+                return picker.colors[Math.max(columnTop, index - columns)];
             }
+
+            if (index - columns >= columnTop) {
+                return picker.colors[index - columns];
+            }
+
+            picker.nextColorDownDirection = 1;
 
             if (settings.jump) {
                 nextColumn = (column + 1) % columns;
                 return picker.colors[nextColumn < picker.colors.length ? nextColumn : 0];
             }
 
-            return picker.colors[columnTop];
+            return picker.colors[Math.min(columnBottom, index + columns)];
         }
 
         if (nextIndex < picker.colors.length) {
