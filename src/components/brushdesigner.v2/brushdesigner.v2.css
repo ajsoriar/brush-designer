@@ -246,3 +246,52 @@
     cursor: pointer;
     z-index: 19;
 }
+
+.wm-window-brush-designer-2 .wm-title {
+    visibility: hidden;
+}
+
+.wm-window.wm-window-brush-designer-2 {
+    grid-template-rows: 40px 0 1fr 0 8px;
+}
+
+.wm-window-brush-designer-2 .wm-center {
+    display: block;
+    grid-column: 1 / 4;
+    grid-row: 1 / 6;
+    overflow: hidden;
+}
+
+.wm-window-brush-designer-2 .wm-top {
+    grid-column: 1 / 4;
+    position: relative;
+    z-index: 30;
+}
+
+.wm-window-brush-designer-2 .wm-actions {
+    position: absolute;
+    right: 1px;
+    top: 1px;
+}
+
+.wm-window-brush-designer-2 .wm-btn {
+    background: transparent !important;
+    border-color: transparent !important;
+    color: transparent !important;
+}
+
+.wm-window-brush-designer-2 .wm-btn-close {
+    background-image: url("./close.png") !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-size: 30px 30px !important;
+    width: 30px;
+    height: 30px;
+    top: 1px;
+    position: absolute;
+    right: 1px;
+}
+
+.wm-window-brush-designer-2 .wm-btn-close:hover {
+    background-image: url("./close-hover.png") !important;
+}

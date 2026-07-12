@@ -842,8 +842,8 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
 
         var brushDesignerWidth = 380;
         var brushDesignerHeight = 475;
-        var windowFrameWidth = 16;
-        var windowFrameHeight = 36;
+        var windowFrameWidth = 0;
+        var windowFrameHeight = 0;
         var outerWidth = brushDesignerWidth + windowFrameWidth;
         var outerHeight = brushDesignerHeight + windowFrameHeight;
         var x = Math.max(0, Math.round((global.innerWidth - outerWidth) / 2));
@@ -851,7 +851,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         var bdWindow = WindowsManager.create({
             id: "brush-designer-2-window",
             windowId: "brush-designer-2",
-            title: "Brush Designer II",
+            title: "",
             type: "TOOL",
             x: x,
             y: y,
@@ -861,8 +861,13 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             minimizable: false,
             scrollBarX: false,
             scrollBarY: false,
+            transparentFrame: true,
+            cornerRadius: 4,
+            boxShadow: "rgba(0, 0, 0, 0.5) 2px 2px 5px 0px",
             contentId: "brush-designer-2-window-content"
         });
+
+        bdWindow.element.className += " wm-window-brush-designer-2";
 
         appBrushDesigner2 = global.createBrushDesignerV2(bdWindow.contentElement, {
             algorithm: "C",
