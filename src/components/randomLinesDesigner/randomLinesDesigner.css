@@ -175,16 +175,15 @@
 .random-lines-designer-check {
     align-items: center;
     display: flex;
-    font-size: 14px;
-    font-weight: 700;
-    gap: 8px;
-    margin-top: 4px;
+    font: bold 12px Arial, sans-serif;
+    gap: 4px;
+    margin-top: 10px;
 }
 
 .random-lines-designer-check input {
-    height: 16px;
+    height: 14px;
     margin: 0;
-    width: 16px;
+    width: 14px;
 }
 
 .wm-window-random-lines-designer .wm-top,

@@ -940,7 +940,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         }
 
         designerWidth = 200;
-        designerHeight = 470;
+        designerHeight = 396;
         windowFrameWidth = 16;
         windowFrameHeight = 36;
         brush = global.App.memory.currentRandomLinesBrush || {};

@@ -7,7 +7,7 @@
     var DEFAULTS = {
         id: null,
         width: 200,
-        height: 470,
+        height: 396,
         previewWidth: 276,
         previewHeight: 140,
         minSegmentCount: 10,
