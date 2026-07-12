@@ -74,6 +74,7 @@
         setWindowScrollBars: setWindowScrollBars,
         bringToFront: bringToFront,
         listWindows: listWindows,
+        getAvailableWindowSize: getAvailableWindowSize,
         setLayout: setLayout
     };
 
@@ -1065,6 +1066,95 @@
             width: parent.clientWidth,
             height: parent.clientHeight
         };
+    }
+
+    function getAvailableWindowSize(options) {
+        var config = options || {};
+        var bounds = getAvailableWindowBounds(config.parent);
+        var margin = normalizeAvailableWindowMargin(config.margin);
+        var x = normalizeAvailableWindowPosition(config.x, bounds.left + margin.left);
+        var y = normalizeAvailableWindowPosition(config.y, bounds.top + margin.top);
+        var minWidth = normalizeAvailableWindowSize(config.minWidth);
+        var minHeight = normalizeAvailableWindowSize(config.minHeight);
+        var availableWidth = bounds.left + bounds.width - margin.right - x;
+        var availableHeight = bounds.top + bounds.height - margin.bottom - y;
+        var width = Math.max(0, availableWidth);
+        var height = Math.max(0, availableHeight);
+
+        if (minWidth > 0) {
+            width = Math.max(minWidth, width);
+        }
+        if (minHeight > 0) {
+            height = Math.max(minHeight, height);
+        }
+
+        return {
+            x: x,
+            y: y,
+            w: width,
+            h: height,
+            width: width,
+            height: height,
+            bounds: bounds
+        };
+    }
+
+    function getAvailableWindowBounds(parent) {
+        var targetParent = parent || document.body;
+        var rect;
+
+        if (targetParent === document.body || targetParent === document.documentElement) {
+            return {
+                left: 0,
+                top: 0,
+                width: global.innerWidth || document.documentElement.clientWidth || 0,
+                height: global.innerHeight || document.documentElement.clientHeight || 0
+            };
+        }
+
+        rect = targetParent.getBoundingClientRect ? targetParent.getBoundingClientRect() : null;
+
+        return {
+            left: rect ? rect.left : 0,
+            top: rect ? rect.top : 0,
+            width: targetParent.clientWidth || (rect ? rect.width : 0) || 0,
+            height: targetParent.clientHeight || (rect ? rect.height : 0) || 0
+        };
+    }
+
+    function normalizeAvailableWindowMargin(margin) {
+        var value;
+
+        if (typeof margin === "number") {
+            value = Math.max(0, margin);
+            return {
+                top: value,
+                right: value,
+                bottom: value,
+                left: value
+            };
+        }
+
+        margin = margin || {};
+
+        return {
+            top: normalizeAvailableWindowSize(margin.top),
+            right: normalizeAvailableWindowSize(margin.right),
+            bottom: normalizeAvailableWindowSize(margin.bottom),
+            left: normalizeAvailableWindowSize(margin.left)
+        };
+    }
+
+    function normalizeAvailableWindowPosition(value, fallback) {
+        var number = parseInt(value, 10);
+
+        return isNaN(number) ? fallback : number;
+    }
+
+    function normalizeAvailableWindowSize(value) {
+        var number = parseInt(value, 10);
+
+        return isNaN(number) ? 0 : Math.max(0, number);
     }
 
     function closeWindow(currentWindow, config) {

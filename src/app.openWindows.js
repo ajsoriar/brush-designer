@@ -428,8 +428,19 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         var config = options || {};
         var paintBoardWidth = config.width || 800;
         var paintBoardHeight = config.height || 600;
+        var windowX = 244;
+        var windowY = 105;
         var windowFrameWidth = 18;
         var windowFrameHeight = 66;
+        var boardRulesSize = 24;
+        var availableWindowSize = WindowsManager.getAvailableWindowSize({
+            x: windowX,
+            y: windowY
+        });
+        var desiredWindowWidth = paintBoardWidth + boardRulesSize + windowFrameWidth;
+        var desiredWindowHeight = paintBoardHeight + boardRulesSize + windowFrameHeight;
+        var paintBoardWindowWidth = Math.min(desiredWindowWidth, availableWindowSize.w || desiredWindowWidth);
+        var paintBoardWindowHeight = Math.min(desiredWindowHeight, availableWindowSize.h || desiredWindowHeight);
         var windowIndex = documentCount + 1;
         var paintBoard;
         var rules;
@@ -438,10 +449,10 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             title: "Paint Board " + windowIndex,
             windowGroupName: "paint-boards",
             maxGroupItems: 5,
-            x: 244,
-            y: 105,
-            width: paintBoardWidth + windowFrameWidth,
-            height: paintBoardHeight + windowFrameHeight,
+            x: windowX,
+            y: windowY,
+            width: paintBoardWindowWidth,
+            height: paintBoardWindowHeight,
             resizable: true,
             maximizable: true,
             topBarGradient: {
@@ -473,6 +484,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             containerId: paintBoardWindow.contentId,
             width: paintBoardWidth,
             height: paintBoardHeight,
+            ruleSize: boardRulesSize,
             units: config.units || "px"
         });
 
@@ -490,7 +502,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         paintBoardWindow.baseTitle = paintBoardWindow.title;
         setActivePaintBoard(paintBoard);
         initPaintBoardToolbar(paintBoard);
-        paintBoardWindow.scaleToContent(paintBoardWidth + rules.ruleSize, paintBoardHeight + rules.ruleSize);
+        paintBoardWindow.resizeTo(paintBoardWindowWidth, paintBoardWindowHeight);
         setActiveZoomBoard(paintBoard);
         updatePaintBoardWindowTitle(paintBoard);
 
