@@ -9075,11 +9075,11 @@
         colorMode = String(brush.colorMode || "front").toLowerCase();
 
         if (isNaN(brushWidth)) {
-            brushWidth = 20;
+            brushWidth = 125;
         }
 
         if (isNaN(lineWidth)) {
-            lineWidth = 2;
+            lineWidth = 1;
         }
 
         if (isNaN(density)) {

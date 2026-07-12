@@ -8,6 +8,8 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
 
     "use strict";
 
+    var currentRandomLinesBrush;
+
     global.App = global.App || {};
     global.App.memory = global.App.memory || {};
     global.App.memory.currentColor = global.App.memory.currentColor || "#000000";
@@ -83,13 +85,24 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
         outerRadius: 96,
         innerRadius: 44
     };
-    global.App.memory.currentRandomLinesBrush = global.App.memory.currentRandomLinesBrush || {
-        brushWidth: 20,
-        lineWidth: 2,
-        density: 35,
-        antialiasing: false,
-        colorMode: "front"
-    };
+    currentRandomLinesBrush = global.App.memory.currentRandomLinesBrush;
+    if (!currentRandomLinesBrush) {
+        currentRandomLinesBrush = {
+            brushWidth: 125,
+            lineWidth: 1,
+            density: 35,
+            antialiasing: false,
+            colorMode: "front"
+        };
+    } else if (
+        Number(currentRandomLinesBrush.brushWidth) === 20 &&
+        Number(currentRandomLinesBrush.lineWidth) === 2 &&
+        Number(currentRandomLinesBrush.density) === 35
+    ) {
+        currentRandomLinesBrush.brushWidth = 125;
+        currentRandomLinesBrush.lineWidth = 1;
+    }
+    global.App.memory.currentRandomLinesBrush = currentRandomLinesBrush;
 
     var selectionBehabiourComponent = null;
     var toolsMagicWandOptionsComponent = null;
@@ -516,9 +529,32 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
                 global.App.memory.rainbowCrazyAlgorithm = options.algorithm;
                 global.App.memory.rainbowCrazyJump = options.jump;
                 global.App.memory.rainbowCrazyLoop = options.loop;
+                syncRandomLinesColorModeFromCrazyOptions(options);
             }
         });
         global.ToolsCrazyOptionsApi = toolsCrazyOptionsComponent;
+    }
+
+    function syncRandomLinesColorModeFromCrazyOptions(options) {
+        var brush;
+        var designer;
+        var mode = global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : null;
+
+        if (mode !== "RANDOM-LINES") {
+            return;
+        }
+
+        brush = global.App.memory.currentRandomLinesBrush || {};
+        brush.colorMode = options && options.active ? "crazy" : "front";
+        global.App.memory.currentRandomLinesBrush = brush;
+
+        designer = global.RandomLinesDesignerApi && global.RandomLinesDesignerApi.getInstance ?
+            global.RandomLinesDesignerApi.getInstance() :
+            null;
+        if (designer && typeof designer.setBrush === "function") {
+            designer.syncedCrazyOptionsColorMode = brush.colorMode;
+            designer.setBrush({ colorMode: brush.colorMode });
+        }
     }
 
     function initToolsCropOptionsComponent() {

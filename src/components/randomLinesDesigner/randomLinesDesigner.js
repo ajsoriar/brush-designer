@@ -14,10 +14,10 @@
         maxSegmentCount: 140,
         minBrushWidth: 10,
         maxBrushWidth: 256,
-        brushWidth: 20,
+        brushWidth: 125,
         minLineWidth: 1,
         maxLineWidth: 10,
-        lineWidth: 2,
+        lineWidth: 1,
         minDensity: 0,
         maxDensity: 100,
         density: 35,
@@ -341,6 +341,14 @@
 
         if (typeof api.resetSetup === "function") {
             api.resetSetup();
+        }
+
+        if (typeof api.setOptions === "function") {
+            api.setOptions({ active: false });
+        }
+
+        if (global.App && global.App.memory) {
+            global.App.memory.rainbowCrazyMode = false;
         }
     };
 
