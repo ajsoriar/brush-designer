@@ -245,11 +245,118 @@
             layerElement.querySelector('[data-paint-target="mask"]');
     }
 
+    var maskAntialiasingEnabled = false;
+    var maskFeatherPixels = 0;
+
+    function setMaskAntialiasing(enabled) {
+        maskAntialiasingEnabled = !!enabled;
+    }
+
+    function getMaskAntialiasing() {
+        return maskAntialiasingEnabled;
+    }
+
+    // Feathering is a wider, explicit blur radius (in pixels) applied on top
+    // of a hard selection edge - distinct from plain antialiasing, which is
+    // just the ~1px softness Canvas2D's own rasterizer produces. 0 disables
+    // it.
+    function setMaskFeather(pixels) {
+        var value = Number(pixels);
+
+        maskFeatherPixels = isFinite(value) && value > 0 ? value : 0;
+    }
+
+    function getMaskFeather() {
+        return maskFeatherPixels;
+    }
+
+    // Selections are stored as antialiased white shapes on a transparent
+    // canvas (plain canvas fill(), soft edges). When mask antialiasing is
+    // off, edge pixels are snapped to fully opaque/transparent so the
+    // resulting layer mask has a hard black/white boundary instead of a
+    // partial-alpha gradient.
+    function createBinarizedSelectionMask(maskCanvas) {
+        var binarized = maskCanvas.ownerDocument.createElement("canvas");
+        var context;
+        var sourceContext;
+        var imageData;
+        var data;
+        var i;
+        var visible;
+
+        binarized.width = maskCanvas.width;
+        binarized.height = maskCanvas.height;
+        context = getReadableCanvasContext(binarized);
+        sourceContext = getReadableCanvasContext(maskCanvas);
+        imageData = sourceContext.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+        data = imageData.data;
+
+        for (i = 0; i < data.length; i += 4) {
+            visible = data[i + 3] >= 128;
+            data[i] = visible ? 255 : 0;
+            data[i + 1] = visible ? 255 : 0;
+            data[i + 2] = visible ? 255 : 0;
+            data[i + 3] = visible ? 255 : 0;
+        }
+
+        context.putImageData(imageData, 0, 0);
+        return binarized;
+    }
+
+    // Blurs a hard-edged copy of the selection over featherPixels, producing
+    // a graduated black-to-white transition band of roughly that width.
+    function createFeatheredSelectionMask(maskCanvas, featherPixels) {
+        var hardMask = createBinarizedSelectionMask(maskCanvas);
+        var feathered = maskCanvas.ownerDocument.createElement("canvas");
+        var context;
+
+        feathered.width = maskCanvas.width;
+        feathered.height = maskCanvas.height;
+        context = feathered.getContext("2d");
+        context.filter = "blur(" + featherPixels + "px)";
+        context.drawImage(hardMask, 0, 0);
+        context.filter = "none";
+
+        return feathered;
+    }
+
+    // Generic entry point shared by every consumer that needs to turn a B/W
+    // mask-like canvas (selection mask, layer mask, ...) into a version that
+    // matches an explicit {feather, antiAlias} pair. Feather (a blur radius
+    // in pixels) takes priority over antiAlias when greater than 0. This is
+    // the single implementation of the binarize/feather logic - callers pass
+    // their own settings instead of reading module-level state, so it works
+    // equally well for paintBoard.js's per-selection options and for this
+    // module's own mask-level defaults.
+    function applyMaskFeatherOptions(maskCanvas, options) {
+        var settings = options || {};
+        var feather = Number(settings.feather) || 0;
+
+        if (feather > 0) {
+            return createFeatheredSelectionMask(maskCanvas, feather);
+        }
+
+        if (!settings.antiAlias) {
+            return createBinarizedSelectionMask(maskCanvas);
+        }
+
+        return maskCanvas;
+    }
+
+    function selectionMaskMatchesCurrentMaskOptions(maskCanvas) {
+        var options = maskCanvas && maskCanvas.selectionFeatherOptions;
+
+        return !!options &&
+            Number(options.feather) === maskFeatherPixels &&
+            !!options.antiAlias === maskAntialiasingEnabled;
+    }
+
     function createLayerMaskCanvas(board, layerId) {
         var layerElement = getLayerElement(board, layerId);
         var layerCanvas = getLayerCanvas(board, layerId);
         var maskCanvas;
         var maskContext;
+        var selectionSource;
 
         if (!layerElement || !layerCanvas) {
             return null;
@@ -271,9 +378,15 @@
 
         maskContext = getReadableCanvasContext(maskCanvas);
         if (board && board.selection && board.selection.maskCanvas) {
+            selectionSource = selectionMaskMatchesCurrentMaskOptions(board.selection.maskCanvas) ?
+                board.selection.maskCanvas :
+                applyMaskFeatherOptions(board.selection.maskCanvas, {
+                    feather: maskFeatherPixels,
+                    antiAlias: maskAntialiasingEnabled
+                });
             maskContext.fillStyle = "#000000";
             maskContext.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-            maskContext.drawImage(board.selection.maskCanvas, 0, 0);
+            maskContext.drawImage(selectionSource, 0, 0);
         } else {
             maskContext.fillStyle = "#ffffff";
             maskContext.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
@@ -1055,6 +1168,11 @@
         getLayerMaskCanvas: getLayerMaskCanvas,
         applyLayerMaskToElement: applyLayerMaskToElement,
         applyLayerMasksToElements: applyLayerMasksToElements,
+        setMaskAntialiasing: setMaskAntialiasing,
+        getMaskAntialiasing: getMaskAntialiasing,
+        setMaskFeather: setMaskFeather,
+        getMaskFeather: getMaskFeather,
+        applyMaskFeatherOptions: applyMaskFeatherOptions,
         addLayer: addLayer,
         duplicateActiveLayer: duplicateActiveLayer,
         flattenImage: flattenImage,

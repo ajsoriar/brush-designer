@@ -76,6 +76,10 @@
     var currentPaintToolMode = PAINT_TOOL_MODES.SQUARED_POINTS;
     var currentSelectionToolType = SELECTION_TOOL_TYPES.FREEHAND;
     var currentSelectionBehavior = SELECTION_BEHAVIORS.NORMAL;
+    var currentSelectionFeatherOptions = {
+        feather: 0,
+        antiAlias: true
+    };
     var MAGIC_WAND_MODES = {
         FAST: "fast",
         PHOTOSHOP: "photoshop",
@@ -148,6 +152,33 @@
         },
         getSelectionBehavior: function() {
             return currentSelectionBehavior;
+        },
+        setSelectionFeather: function(feather) {
+            currentSelectionFeatherOptions.feather = normalizeSelectionFeather(feather);
+            syncSelectionFeatherWithLayersManager(currentSelectionFeatherOptions);
+            notifySelectionFeatherOptionsChange(currentSelectionFeatherOptions);
+            return currentSelectionFeatherOptions.feather;
+        },
+        getSelectionFeather: function() {
+            return currentSelectionFeatherOptions.feather;
+        },
+        setSelectionAntiAlias: function(antiAlias) {
+            currentSelectionFeatherOptions.antiAlias = !!antiAlias;
+            syncSelectionFeatherWithLayersManager(currentSelectionFeatherOptions);
+            notifySelectionFeatherOptionsChange(currentSelectionFeatherOptions);
+            return currentSelectionFeatherOptions.antiAlias;
+        },
+        getSelectionAntiAlias: function() {
+            return currentSelectionFeatherOptions.antiAlias;
+        },
+        setSelectionFeatherOptions: function(options) {
+            currentSelectionFeatherOptions = normalizeSelectionFeatherOptions(options);
+            syncSelectionFeatherWithLayersManager(currentSelectionFeatherOptions);
+            notifySelectionFeatherOptionsChange(currentSelectionFeatherOptions);
+            return copySelectionFeatherOptions(currentSelectionFeatherOptions);
+        },
+        getSelectionFeatherOptions: function() {
+            return copySelectionFeatherOptions(currentSelectionFeatherOptions);
         },
         setMagicWandTolerance: function(tolerance) {
             var normalizedTolerance = normalizeMagicWandTolerance(tolerance);
@@ -297,6 +328,45 @@
         return Math.max(0, Math.min(100, numericTolerance));
     }
 
+    function normalizeSelectionFeather(feather) {
+        var numericFeather = parseInt(feather, 10);
+
+        if (isNaN(numericFeather)) {
+            return 0;
+        }
+
+        return Math.max(0, Math.min(200, numericFeather));
+    }
+
+    function normalizeSelectionFeatherOptions(options) {
+        var source = options || {};
+
+        return {
+            feather: normalizeSelectionFeather(source.feather),
+            antiAlias: !!source.antiAlias
+        };
+    }
+
+    function copySelectionFeatherOptions(options) {
+        return {
+            feather: options.feather,
+            antiAlias: !!options.antiAlias
+        };
+    }
+
+    function syncSelectionFeatherWithLayersManager(options) {
+        if (!global.PaintBoardLayersManager) {
+            return;
+        }
+
+        if (global.PaintBoardLayersManager.setMaskAntialiasing) {
+            global.PaintBoardLayersManager.setMaskAntialiasing(!!options.antiAlias);
+        }
+        if (global.PaintBoardLayersManager.setMaskFeather) {
+            global.PaintBoardLayersManager.setMaskFeather(options.feather);
+        }
+    }
+
     function normalizeMagicWandMode(mode) {
         var key;
 
@@ -383,6 +453,22 @@
             event.initCustomEvent("paint-selection-behavior-change", false, false, {
                 selectionBehavior: selectionBehavior
             });
+        }
+
+        global.dispatchEvent(event);
+    }
+
+    function notifySelectionFeatherOptionsChange(options) {
+        var event;
+        var detail = copySelectionFeatherOptions(options);
+
+        if (typeof global.CustomEvent === "function") {
+            event = new global.CustomEvent("paint-selection-feather-options-change", {
+                detail: detail
+            });
+        } else {
+            event = document.createEvent("CustomEvent");
+            event.initCustomEvent("paint-selection-feather-options-change", false, false, detail);
         }
 
         global.dispatchEvent(event);
@@ -3879,6 +3965,21 @@
         return maskCanvas;
     }
 
+    // The actual binarize/feather pixel logic lives in one place only:
+    // PaintBoardLayersManager (the "masks" module), which every consumer of
+    // B/W mask-like canvases shares. See applyMaskFeatherOptions there.
+    function applySelectionFeatherOptionsToMask(maskCanvas) {
+        var options = currentSelectionFeatherOptions;
+        var result = maskCanvas;
+
+        if (global.PaintBoardLayersManager && global.PaintBoardLayersManager.applyMaskFeatherOptions) {
+            result = global.PaintBoardLayersManager.applyMaskFeatherOptions(maskCanvas, options);
+        }
+
+        result.selectionFeatherOptions = copySelectionFeatherOptions(options);
+        return result;
+    }
+
     function createPolygonSelectionMask(board, points) {
         var maskCanvas = createSelectionMaskCanvas(board);
         var maskContext = getReadableCanvasContext(maskCanvas);
@@ -3895,7 +3996,7 @@
         maskContext.closePath();
         maskContext.fill();
 
-        return maskCanvas;
+        return applySelectionFeatherOptionsToMask(maskCanvas);
     }
 
     function createRectangleSelectionMask(board, bounds) {
@@ -3905,7 +4006,7 @@
         maskContext.fillStyle = "#ffffff";
         maskContext.fillRect(bounds.left, bounds.top, bounds.width, bounds.height);
 
-        return maskCanvas;
+        return applySelectionFeatherOptionsToMask(maskCanvas);
     }
 
     function createOvalSelectionMask(board, bounds) {
@@ -3925,7 +4026,7 @@
         );
         maskContext.fill();
 
-        return maskCanvas;
+        return applySelectionFeatherOptionsToMask(maskCanvas);
     }
 
     function combineSelectionMasks(board, baseMaskCanvas, nextMaskCanvas, operation) {
@@ -9510,6 +9611,7 @@
 
     global.PaintBoard = PaintBoard;
     global.paintBoard = PaintBoard;
+    syncSelectionFeatherWithLayersManager(currentSelectionFeatherOptions);
     global.PaintTools = PaintTools;
 
 }(window));

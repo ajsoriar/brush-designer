@@ -104,6 +104,7 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
     global.App.memory.currentRandomLinesBrush = currentRandomLinesBrush;
 
     var selectionBehabiourComponent = null;
+    var toolsSelectFeatherComponent = null;
     var toolsMagicWandOptionsComponent = null;
     var toolsBucketOptionsComponent = null;
     var toolsTransformOptionsComponent = null;
@@ -129,6 +130,7 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
         global.AppOpenWindows.openPaintToolsWindow();
         global.AppOpenWindows.openLayersPanelWindow();
         initSelectionBehabiourComponent();
+        initToolsSelectFeatherComponent();
         initToolsMagicWandOptionsComponent();
         initToolsBucketOptionsComponent();
         initToolsTransformOptionsComponent();
@@ -265,6 +267,7 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
         var mode = event.detail && event.detail.mode;
 
         syncSelectionBehabiourVisibility(mode);
+        syncToolsSelectFeatherVisibility(mode);
         syncToolsMagicWandOptionsVisibility(mode);
         syncToolsBucketOptionsVisibility(mode);
         syncToolsPointerOptionsVisibility(mode);
@@ -342,6 +345,33 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
         }
 
         selectionBehabiourComponent.hide();
+    }
+
+    function initToolsSelectFeatherComponent() {
+        if (!global.ToolsSelectFeatherComponent) {
+            return;
+        }
+
+        toolsSelectFeatherComponent = global.ToolsSelectFeatherComponent({
+            id: "tools-select-feather-toolbar",
+            containerId: "tools-select-feather-container",
+            visible: false
+        });
+
+        syncToolsSelectFeatherVisibility(global.PaintTools && global.PaintTools.getMode ? global.PaintTools.getMode() : "");
+    }
+
+    function syncToolsSelectFeatherVisibility(mode) {
+        if (!toolsSelectFeatherComponent) {
+            return;
+        }
+
+        if (mode === "LASSO-SELECTION") {
+            toolsSelectFeatherComponent.show();
+            return;
+        }
+
+        toolsSelectFeatherComponent.hide();
     }
 
     function initToolsMagicWandOptionsComponent() {

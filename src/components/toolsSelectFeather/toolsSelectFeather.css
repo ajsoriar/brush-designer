@@ -1,0 +1,49 @@
+.tools-select-feather {
+    align-items: center;
+    border: 1px solid #a0a0a0;
+    display: flex;
+    gap: 6px;
+    margin: 0;
+    padding: 2px 7px 7px;
+}
+
+.tools-select-feather legend,
+.tools-select-feather label,
+.tools-select-feather-unit {
+    color: #111;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.tools-select-feather legend {
+    padding: 0 4px;
+}
+
+.tools-select-feather-grid {
+    align-items: center;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: auto auto;
+}
+
+.tools-select-feather-feather,
+.tools-select-feather-check {
+    align-items: center;
+    display: inline-flex;
+    gap: 4px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.tools-select-feather input {
+    margin: 0;
+}
+
+.tools-select-feather-number {
+    box-sizing: border-box;
+    font: 11px Arial, sans-serif;
+    height: 18px;
+    padding: 0 2px;
+    width: 52px;
+}
