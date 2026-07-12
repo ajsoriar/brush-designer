@@ -23,6 +23,7 @@
         density: 35,
         antialiasing: false,
         colorMode: "front",
+        strokeMode: "brush",
         onChange: null
     };
 
@@ -127,7 +128,8 @@
             lineWidth: normalizeValue(this.options.lineWidth, this.options.minLineWidth, this.options.maxLineWidth, DEFAULTS.lineWidth),
             density: normalizeValue(this.options.density, this.options.minDensity, this.options.maxDensity, DEFAULTS.density),
             antialiasing: typeof this.options.antialiasing === "boolean" ? this.options.antialiasing : DEFAULTS.antialiasing,
-            colorMode: normalizeColorMode(this.options.colorMode)
+            colorMode: normalizeColorMode(this.options.colorMode),
+            strokeMode: normalizeStrokeMode(this.options.strokeMode)
         };
         this.segments = generateSegments(this.getSegmentCount());
         this.hover = null;
@@ -140,12 +142,15 @@
 
     RandomLinesDesigner.prototype.render = function() {
         var root = createElement("div", "random-lines-designer");
+        var previewOptions = createElement("div", "random-lines-designer-preview-options", root);
         var previewWrap = createElement("div", "random-lines-designer-preview-wrap", root);
 
         root.style.width = this.options.width + "px";
         root.style.height = this.options.height + "px";
         this.target.replaceChildren(root);
         this.root = root;
+
+        this.strokeModeControl = this.createStrokeModeRadios(previewOptions);
 
         createElement("span", "random-lines-designer-preview-label", previewWrap).textContent = "Preview";
 
@@ -178,6 +183,27 @@
 
         this.bindPreviewEvents();
         this.bindControlEvents();
+    };
+
+    RandomLinesDesigner.prototype.createStrokeModeRadios = function(parent) {
+        var groupName = "random-lines-stroke-mode-" + Date.now();
+        var inputs = {};
+
+        ["brush", "line"].forEach(function(mode) {
+            var row = createElement("label", "random-lines-designer-preview-option", parent);
+            var input = createElement("input", "", row);
+
+            input.type = "radio";
+            input.name = groupName;
+            input.value = mode;
+            row.appendChild(document.createTextNode(mode === "brush" ? "Brush" : "Line"));
+            inputs[mode] = input;
+        });
+
+        return {
+            element: parent,
+            inputs: inputs
+        };
     };
 
     RandomLinesDesigner.prototype.createControl = function(labelText, min, max, parent, settings) {
@@ -265,6 +291,14 @@
             self.setBrush({ density: self.densityControl.input.value });
         });
 
+        Object.keys(this.strokeModeControl.inputs).forEach(function(mode) {
+            self.strokeModeControl.inputs[mode].addEventListener("change", function() {
+                if (self.strokeModeControl.inputs[mode].checked) {
+                    self.setBrush({ strokeMode: mode });
+                }
+            });
+        });
+
         this.colorModeControl.buttonsRow.addEventListener("click", function(event) {
             var button = event.target.closest("[data-color-mode]");
 
@@ -318,6 +352,7 @@
         this.state.density = normalizeValue(brush.density, this.options.minDensity, this.options.maxDensity, this.state.density);
         this.state.antialiasing = typeof brush.antialiasing === "boolean" ? brush.antialiasing : this.state.antialiasing;
         this.state.colorMode = brush.colorMode ? normalizeColorMode(brush.colorMode) : this.state.colorMode;
+        this.state.strokeMode = brush.strokeMode ? normalizeStrokeMode(brush.strokeMode) : this.state.strokeMode;
 
         if (this.state.density !== previousDensity) {
             this.segments = generateSegments(this.getSegmentCount());
@@ -332,7 +367,8 @@
             lineWidth: this.state.lineWidth,
             density: this.state.density,
             antialiasing: this.state.antialiasing,
-            colorMode: this.state.colorMode
+            colorMode: this.state.colorMode,
+            strokeMode: this.state.strokeMode
         };
     };
 
@@ -345,6 +381,8 @@
         this.brushWidthControl.value.textContent = brush.brushWidth + this.brushWidthControl.unit;
         this.lineWidthControl.value.textContent = brush.lineWidth + this.lineWidthControl.unit;
         this.densityControl.value.textContent = brush.density + this.densityControl.unit;
+        this.strokeModeControl.inputs.brush.checked = brush.strokeMode === "brush";
+        this.strokeModeControl.inputs.line.checked = brush.strokeMode === "line";
         this.updateColorModeButtons(brush.colorMode);
         this.antialiasingControl.input.checked = brush.antialiasing;
         this.syncCrazyOptions();
@@ -377,6 +415,7 @@
             if (typeof api.applySetup === "function") {
                 api.applySetup("random-lines-crazy");
             }
+            selectSimpleColorPickerFirstColumnCenterColor();
             return;
         }
 
@@ -392,6 +431,14 @@
             global.App.memory.rainbowCrazyMode = false;
         }
     };
+
+    function selectSimpleColorPickerFirstColumnCenterColor() {
+        var api = global.SimpleColorPickerApi;
+
+        if (api && typeof api.selectFirstColumnCenterColor === "function") {
+            api.selectFirstColumnCenterColor();
+        }
+    }
 
     RandomLinesDesigner.prototype.getBandHeight = function() {
         var maxBand = this.options.previewHeight - 20;
@@ -534,6 +581,12 @@
         }
 
         return colorMode;
+    }
+
+    function normalizeStrokeMode(strokeMode) {
+        strokeMode = String(strokeMode || DEFAULTS.strokeMode).toLowerCase();
+
+        return strokeMode === "line" ? "line" : DEFAULTS.strokeMode;
     }
 
     function drawCursor(ctx, hover, bandHeight) {

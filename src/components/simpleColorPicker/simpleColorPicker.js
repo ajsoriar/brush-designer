@@ -98,6 +98,9 @@
             getNextColorDown: function(options) {
                 return getNextColorDown(picker, config, options);
             },
+            selectFirstColumnCenterColor: function(silent) {
+                return selectFirstColumnCenterColor(picker, config, !!silent);
+            },
             getWidth: function() {
                 return getWidth(config);
             },
@@ -197,7 +200,6 @@
         var column;
         var columnTop;
         var columnBottom;
-        var direction;
         var nextIndex;
         var nextColumn;
 
@@ -215,29 +217,16 @@
         nextIndex = index + columns;
 
         if (settings.loop) {
-            direction = picker.nextColorDownDirection || 1;
-
-            if (direction > 0) {
-                if (nextIndex <= columnBottom) {
-                    return picker.colors[nextIndex];
-                }
-
-                picker.nextColorDownDirection = -1;
-                return picker.colors[Math.max(columnTop, index - columns)];
+            if (nextIndex <= columnBottom) {
+                return picker.colors[nextIndex];
             }
-
-            if (index - columns >= columnTop) {
-                return picker.colors[index - columns];
-            }
-
-            picker.nextColorDownDirection = 1;
 
             if (settings.jump) {
                 nextColumn = (column + 1) % columns;
                 return picker.colors[nextColumn < picker.colors.length ? nextColumn : 0];
             }
 
-            return picker.colors[Math.min(columnBottom, index + columns)];
+            return picker.colors[columnTop];
         }
 
         if (nextIndex < picker.colors.length) {
@@ -260,6 +249,42 @@
         }
 
         return bottom;
+    }
+
+    function selectFirstColumnCenterColor(picker, config, silent) {
+        var color = getFirstColumnCenterColor(picker, config);
+
+        if (!color) {
+            return null;
+        }
+
+        setActiveColor(picker, color, config, silent);
+        picker.nextColorRightDirection = 1;
+        picker.nextColorDownDirection = 1;
+        return color;
+    }
+
+    function getFirstColumnCenterColor(picker, config) {
+        var columns = Math.max(1, config.columns);
+        var rows = Math.max(1, Math.ceil(picker.colors.length / columns));
+        var centerRow = (rows - 1) / 2;
+        var bestIndex = -1;
+        var bestDistance = Infinity;
+        var index;
+        var row;
+        var distance;
+
+        for (index = 0; index < picker.colors.length; index += columns) {
+            row = Math.floor(index / columns);
+            distance = Math.abs(row - centerRow);
+
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestIndex = index;
+            }
+        }
+
+        return bestIndex >= 0 ? picker.colors[bestIndex] : null;
     }
 
     function getActiveColorIndex(picker) {
@@ -481,7 +506,7 @@
             column = i % columns;
             hue = getPaletteHue(column, columns);
             row = Math.floor(i / columns);
-            lightness = Math.round(30 + (row * 40) / Math.max(1, rows - 1));
+            lightness = Math.round((30 + (row * 40) / Math.max(1, rows - 1)) * 10) / 10;
             if (row === Math.floor(rows / 2)) {
                 lightness = 50;
             }

@@ -184,6 +184,8 @@
             if (setup === "random-lines-crazy" &&
                     (current.algorithm === "picker-vertical" || current.algorithm === "picker-horizontal")) {
                 resolved.algorithm = current.algorithm;
+                resolved.jump = current.jump;
+                resolved.loop = current.loop;
             }
 
             if (!setupResetOptions) {

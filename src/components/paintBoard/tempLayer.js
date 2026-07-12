@@ -107,6 +107,14 @@
         tempLayer.innerHTML = "";
     }
 
+    function clearBrushOutline(tempLayer) {
+        var outline = tempLayer && tempLayer.querySelector ? tempLayer.querySelector(".paint-board-temp-brush-svg") : null;
+
+        if (outline && outline.parentNode) {
+            outline.parentNode.removeChild(outline);
+        }
+    }
+
     function showCircle(tempLayer, point, radius) {
         var diameter;
         var left;
@@ -142,6 +150,7 @@
         var screenPixel = getScreenPixelScale(tempLayer);
         var inset = Math.min(size / 2, screenPixel / 2);
         var innerSize = Math.max(0, size - (inset * 2));
+        var virtualLine = tempLayer && tempLayer.querySelector ? tempLayer.querySelector(".virtual-line-svg") : null;
         var svg = document.createElementNS(namespace, "svg");
         var outline = document.createElementNS(namespace, circle ? "ellipse" : "rect");
 
@@ -175,6 +184,9 @@
 
         tempLayer.tempShape = null;
         tempLayer.innerHTML = "";
+        if (virtualLine) {
+            tempLayer.appendChild(virtualLine);
+        }
         tempLayer.appendChild(svg);
     }
 
@@ -355,6 +367,7 @@
         updateLine: updateLine,
         showCircle: showCircle,
         showSquare: showSquare,
+        clearBrushOutline: clearBrushOutline,
         clear: clear
     };
 

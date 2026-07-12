@@ -625,6 +625,10 @@
                 paintStraightLinePointerEvent(board, event);
             }
 
+            if (isPainting && isRandomLinesLineStrokeMode() && board.pointerStartPosition) {
+                paintRandomLinesLinePointerEvent(board, event);
+            }
+
             if (isPainting && isShapeToolMode() && board.pointerStartPosition) {
                 paintShapePointerEvent(board, event);
             }
@@ -2368,6 +2372,11 @@
             return;
         }
 
+        if (isRandomLinesLineStrokeMode()) {
+            startRandomLinesLinePreview(board, event);
+            return;
+        }
+
         startTempSquare(board, event);
     }
 
@@ -2380,6 +2389,11 @@
         }
 
         if (isStraightLineToolMode()) {
+            updateStraightLinePreview(board, event);
+            return;
+        }
+
+        if (isRandomLinesLineStrokeMode()) {
             updateStraightLinePreview(board, event);
             return;
         }
@@ -2398,6 +2412,11 @@
         }
 
         if (isStraightLineToolMode()) {
+            updateStraightLinePreviewToPoint(board, board.previewPointerPosition, event);
+            return;
+        }
+
+        if (isRandomLinesLineStrokeMode()) {
             updateStraightLinePreviewToPoint(board, board.previewPointerPosition, event);
             return;
         }
@@ -2522,6 +2541,19 @@
         board.straightLinePreview.start(getSelectionPointerPosition(board, event));
     }
 
+    function startRandomLinesLinePreview(board, event) {
+        if (!global.VirtualLine) {
+            return;
+        }
+
+        if (board.straightLinePreview) {
+            board.straightLinePreview.destroy();
+        }
+
+        board.straightLinePreview = global.VirtualLine(board.tempLayerElement, mapRandomLinesToVirtualLineOptions(board));
+        board.straightLinePreview.start(getSelectionPointerPosition(board, event));
+    }
+
     function updateStraightLinePreview(board, event) {
         updateStraightLinePreviewToPoint(board, getSelectionPointerPosition(board, event), event);
     }
@@ -2547,6 +2579,19 @@
             color: lineDesign && lineDesign.color ? lineDesign.color : getCurrentPreviewPaintColor(board),
             capStyle: lineDesign && lineDesign.cap ? lineDesign.cap : "butt",
             dashArray: lineDesign && lineDesign.dashed && Array.isArray(lineDesign.dashes) ? lineDesign.dashes : null,
+            opacity: 0.8,
+            die: false
+        };
+    }
+
+    function mapRandomLinesToVirtualLineOptions(board) {
+        var brush = getCurrentRandomLinesBrush();
+
+        return {
+            width: Math.max(1, brush.lineWidth),
+            color: "#000000",
+            capStyle: "round",
+            dashArray: null,
             opacity: 0.8,
             die: false
         };
@@ -2583,6 +2628,11 @@
         point = getCanvasPointerPosition(board, event);
 
         if (!point) {
+            if (isRandomLinesLineStrokeMode() && global.PaintBoardTempLayer.clearBrushOutline) {
+                global.PaintBoardTempLayer.clearBrushOutline(board.tempLayerElement);
+                return;
+            }
+
             clearBrushHoverPreview(board);
             return;
         }
@@ -4526,6 +4576,13 @@
             return;
         }
 
+        if (isRandomLinesLineStrokeMode()) {
+            event.preventDefault();
+            board.pointerStartPosition = getSelectionPointerPosition(board, event);
+            board.previewPointerPosition = board.pointerStartPosition;
+            return;
+        }
+
         if (isShapeToolMode()) {
             event.preventDefault();
             board.pointerStartPosition = getSelectionPointerPosition(board, event);
@@ -4574,6 +4631,10 @@
         }
 
         if (isStraightLineToolMode()) {
+            return;
+        }
+
+        if (isRandomLinesLineStrokeMode()) {
             return;
         }
 
@@ -4761,6 +4822,34 @@
         markUndoableChange(board);
         paintWithSelection(board, function() {
             paintLine(board, fromPoint, toPoint, "butt", "miter", lineDesign);
+        });
+        scheduleActiveLayerMaskRefresh(board);
+    }
+
+    function paintRandomLinesLinePointerEvent(board, event) {
+        var fromPoint = board.pointerStartPosition;
+        var rawPoint;
+        var toPoint;
+
+        if (!fromPoint) {
+            return;
+        }
+
+        rawPoint = getSelectionPointerPosition(board, event);
+        toPoint = getGradientEndPoint(fromPoint, rawPoint, event);
+
+        if (board.straightLinePreview) {
+            board.straightLinePreview.finish(toPoint);
+            board.straightLinePreview = null;
+        }
+
+        if (event && typeof event.preventDefault === "function") {
+            event.preventDefault();
+        }
+
+        markUndoableChange(board);
+        paintWithSelection(board, function() {
+            paintRandomLinesBrushStroke(board, fromPoint, toPoint);
         });
         scheduleActiveLayerMaskRefresh(board);
     }
@@ -5715,6 +5804,22 @@
         }
 
         board.context.restore();
+    }
+
+    function paintRandomLinesBrushStroke(board, fromPoint, toPoint) {
+        var brush = getCurrentRandomLinesBrush();
+        var dx = toPoint.x - fromPoint.x;
+        var dy = toPoint.y - fromPoint.y;
+        var distance = Math.sqrt((dx * dx) + (dy * dy));
+        var spacing = Math.max(1, Math.round(brush.brushWidth / 5));
+        var steps = Math.max(1, Math.ceil(distance / spacing));
+        var i;
+        var t;
+
+        for (i = 0; i <= steps; i++) {
+            t = i / steps;
+            paintRandomLinesBrush(board, fromPoint.x + (dx * t), fromPoint.y + (dy * t));
+        }
     }
 
     function bresenhamPoints(x0, y0, x1, y1) {
@@ -6743,6 +6848,11 @@
 
     function isStraightLineToolMode() {
         return currentPaintToolMode === PAINT_TOOL_MODES.STRAIGHT_LINE;
+    }
+
+    function isRandomLinesLineStrokeMode() {
+        return currentPaintToolMode === PAINT_TOOL_MODES.RANDOM_LINES &&
+            getCurrentRandomLinesBrush().strokeMode === "line";
     }
 
     function canStartActionOutsideCanvas() {
@@ -9167,7 +9277,8 @@
             lineWidth: Math.max(1, Math.min(Math.round(lineWidth), 10)),
             density: Math.max(0, Math.min(Math.round(density), 100)),
             antialiasing: !!brush.antialiasing,
-            colorMode: colorMode
+            colorMode: colorMode,
+            strokeMode: String(brush.strokeMode || "brush").toLowerCase() === "line" ? "line" : "brush"
         };
     }
 

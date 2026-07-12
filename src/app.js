@@ -90,7 +90,8 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
             lineWidth: 1,
             density: 35,
             antialiasing: false,
-            colorMode: "front"
+            colorMode: "front",
+            strokeMode: "brush"
         };
     } else if (
         Number(currentRandomLinesBrush.brushWidth) === 20 &&

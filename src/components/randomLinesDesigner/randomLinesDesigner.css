@@ -10,12 +10,33 @@
     box-sizing: border-box;
 }
 
+.random-lines-designer-preview-options {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.random-lines-designer-preview-option {
+    align-items: center;
+    display: flex;
+    font-size: 12px;
+    font-weight: 700;
+    gap: 4px;
+}
+
+.random-lines-designer-preview-option input {
+    height: 14px;
+    margin: 0;
+    width: 14px;
+}
+
 .random-lines-designer-preview-wrap {
     background: #ffffff;
     border: 1px solid #6b6b6b;
     margin-bottom: 0px;
     position: relative;
-    margin-top: 8px;
+    margin-top: 4px;
 }
 
 .random-lines-designer-preview-label {

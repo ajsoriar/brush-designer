@@ -971,6 +971,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             density: brush.density,
             antialiasing: brush.antialiasing,
             colorMode: brush.colorMode,
+            strokeMode: brush.strokeMode,
             onChange: function(randomLinesBrush) {
                 global.App.memory.currentRandomLinesBrush = randomLinesBrush;
             }
@@ -1768,6 +1769,13 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             },
             getNextColorDown: function(options) {
                 return appColorPicker && appColorPicker.getNextColorDown ? appColorPicker.getNextColorDown(options) : null;
+            },
+            selectFirstColumnCenterColor: function(silent) {
+                if (!appColorPicker) {
+                    openSimpleColorPickerWindow();
+                }
+
+                return appColorPicker && appColorPicker.selectFirstColumnCenterColor ? appColorPicker.selectFirstColumnCenterColor(silent) : null;
             }
         };
     }
