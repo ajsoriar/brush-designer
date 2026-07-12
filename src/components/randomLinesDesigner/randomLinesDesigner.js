@@ -358,7 +358,6 @@
         var bandHeight = this.getBandHeight();
 
         ctx.clearRect(0, 0, width, height);
-        ctx.imageSmoothingEnabled = this.state.antialiasing;
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, width, height);
 
@@ -392,8 +391,12 @@
     function drawSegments(ctx, segments, width, centerY, bandHeight, lineWidth, antialiasing) {
         ctx.save();
         ctx.strokeStyle = "#111111";
-        ctx.lineWidth = antialiasing ? lineWidth : Math.round(lineWidth);
-        ctx.lineCap = antialiasing ? "round" : "square";
+        ctx.fillStyle = "#111111";
+
+        if (antialiasing) {
+            ctx.lineWidth = lineWidth;
+            ctx.lineCap = "round";
+        }
 
         segments.forEach(function(segment) {
             var x = segment.xFraction * width;
@@ -406,20 +409,72 @@
             var x1 = x + dx;
             var y1 = y + dy;
 
-            if (!antialiasing) {
-                x0 = Math.round(x0) + 0.5;
-                y0 = Math.round(y0) + 0.5;
-                x1 = Math.round(x1) + 0.5;
-                y1 = Math.round(y1) + 0.5;
+            if (antialiasing) {
+                ctx.beginPath();
+                ctx.moveTo(x0, y0);
+                ctx.lineTo(x1, y1);
+                ctx.stroke();
+            } else {
+                drawAliasedLineSegment(ctx, x0, y0, x1, y1, Math.round(lineWidth));
             }
-
-            ctx.beginPath();
-            ctx.moveTo(x0, y0);
-            ctx.lineTo(x1, y1);
-            ctx.stroke();
         });
 
         ctx.restore();
+    }
+
+    function bresenhamPoints(x0, y0, x1, y1) {
+        var points = [];
+        var dx;
+        var dy;
+        var sx;
+        var sy;
+        var err;
+        var e2;
+        var x;
+        var y;
+
+        x0 = Math.round(x0);
+        y0 = Math.round(y0);
+        x1 = Math.round(x1);
+        y1 = Math.round(y1);
+        dx = Math.abs(x1 - x0);
+        dy = -Math.abs(y1 - y0);
+        sx = x0 < x1 ? 1 : -1;
+        sy = y0 < y1 ? 1 : -1;
+        err = dx + dy;
+        x = x0;
+        y = y0;
+
+        while (true) {
+            points.push({ x: x, y: y });
+
+            if (x === x1 && y === y1) {
+                break;
+            }
+
+            e2 = 2 * err;
+
+            if (e2 >= dy) {
+                err += dy;
+                x += sx;
+            }
+
+            if (e2 <= dx) {
+                err += dx;
+                y += sy;
+            }
+        }
+
+        return points;
+    }
+
+    function drawAliasedLineSegment(ctx, x0, y0, x1, y1, thickness) {
+        var half = Math.floor(Math.max(1, thickness) / 2);
+        var size = Math.max(1, thickness);
+
+        bresenhamPoints(x0, y0, x1, y1).forEach(function(point) {
+            ctx.fillRect(point.x - half, point.y - half, size, size);
+        });
     }
 
     function normalizeColorMode(colorMode) {

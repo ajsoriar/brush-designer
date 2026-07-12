@@ -5600,11 +5600,14 @@
         var y0;
         var x1;
         var y1;
+        var color;
 
         board.context.save();
-        board.context.imageSmoothingEnabled = brush.antialiasing;
-        board.context.lineCap = brush.antialiasing ? "round" : "square";
-        board.context.lineWidth = brush.antialiasing ? lineWidth : Math.round(lineWidth);
+
+        if (brush.antialiasing) {
+            board.context.lineCap = "round";
+            board.context.lineWidth = lineWidth;
+        }
 
         for (i = 0; i < count; i++) {
             center = getRandomPointInRadius(x, y, radius);
@@ -5616,22 +5619,77 @@
             y0 = center.y - dy;
             x1 = center.x + dx;
             y1 = center.y + dy;
+            color = getRandomLinesSegmentColor(board, brush, i);
 
-            if (!brush.antialiasing) {
-                x0 = Math.round(x0) + 0.5;
-                y0 = Math.round(y0) + 0.5;
-                x1 = Math.round(x1) + 0.5;
-                y1 = Math.round(y1) + 0.5;
+            if (brush.antialiasing) {
+                board.context.strokeStyle = color;
+                board.context.beginPath();
+                board.context.moveTo(x0, y0);
+                board.context.lineTo(x1, y1);
+                board.context.stroke();
+            } else {
+                paintAliasedLineSegment(board.context, x0, y0, x1, y1, Math.round(lineWidth), color);
             }
-
-            board.context.strokeStyle = getRandomLinesSegmentColor(board, brush, i);
-            board.context.beginPath();
-            board.context.moveTo(x0, y0);
-            board.context.lineTo(x1, y1);
-            board.context.stroke();
         }
 
         board.context.restore();
+    }
+
+    function bresenhamPoints(x0, y0, x1, y1) {
+        var points = [];
+        var dx;
+        var dy;
+        var sx;
+        var sy;
+        var err;
+        var e2;
+        var x;
+        var y;
+
+        x0 = Math.round(x0);
+        y0 = Math.round(y0);
+        x1 = Math.round(x1);
+        y1 = Math.round(y1);
+        dx = Math.abs(x1 - x0);
+        dy = -Math.abs(y1 - y0);
+        sx = x0 < x1 ? 1 : -1;
+        sy = y0 < y1 ? 1 : -1;
+        err = dx + dy;
+        x = x0;
+        y = y0;
+
+        while (true) {
+            points.push({ x: x, y: y });
+
+            if (x === x1 && y === y1) {
+                break;
+            }
+
+            e2 = 2 * err;
+
+            if (e2 >= dy) {
+                err += dy;
+                x += sx;
+            }
+
+            if (e2 <= dx) {
+                err += dx;
+                y += sy;
+            }
+        }
+
+        return points;
+    }
+
+    function paintAliasedLineSegment(ctx, x0, y0, x1, y1, thickness, color) {
+        var half = Math.floor(Math.max(1, thickness) / 2);
+        var size = Math.max(1, thickness);
+
+        ctx.fillStyle = color;
+
+        bresenhamPoints(x0, y0, x1, y1).forEach(function(point) {
+            ctx.fillRect(point.x - half, point.y - half, size, size);
+        });
     }
 
     function getRandomPointInRadius(x, y, radius) {
