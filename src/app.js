@@ -783,6 +783,7 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
             containerId: "app-menu-container",
             actions: {
                 newDocument: global.AppOpenWindows.newDocument,
+                newDocument2: global.AppOpenWindows.newDocument2,
                 createPaintBoard: function() {
                     global.AppOpenWindows.openPaintBoardWindow();
                 },

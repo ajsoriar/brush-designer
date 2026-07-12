@@ -4,6 +4,7 @@
       "label": "File",
       "items": [
         { "label": "New...", "action": "newDocument" },
+        { "label": "New Document...", "action": "newDocument2" },
         { "label": "Quick New (800x600)", "action": "createPaintBoard" },
         { "label": "Open", "action": "openImage" },
         { "label": "Open Project", "action": "openProject" },

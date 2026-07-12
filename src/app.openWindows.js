@@ -170,6 +170,55 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         dialogWindow.setContent(dialog.element);
     }
 
+    function newDocument2() {
+        var existingWindow = WindowsManager.getWindowByWindowId("new-document-2");
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return;
+        }
+
+        global.AppClipboard.getNewDocumentInitialSize().then(function(size) {
+            openNewDocumentDialog2(size);
+        });
+    }
+
+    function openNewDocumentDialog2(size) {
+        var existingWindow = WindowsManager.getWindowByWindowId("new-document-2");
+        var dialogWidth = 780;
+        var dialogHeight = 625;
+        var dialogWindow;
+        var dialog;
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return;
+        }
+
+        dialogWindow = ModalWindow({
+            id: "new-document-2-window",
+            windowId: "new-document-2",
+            title: "New Document",
+            width: dialogWidth,
+            height: dialogHeight,
+            className: "wm-window-new-document-2"
+        });
+
+        dialog = NewDocumentDialog2({
+            width: size.width,
+            height: size.height,
+            onCancel: function() {
+                dialogWindow.close();
+            },
+            onOk: function(options) {
+                dialogWindow.close();
+                openPaintBoardWindow(options);
+            }
+        });
+
+        dialogWindow.setContent(dialog.element);
+    }
+
     function openMultiPaste() {
         var existingWindow = WindowsManager.getWindowByWindowId("multi-paste");
         var dialogWindow;
@@ -2783,6 +2832,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
     global.AppOpenWindows = {
         openEditor: openEditor,
         newDocument: newDocument,
+        newDocument2: newDocument2,
         openMultiPaste: openMultiPaste,
         createDemoWindow: createDemoWindow,
         openPaintBoardWindow: openPaintBoardWindow,
