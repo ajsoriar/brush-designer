@@ -823,6 +823,8 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
                 openLayers: global.AppOpenWindows.openLayersPanelWindow,
                 openGlobalGoalsPicker: global.AppOpenWindows.openTheGlobalGoalsPickerWindow,
                 openRandomLinesDesigner: global.AppOpenWindows.openRandomLinesDesignerWindow,
+                openEmojiPicker: global.AppOpenWindows.openEmojiPickerWindow,
+                openHarmonograph: global.AppOpenWindows.openHarmonographWindow,
                 openEyes: global.Eyes && global.Eyes.open,
                 openColorPicker: global.AppOpenWindows.openSimpleColorPickerWindow,
                 openBigColorPicker: global.AppOpenWindows.openBigColorPickerWindow,

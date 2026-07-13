@@ -21,6 +21,8 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
     var appPatternsView = null;
     var appGradientPanel = null;
     var appLinesDesigner = null;
+    var appEmojiPicker = null;
+    var appHarmonograph = null;
     var appSvgExporter = null;
     var appBrightnessContrast = null;
     var appGlobalGoalsPicker = null;
@@ -2117,6 +2119,100 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         return appLayersPanel;
     }
 
+    function openEmojiPickerWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("emoji-picker");
+        var pickerWidth = 360;
+        var pickerHeight = 420;
+        var pickerWindow;
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return appEmojiPicker;
+        }
+
+        pickerWindow = WindowsManager.create({
+            id: "emoji-picker-window",
+            windowId: "emoji-picker",
+            title: "Emoji Picker",
+            type: "TOOL",
+            x: 80,
+            y: 140,
+            width: pickerWidth + 16,
+            height: pickerHeight + 36,
+            minWidth: 240,
+            minHeight: 240,
+            resizable: true,
+            scrollBarX: false,
+            scrollBarY: false,
+            contentCentered: false,
+            contentId: "emoji-picker-window-content",
+            beforeClose: function() {
+                if (appEmojiPicker) {
+                    appEmojiPicker.destroy();
+                    appEmojiPicker = null;
+                }
+                return true;
+            }
+        });
+
+        appEmojiPicker = EmojiPicker({
+            id: "app-emoji-picker",
+            containerId: pickerWindow.contentId,
+            width: pickerWidth,
+            height: pickerHeight
+        });
+
+        pickerWindow.scaleToContent(pickerWidth, pickerHeight);
+        return appEmojiPicker;
+    }
+
+    function openHarmonographWindow() {
+        var existingWindow = WindowsManager.getWindowByWindowId("harmonograph");
+        var harmonographWidth = 520;
+        var harmonographHeight = 420;
+        var harmonographWindow;
+
+        if (existingWindow) {
+            WindowsManager.bringToFront(existingWindow);
+            return appHarmonograph;
+        }
+
+        harmonographWindow = WindowsManager.create({
+            id: "harmonograph-window",
+            windowId: "harmonograph",
+            title: "Harmonograph",
+            type: "TOOL",
+            x: 120,
+            y: 160,
+            width: harmonographWidth + 16,
+            height: harmonographHeight + 36,
+            minWidth: 320,
+            minHeight: 260,
+            resizable: true,
+            scrollBarX: false,
+            scrollBarY: false,
+            contentCentered: false,
+            contentId: "harmonograph-window-content",
+            beforeClose: function() {
+                if (appHarmonograph) {
+                    appHarmonograph.destroy();
+                    appHarmonograph = null;
+                }
+                return true;
+            }
+        });
+
+        appHarmonograph = Harmonograph({
+            id: "app-harmonograph",
+            containerId: harmonographWindow.contentId,
+            width: harmonographWidth,
+            height: harmonographHeight
+        });
+
+        harmonographWindow.scaleToContent(harmonographWidth, harmonographHeight);
+        return appHarmonograph;
+    }
+
     function renderLayersPanelToolsRow(toolsRowElement, layersPanel) {
         var blockButton;
         var opacityRange;
@@ -2871,6 +2967,8 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         getRandomLinesDesignerApi: getRandomLinesDesignerApi,
         openPaintToolsWindow: openPaintToolsWindow,
         openLayersPanelWindow: openLayersPanelWindow,
+        openEmojiPickerWindow: openEmojiPickerWindow,
+        openHarmonographWindow: openHarmonographWindow,
         openTheGlobalGoalsPickerWindow: openTheGlobalGoalsPickerWindow,
         openTransparentFrameExampleWindow: openTransparentFrameExampleWindow,
         openStarGeneratorWindow: openStarGeneratorWindow,

@@ -100,6 +100,8 @@
         { "label": "The Global Goals", "action": "openGlobalGoalsPicker" },
         { "label": "Random Lines", "action": "openRandomLinesDesigner" },
         { "label": "Eyes", "action": "openEyes" },
+        { "label": "Emoji Picker", "action": "openEmojiPicker" },
+        { "label": "Harmonograph", "action": "openHarmonograph" },
         { "type": "separator" },
         { "label": "Line Width", "action": "openLineWidthPicker" },
         { "label": "Brush Width", "action": "openBrushWidthPicker" }
