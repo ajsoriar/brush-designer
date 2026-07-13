@@ -19,7 +19,25 @@
     background: #eeeeee;
     display: flex;
     gap: 5px;
-    padding: 4px 9px;
+}
+
+.harmonograph-antialiasing-control {
+    align-items: center;
+    display: flex;
+    font: 12px Arial, sans-serif;
+    gap: 4px;
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+.harmonograph-antialiasing-input {
+    height: 13px;
+    margin: 0;
+    width: 13px;
+}
+
+.harmonograph-antialiasing-input:focus {
+    outline: 1px solid #0f87c4;
 }
 
 .harmonograph-tool-button {
@@ -59,7 +77,7 @@
 
 .harmonograph-stage {
     background: #eeeeee;
-    padding: 8px 9px 0;
+    _padding: 8px 9px 0;
 }
 
 .harmonograph-preview {
@@ -67,13 +85,13 @@
     border: 1px solid #111111;
     display: block;
     height: 318px;
-    width: 423px;
+    width: 441px;
 }
 
 .harmonograph-controls {
     background: #eeeeee;
     border: 1px solid #111111;
-    margin: 8px 9px 9px;
+    _margin: 8px 9px 9px;
     min-height: 0;
     padding: 7px 8px 8px;
 }

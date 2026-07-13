@@ -2174,7 +2174,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         var harmonographWindow;
 
         if (existingWindow) {
-            existingWindow.setTitle("# Harmonograph");
+            existingWindow.setTitle("Harmonograph");
             WindowsManager.bringToFront(existingWindow);
             return appHarmonograph;
         }
@@ -2182,7 +2182,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         harmonographWindow = WindowsManager.create({
             id: "harmonograph-window",
             windowId: "harmonograph",
-            title: "# Harmonograph",
+            title: "Harmonograph",
             type: "TOOL",
             x: 120,
             y: 160,

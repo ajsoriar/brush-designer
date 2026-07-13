@@ -43,7 +43,11 @@
 
     var TOOL_ACTIONS = {
         "HARMONOGRAPH": function(component) {
-            component.setActiveTool("HARMONOGRAPH");
+            if (global.PaintTools && global.PaintTools.use) {
+                global.PaintTools.use("HARMONOGRAPH");
+            } else {
+                component.setActiveTool("HARMONOGRAPH");
+            }
 
             if (global.AppOpenWindows && global.AppOpenWindows.openHarmonographWindow) {
                 global.AppOpenWindows.openHarmonographWindow();

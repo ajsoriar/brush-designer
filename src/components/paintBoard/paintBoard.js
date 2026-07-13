@@ -55,6 +55,7 @@
         DESIGNED_BRUSH_2: "DESIGNED-BRUSH-2",
         RANDOM_LINES: "RANDOM-LINES",
         STAR_GENERATOR: "STAR-GENERATOR",
+        HARMONOGRAPH: "HARMONOGRAPH",
         CROP_BOARD: "CROP-BOARD",
         TEXT: "TEXT",
         REMOVE: "REMOVE"
@@ -2748,6 +2749,7 @@
             toolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH ||
             toolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2 ||
             toolMode === PAINT_TOOL_MODES.STAR_GENERATOR ||
+            toolMode === PAINT_TOOL_MODES.HARMONOGRAPH ||
             toolMode === PAINT_TOOL_MODES.RANDOM_LINES ||
             toolMode === PAINT_TOOL_MODES.PENCIL_TOOL ||
             toolMode === PAINT_TOOL_MODES.SQUARED_POINTS ||
@@ -2793,6 +2795,10 @@
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.RANDOM_LINES) {
             return Math.max(1, getCurrentRandomLinesBrush().brushWidth);
+        }
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.HARMONOGRAPH) {
+            return getCurrentHarmonographVisibleBrushSize(board);
         }
 
         if (!brush) {
@@ -4797,6 +4803,8 @@
                 paintDesignedBrush2(board, point.x, point.y);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.STAR_GENERATOR) {
                 paintStarGeneratorBrush(board, point.x, point.y);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.HARMONOGRAPH) {
+                paintHarmonographBrush(board, point.x, point.y);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.RANDOM_LINES) {
                 paintRandomLinesBrush(board, point.x, point.y);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS ||
@@ -4841,6 +4849,7 @@
             currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH ||
             currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2 ||
             currentPaintToolMode === PAINT_TOOL_MODES.STAR_GENERATOR ||
+                currentPaintToolMode === PAINT_TOOL_MODES.HARMONOGRAPH ||
             currentPaintToolMode === PAINT_TOOL_MODES.RANDOM_LINES ||
             currentPaintToolMode === PAINT_TOOL_MODES.REMOVE;
     }
@@ -5834,6 +5843,23 @@
         board.context.closePath();
         board.context.fill();
         board.context.restore();
+    }
+
+    function paintHarmonographBrush(board, x, y) {
+        var brush = getCurrentHarmonographBrush();
+        var width;
+        var height;
+        var tintedBrush;
+
+        if (!brush) {
+            paintRoundPoint(board, x, y);
+            return;
+        }
+
+        width = brush.naturalWidth || brush.width;
+        height = brush.naturalHeight || brush.height;
+        tintedBrush = getTintedBrush(brush, width, height, getCurrentPaintColor(board));
+        board.context.drawImage(tintedBrush, x - width / 2, y - height / 2, width, height);
     }
 
     function getStarVertices(x, y, star) {
@@ -9303,6 +9329,88 @@
         }
 
         return null;
+    }
+
+    function getCurrentHarmonographBrush() {
+        var harmonograph = getCurrentHarmonograph();
+
+        if (harmonograph && typeof harmonograph.getDrawingCanvas === "function") {
+            return harmonograph.getDrawingCanvas();
+        }
+
+        return null;
+    }
+
+    function getCurrentHarmonograph() {
+        if (global.AppOpenWindows && typeof global.AppOpenWindows.openHarmonographWindow === "function") {
+            return global.AppOpenWindows.openHarmonographWindow();
+        }
+
+        return null;
+    }
+
+    function getCurrentHarmonographVisibleBrushSize(board) {
+        var brush = getCurrentHarmonographBrush();
+        var bounds = brush ? getCanvasVisibleBounds(brush) : null;
+
+        if (bounds) {
+            return Math.max(1, Math.max(bounds.width, bounds.height));
+        }
+
+        return Math.max(1, getCurrentBrushSize(board));
+    }
+
+    function getCanvasVisibleBounds(canvas) {
+        var context;
+        var imageData;
+        var data;
+        var width;
+        var height;
+        var left;
+        var top;
+        var right;
+        var bottom;
+        var x;
+        var y;
+        var index;
+
+        if (!canvas || !canvas.width || !canvas.height || !canvas.getContext) {
+            return null;
+        }
+
+        width = canvas.width;
+        height = canvas.height;
+        context = canvas.getContext("2d");
+        imageData = context.getImageData(0, 0, width, height);
+        data = imageData.data;
+        left = width;
+        top = height;
+        right = -1;
+        bottom = -1;
+
+        for (y = 0; y < height; y++) {
+            for (x = 0; x < width; x++) {
+                index = ((y * width) + x) * 4;
+
+                if (data[index + 3] === 0) {
+                    continue;
+                }
+
+                left = Math.min(left, x);
+                top = Math.min(top, y);
+                right = Math.max(right, x);
+                bottom = Math.max(bottom, y);
+            }
+        }
+
+        if (right < left || bottom < top) {
+            return null;
+        }
+
+        return {
+            width: (right - left) + 1,
+            height: (bottom - top) + 1
+        };
     }
 
     function getCurrentStar() {

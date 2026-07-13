@@ -307,6 +307,10 @@ const layoutModules = import.meta.glob("./layouts/*.json", { eager: true });
             global.AppOpenWindows.openStarGeneratorWindow();
         }
 
+        if (mode === "HARMONOGRAPH") {
+            global.AppOpenWindows.openHarmonographWindow();
+        }
+
         if (mode === "STRAIGHT-LINE") {
             global.AppOpenWindows.openLinesDesignerWindow();
         }
