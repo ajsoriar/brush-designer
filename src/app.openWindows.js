@@ -48,6 +48,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         "DESIGNED-BRUSH-2",
         "RANDOM-LINES",
         "STAR-GENERATOR",
+        "HARMONOGRAPH",
         "CROP-BOARD",
         "TEXT",
         "REMOVE"
@@ -2168,11 +2169,12 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
 
     function openHarmonographWindow() {
         var existingWindow = WindowsManager.getWindowByWindowId("harmonograph");
-        var harmonographWidth = 520;
-        var harmonographHeight = 420;
+        var harmonographWidth = 441;
+        var harmonographHeight = 602;
         var harmonographWindow;
 
         if (existingWindow) {
+            existingWindow.setTitle("# Harmonograph");
             WindowsManager.bringToFront(existingWindow);
             return appHarmonograph;
         }
@@ -2180,7 +2182,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         harmonographWindow = WindowsManager.create({
             id: "harmonograph-window",
             windowId: "harmonograph",
-            title: "Harmonograph",
+            title: "# Harmonograph",
             type: "TOOL",
             x: 120,
             y: 160,
@@ -2201,6 +2203,8 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
                 return true;
             }
         });
+
+        harmonographWindow.element.className += " wm-window-harmonograph";
 
         appHarmonograph = Harmonograph({
             id: "app-harmonograph",

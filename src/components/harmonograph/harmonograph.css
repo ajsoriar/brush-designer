@@ -1,6 +1,279 @@
 .harmonograph {
-    background: #ffffff;
+    background: #eeeeee;
     box-sizing: border-box;
-    min-height: 100%;
-    min-width: 100%;
+    color: #111111;
+    display: grid;
+    font-family: Georgia, "Times New Roman", serif;
+    grid-template-rows: 40px 327px 1fr;
+    overflow: hidden;
+}
+
+.harmonograph *,
+.harmonograph *::before,
+.harmonograph *::after {
+    box-sizing: border-box;
+}
+
+.harmonograph-tools {
+    align-items: center;
+    background: #eeeeee;
+    display: flex;
+    gap: 5px;
+    padding: 4px 9px;
+}
+
+.harmonograph-tool-button {
+    align-items: center;
+    background: #f7f7f7;
+    border: 1px solid #777777;
+    border-color: #ffffff #777777 #777777 #ffffff;
+    color: #111111;
+    cursor: pointer;
+    display: flex;
+    height: 32px;
+    justify-content: center;
+    padding: 0;
+    width: 32px;
+}
+
+.harmonograph-tool-button:hover,
+.harmonograph-tool-button:focus {
+    background: #ffffff;
+    outline: 1px solid #0f87c4;
+}
+
+.harmonograph-tool-button-active {
+    background: #d0d0d0;
+    border-color: #777777 #ffffff #ffffff #777777;
+}
+
+.harmonograph-tool-icon {
+    align-items: center;
+    color: #333333;
+    display: flex;
+    font: bold 13px Arial, sans-serif;
+    height: 20px;
+    justify-content: center;
+    width: 20px;
+}
+
+.harmonograph-stage {
+    background: #eeeeee;
+    padding: 8px 9px 0;
+}
+
+.harmonograph-preview {
+    background: #fffdf4;
+    border: 1px solid #111111;
+    display: block;
+    height: 318px;
+    width: 423px;
+}
+
+.harmonograph-controls {
+    background: #eeeeee;
+    border: 1px solid #111111;
+    margin: 8px 9px 9px;
+    min-height: 0;
+    padding: 7px 8px 8px;
+}
+
+.harmonograph-type-row {
+    display: grid;
+    gap: 7px;
+    grid-template-columns: repeat(6, 48px);
+    justify-content: center;
+    margin-bottom: 7px;
+}
+
+.harmonograph-type-button {
+    align-items: center;
+    background: #f7f7f7;
+    border: 1px solid #777777;
+    border-color: #ffffff #777777 #777777 #ffffff;
+    cursor: pointer;
+    display: flex;
+    height: 48px;
+    justify-content: center;
+    padding: 0;
+    width: 48px;
+}
+
+.harmonograph-type-button:hover,
+.harmonograph-type-button:focus {
+    background: #ffffff;
+    outline: 1px solid #0f87c4;
+}
+
+.harmonograph-type-button-active {
+    background: #d0d0d0;
+    border-color: #777777 #ffffff #ffffff #777777;
+}
+
+.harmonograph-type-icon {
+    align-items: center;
+    border: 1px dashed #8c8c8c;
+    color: #333333;
+    display: flex;
+    font: bold 18px Arial, sans-serif;
+    height: 34px;
+    justify-content: center;
+    width: 34px;
+}
+
+.harmonograph-preset-row {
+    align-items: center;
+    display: grid;
+    gap: 6px;
+    grid-template-columns: 1fr 74px 58px;
+    margin-bottom: 6px;
+}
+
+.harmonograph-select-label {
+    align-items: center;
+    display: grid;
+    font-size: 12px;
+    gap: 5px;
+    grid-template-columns: 44px 1fr;
+}
+
+.harmonograph-select-text {
+    font: 12px Arial, sans-serif;
+}
+
+.harmonograph-select {
+    background: #ffffff;
+    border: 1px solid #777777;
+    color: #111111;
+    font: 12px Arial, sans-serif;
+    height: 23px;
+    min-width: 0;
+}
+
+.harmonograph-button {
+    background: #f7f7f7;
+    border: 1px solid #777777;
+    border-color: #ffffff #777777 #777777 #ffffff;
+    color: #111111;
+    cursor: pointer;
+    font: 12px Arial, sans-serif;
+    height: 23px;
+    padding: 0 6px;
+}
+
+.harmonograph-button:hover,
+.harmonograph-button:focus,
+.harmonograph-select:focus,
+.harmonograph-range:focus,
+.harmonograph-color:focus {
+    outline: 1px solid #0f87c4;
+}
+
+.harmonograph-button:active {
+    background: #d0d0d0;
+    border-color: #777777 #ffffff #ffffff #777777;
+}
+
+.harmonograph-control-grid {
+    display: grid;
+    gap: 5px 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.harmonograph-control {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+}
+
+.harmonograph-control-label-row {
+    align-items: baseline;
+    display: flex;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.harmonograph-control-label,
+.harmonograph-control-value {
+    font: bold 11px Arial, sans-serif;
+}
+
+.harmonograph-control-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.harmonograph-control-value {
+    color: #1546c9;
+    flex: 0 0 auto;
+    margin-left: 4px;
+}
+
+.harmonograph-range {
+    appearance: none;
+    background: transparent;
+    height: 17px;
+    margin: 0;
+    width: 100%;
+}
+
+.harmonograph-range::-webkit-slider-runnable-track {
+    background: #111111;
+    height: 4px;
+}
+
+.harmonograph-range::-webkit-slider-thumb {
+    appearance: none;
+    background: #f4f4f4;
+    border: 1px solid #444444;
+    border-radius: 50%;
+    height: 15px;
+    margin-top: -5px;
+    width: 15px;
+}
+
+.harmonograph-range::-moz-range-track {
+    background: #111111;
+    height: 4px;
+}
+
+.harmonograph-range::-moz-range-thumb {
+    background: #f4f4f4;
+    border: 1px solid #444444;
+    border-radius: 50%;
+    height: 13px;
+    width: 13px;
+}
+
+.harmonograph-color-control {
+    align-items: center;
+    grid-template-columns: 1fr 38px;
+}
+
+.harmonograph-color {
+    background: transparent;
+    border: 1px solid #777777;
+    height: 20px;
+    justify-self: end;
+    padding: 0;
+    width: 34px;
+}
+
+.wm-window-harmonograph .wm-top,
+.wm-window-harmonograph .wm-top-left,
+.wm-window-harmonograph .wm-top-right {
+    background: #11b9c5;
+    border-bottom-color: #0a9ea8;
+}
+
+.wm-window-harmonograph .wm-title {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 20px;
+    font-weight: 400;
+    padding-left: 0;
+}
+
+.wm-window-harmonograph .wm-center {
+    background: #eeeeee;
 }

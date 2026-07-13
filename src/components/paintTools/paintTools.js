@@ -34,6 +34,7 @@
         "MAGIC-WAND": new URL("./icons/paint-tools_magic-wand.png", import.meta.url).href,
         "GRADIENT": new URL("./icons/paint-tools_gradient.png", import.meta.url).href,
         "STAR-GENERATOR": new URL("./icons/paint-tools_poligon-star.png", import.meta.url).href,
+        "HARMONOGRAPH": new URL("./icons/paint-tools_harmonograph.png", import.meta.url).href,
         "CROP-BOARD": new URL("./icons/paint-tools_crop.png", import.meta.url).href,
         "PENCIL-TOOL": new URL("./icons/paint-tools_pencil.png", import.meta.url).href,
         "TEXT": new URL("./icons/paint-tools_text.png", import.meta.url).href,
@@ -41,6 +42,13 @@
     };
 
     var TOOL_ACTIONS = {
+        "HARMONOGRAPH": function(component) {
+            component.setActiveTool("HARMONOGRAPH");
+
+            if (global.AppOpenWindows && global.AppOpenWindows.openHarmonographWindow) {
+                global.AppOpenWindows.openHarmonographWindow();
+            }
+        },
         "POINTER-TOOL": function() {
             if (global.PaintTools && global.PaintTools.use) {
                 global.PaintTools.use("POINTER-TOOL");
@@ -83,6 +91,7 @@
         "LASSO-SELECTION": "Lasso Selection",
         "MAGIC-WAND": "Magic Wand",
         "STAR-GENERATOR": "Star",
+        "HARMONOGRAPH": "Harmonograph",
         "RANDOM-LINES": "Random Lines",
         "CROP-BOARD": "Crop Board",
         "TEXT": "Text",
@@ -161,12 +170,12 @@
 
             button.className = "paint-tools-button" + (icon ? "" : " paint-tools-button-no-icon");
             button.setAttribute("data-paint-tool", tool);
-            button.title = tool;
+            button.title = getToolLabelText(tool);
             button.innerHTML = getToolButtonHtml(tool, icon);
             bindSelectionToolButtons(button, tool);
             button.addEventListener("click", function() {
                 if (TOOL_ACTIONS[tool]) {
-                    TOOL_ACTIONS[tool]();
+                    TOOL_ACTIONS[tool](component);
                     return;
                 }
                 if (global.PaintTools) {
@@ -241,9 +250,13 @@
     }
 
     function getToolLabelHtml(tool) {
-        return String(TOOL_LABELS[tool] || tool).split(/[ -]/).map(function(part) {
+        return getToolLabelText(tool).split(/[ -]/).map(function(part) {
             return '<span class="paint-tools-button-line">' + escapeHtml(part) + '</span>';
         }).join("");
+    }
+
+    function getToolLabelText(tool) {
+        return String(TOOL_LABELS[tool] || tool);
     }
 
     function setActiveTool(element, activeTool) {

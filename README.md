@@ -4,6 +4,8 @@ A simple editor for creating and testing brushes in the browser.
 
 ## Demo
 
+Use Node.js 22.12.0 or newer.
+
 Install dependencies first:
 
 ```sh
