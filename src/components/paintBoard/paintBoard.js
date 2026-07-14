@@ -56,6 +56,7 @@
         RANDOM_LINES: "RANDOM-LINES",
         STAR_GENERATOR: "STAR-GENERATOR",
         HARMONOGRAPH: "HARMONOGRAPH",
+        EMOJI: "EMOJI",
         CROP_BOARD: "CROP-BOARD",
         TEXT: "TEXT",
         REMOVE: "REMOVE"
@@ -2750,6 +2751,7 @@
             toolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2 ||
             toolMode === PAINT_TOOL_MODES.STAR_GENERATOR ||
             toolMode === PAINT_TOOL_MODES.HARMONOGRAPH ||
+            toolMode === PAINT_TOOL_MODES.EMOJI ||
             toolMode === PAINT_TOOL_MODES.RANDOM_LINES ||
             toolMode === PAINT_TOOL_MODES.PENCIL_TOOL ||
             toolMode === PAINT_TOOL_MODES.SQUARED_POINTS ||
@@ -2799,6 +2801,10 @@
 
         if (currentPaintToolMode === PAINT_TOOL_MODES.HARMONOGRAPH) {
             return getCurrentHarmonographVisibleBrushSize(board);
+        }
+
+        if (currentPaintToolMode === PAINT_TOOL_MODES.EMOJI) {
+            return getCurrentEmojiBrushSize();
         }
 
         if (!brush) {
@@ -4805,6 +4811,12 @@
                 paintStarGeneratorBrush(board, point.x, point.y);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.HARMONOGRAPH) {
                 paintHarmonographBrush(board, point.x, point.y);
+            } else if (currentPaintToolMode === PAINT_TOOL_MODES.EMOJI) {
+                if (board.lastPointerPosition) {
+                    paintEmojiBrushLine(board, board.lastPointerPosition, point);
+                } else if (isPointInsideCanvas(board, point)) {
+                    paintEmojiBrush(board, point.x, point.y);
+                }
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.RANDOM_LINES) {
                 paintRandomLinesBrush(board, point.x, point.y);
             } else if (currentPaintToolMode === PAINT_TOOL_MODES.ROUND_POINTS ||
@@ -4850,6 +4862,7 @@
             currentPaintToolMode === PAINT_TOOL_MODES.DESIGNED_BRUSH_2 ||
             currentPaintToolMode === PAINT_TOOL_MODES.STAR_GENERATOR ||
                 currentPaintToolMode === PAINT_TOOL_MODES.HARMONOGRAPH ||
+            currentPaintToolMode === PAINT_TOOL_MODES.EMOJI ||
             currentPaintToolMode === PAINT_TOOL_MODES.RANDOM_LINES ||
             currentPaintToolMode === PAINT_TOOL_MODES.REMOVE;
     }
@@ -5860,6 +5873,59 @@
         height = brush.naturalHeight || brush.height;
         tintedBrush = getTintedBrush(brush, width, height, getCurrentPaintColor(board));
         board.context.drawImage(tintedBrush, x - width / 2, y - height / 2, width, height);
+    }
+
+    function paintEmojiBrushLine(board, fromPoint, toPoint) {
+        var size = getCurrentEmojiBrushSize();
+        var spacing = Math.max(1, Math.floor(size * 0.75));
+        var dx = toPoint.x - fromPoint.x;
+        var dy = toPoint.y - fromPoint.y;
+        var distance = Math.sqrt((dx * dx) + (dy * dy));
+        var steps = Math.max(1, Math.ceil(distance / spacing));
+        var i;
+        var t;
+
+        for (i = 0; i <= steps; i++) {
+            t = i / steps;
+            paintEmojiBrush(board, fromPoint.x + (dx * t), fromPoint.y + (dy * t));
+        }
+    }
+
+    function paintEmojiBrush(board, x, y) {
+        var brush = getCurrentEmojiBrush();
+        var image = getEmojiBrushImage(brush);
+        var size = getCurrentEmojiBrushSize();
+
+        if (image && image.complete && image.naturalWidth) {
+            board.context.drawImage(image, x - size / 2, y - size / 2, size, size);
+            return;
+        }
+
+        if (brush && brush.unicode) {
+            board.context.save();
+            board.context.font = size + "px \"Twemoji Mozilla\", \"Apple Color Emoji\", \"Segoe UI Emoji\", sans-serif";
+            board.context.textAlign = "center";
+            board.context.textBaseline = "middle";
+            board.context.fillText(brush.unicode, x, y);
+            board.context.restore();
+            return;
+        }
+
+        paintRoundPoint(board, x, y);
+    }
+
+    function getEmojiBrushImage(brush) {
+        if (!brush || !brush.svgUrl) {
+            return null;
+        }
+
+        if (!brush.image || brush.image.src !== brush.svgUrl) {
+            brush.image = new Image();
+            brush.image.crossOrigin = "anonymous";
+            brush.image.src = brush.svgUrl;
+        }
+
+        return brush.image;
     }
 
     function getStarVertices(x, y, star) {
@@ -9347,6 +9413,30 @@
         }
 
         return null;
+    }
+
+    function getCurrentEmojiBrush() {
+        if (global.AppOpenWindows && typeof global.AppOpenWindows.getCurrentEmojiBrush === "function") {
+            return global.AppOpenWindows.getCurrentEmojiBrush();
+        }
+
+        return {
+            unicode: "\uD83D\uDE00",
+            svgUrl: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f600.svg",
+            size: 128,
+            image: null
+        };
+    }
+
+    function getCurrentEmojiBrushSize() {
+        var brush = getCurrentEmojiBrush();
+        var size = brush ? parseInt(brush.size, 10) : 128;
+
+        if (isNaN(size)) {
+            size = 128;
+        }
+
+        return Math.max(16, Math.min(512, size));
     }
 
     function getCurrentHarmonographVisibleBrushSize(board) {

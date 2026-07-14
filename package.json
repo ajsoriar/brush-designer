@@ -16,6 +16,7 @@
     "ajsr-confirm": "file:vendor/ajsr-confirm",
     "ajsr-notify": "file:vendor/ajsr-notify",
     "div-lines": "file:vendor/div-lines",
+    "emoji-picker-element": "^1.29.1",
     "jquery": "2.2.3"
   },
   "devDependencies": {

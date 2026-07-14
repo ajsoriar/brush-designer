@@ -35,6 +35,7 @@
         "GRADIENT": new URL("./icons/paint-tools_gradient.png", import.meta.url).href,
         "STAR-GENERATOR": new URL("./icons/paint-tools_poligon-star.png", import.meta.url).href,
         "HARMONOGRAPH": new URL("./icons/paint-tools_harmonograph.png", import.meta.url).href,
+        "EMOJI": new URL("./icons/paint-tools_emoji.png", import.meta.url).href,
         "CROP-BOARD": new URL("./icons/paint-tools_crop.png", import.meta.url).href,
         "PENCIL-TOOL": new URL("./icons/paint-tools_pencil.png", import.meta.url).href,
         "TEXT": new URL("./icons/paint-tools_text.png", import.meta.url).href,
@@ -51,6 +52,22 @@
 
             if (global.AppOpenWindows && global.AppOpenWindows.openHarmonographWindow) {
                 global.AppOpenWindows.openHarmonographWindow();
+            }
+        },
+        "EMOJI": function(component) {
+            if (global.PaintTools && global.PaintTools.use) {
+                global.PaintTools.use("EMOJI");
+            } else {
+                component.setActiveTool("EMOJI");
+            }
+
+            if (global.AppOpenWindows && global.AppOpenWindows.openEmojiPickerWindow) {
+                global.AppOpenWindows.openEmojiPickerWindow({
+                    selectedEmoji: {
+                        unicode: "\uD83D\uDE00",
+                        name: "grinning face"
+                    }
+                });
             }
         },
         "POINTER-TOOL": function() {
@@ -96,6 +113,7 @@
         "MAGIC-WAND": "Magic Wand",
         "STAR-GENERATOR": "Star",
         "HARMONOGRAPH": "Harmonograph",
+        "EMOJI": "Emoji",
         "RANDOM-LINES": "Random Lines",
         "CROP-BOARD": "Crop Board",
         "TEXT": "Text",

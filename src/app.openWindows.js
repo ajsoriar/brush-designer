@@ -26,6 +26,11 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
     var appSvgExporter = null;
     var appBrightnessContrast = null;
     var appGlobalGoalsPicker = null;
+    var DEFAULT_EMOJI_BRUSH = {
+        unicode: "\uD83D\uDE00",
+        name: "grinning face",
+        size: 128
+    };
     var syncingLineWidthComponents = false;
     var documentCount = 0;
     var activePaintBoard = null;
@@ -49,6 +54,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         "RANDOM-LINES",
         "STAR-GENERATOR",
         "HARMONOGRAPH",
+        "EMOJI",
         "CROP-BOARD",
         "TEXT",
         "REMOVE"
@@ -2120,14 +2126,25 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         return appLayersPanel;
     }
 
-    function openEmojiPickerWindow() {
+    function openEmojiPickerWindow(options) {
+        var config = options || {};
         var existingWindow = WindowsManager.getWindowByWindowId("emoji-picker");
         var pickerWidth = 360;
         var pickerHeight = 420;
+        var pickerSizeControlHeight = 44;
+        var pickerPreviewHeight = 144;
+        var pickerContentHeight = pickerHeight + pickerPreviewHeight + pickerSizeControlHeight;
+        var selectedEmoji = setCurrentEmojiBrush(config.selectedEmoji || getCurrentEmojiBrush());
         var pickerWindow;
 
         if (existingWindow) {
             WindowsManager.bringToFront(existingWindow);
+            if (appEmojiPicker && appEmojiPicker.setSelectedEmoji) {
+                appEmojiPicker.setSelectedEmoji(selectedEmoji);
+            }
+            if (appEmojiPicker && appEmojiPicker.setBrushSize) {
+                appEmojiPicker.setBrushSize(selectedEmoji.size, true);
+            }
             return appEmojiPicker;
         }
 
@@ -2139,7 +2156,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             x: 80,
             y: 140,
             width: pickerWidth + 16,
-            height: pickerHeight + 36,
+            height: pickerContentHeight + 36,
             minWidth: 240,
             minHeight: 240,
             resizable: true,
@@ -2160,11 +2177,120 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
             id: "app-emoji-picker",
             containerId: pickerWindow.contentId,
             width: pickerWidth,
-            height: pickerHeight
+            height: pickerHeight,
+            selectedEmoji: selectedEmoji,
+            brushSize: selectedEmoji.size,
+            onEmojiSelected: function(emoji, detail) {
+                setCurrentEmojiBrush(detail && detail.emoji ? detail.emoji : emoji);
+            },
+            onBrushSizeChange: function(size) {
+                setCurrentEmojiBrush(extend(extend({}, getCurrentEmojiBrush()), {
+                    size: size
+                }));
+            }
         });
 
-        pickerWindow.scaleToContent(pickerWidth, pickerHeight);
+        pickerWindow.scaleToContent(pickerWidth, pickerContentHeight);
         return appEmojiPicker;
+    }
+
+    function getCurrentEmojiBrush() {
+        if (!global.App || !global.App.memory) {
+            return normalizeEmojiBrush(DEFAULT_EMOJI_BRUSH);
+        }
+
+        if (!global.App.memory.currentEmojiBrush) {
+            return setCurrentEmojiBrush(DEFAULT_EMOJI_BRUSH);
+        }
+
+        return global.App.memory.currentEmojiBrush;
+    }
+
+    function setCurrentEmojiBrush(emoji) {
+        var previous = global.App && global.App.memory ? global.App.memory.currentEmojiBrush : null;
+        var brush = normalizeEmojiBrush(emoji, previous);
+
+        if (previous && previous.svgUrl === brush.svgUrl) {
+            brush.image = previous.image || null;
+        }
+
+        preloadEmojiBrushImage(brush);
+
+        if (global.App && global.App.memory) {
+            global.App.memory.currentEmojiBrush = brush;
+        }
+
+        return brush;
+    }
+
+    function normalizeEmojiBrush(emoji, previous) {
+        var unicode;
+        var name;
+        var svgUrl;
+        var size;
+
+        if (!emoji) {
+            emoji = DEFAULT_EMOJI_BRUSH;
+        }
+
+        if (typeof emoji === "string") {
+            unicode = emoji;
+            name = "";
+            svgUrl = null;
+        } else {
+            unicode = emoji.unicode || DEFAULT_EMOJI_BRUSH.unicode;
+            name = emoji.name || emoji.annotation || "";
+            svgUrl = emoji.svgUrl || emoji.url || null;
+            size = emoji.size;
+        }
+
+        return {
+            unicode: unicode,
+            name: name,
+            svgUrl: svgUrl || getTwemojiSvgUrl(unicode),
+            size: normalizeEmojiBrushSize(size || (previous && previous.size) || DEFAULT_EMOJI_BRUSH.size),
+            image: null
+        };
+    }
+
+    function normalizeEmojiBrushSize(size) {
+        var numericSize = parseInt(size, 10);
+
+        if (isNaN(numericSize)) {
+            numericSize = DEFAULT_EMOJI_BRUSH.size;
+        }
+
+        return Math.max(16, Math.min(512, numericSize));
+    }
+
+    function preloadEmojiBrushImage(brush) {
+        if (!brush || !brush.svgUrl || brush.image) {
+            return;
+        }
+
+        brush.image = new Image();
+        brush.image.crossOrigin = "anonymous";
+        brush.image.src = brush.svgUrl;
+    }
+
+    function getTwemojiSvgUrl(unicode) {
+        var codePoints;
+
+        if (!unicode) {
+            return null;
+        }
+
+        codePoints = Array.from(unicode).map(function(character) {
+            return character.codePointAt(0).toString(16);
+        }).filter(function(codePoint, index, allCodePoints) {
+            return codePoint !== "fe0f" || allCodePoints[index + 1] === "20e3";
+        });
+
+        if (!codePoints.length) {
+            return null;
+        }
+
+        return "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/" + codePoints.join("-") + ".svg";
     }
 
     function openHarmonographWindow() {
@@ -2969,6 +3095,7 @@ import svgExporterIconUrl from "./components/svgExporter/svg-exporter-icon.png";
         getSimpleBrushWidthPickerApi: getSimpleBrushWidthPickerApi,
         getLinesDesignerApi: getLinesDesignerApi,
         getRandomLinesDesignerApi: getRandomLinesDesignerApi,
+        getCurrentEmojiBrush: getCurrentEmojiBrush,
         openPaintToolsWindow: openPaintToolsWindow,
         openLayersPanelWindow: openLayersPanelWindow,
         openEmojiPickerWindow: openEmojiPickerWindow,
