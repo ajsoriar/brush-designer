@@ -4,7 +4,21 @@ A simple editor for creating and testing brushes in the browser.
 
 ## Demo
 
-Use Node.js 22.12.0 or newer.
+Use Node.js 22.13.0 or newer. The project includes `.nvmrc` and `.node-version` files pinned to 22.13.0.
+
+If you use nvm on Windows, activate the project version before installing dependencies:
+
+```sh
+nvm list
+nvm install 22.13.0
+nvm use 22.13.0
+```
+
+Confirm the active version:
+
+```sh
+node --version
+```
 
 Install dependencies first:
 
